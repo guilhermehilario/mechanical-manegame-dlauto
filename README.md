@@ -4,7 +4,7 @@ Aplicação desktop **offline-first** para gerenciamento de oficinas mecânicas,
 construída como monorepo TypeScript com foco em segurança, manutenibilidade,
 testabilidade e evolução incremental.
 
-> **Status: Fases 1–3 concluídas (infraestrutura, clientes + veículos, serviços + produtos/estoque + fornecedores).**
+> **Status: Fases 1–5 concluídas (infraestrutura; clientes + veículos; catálogos + estoque; agendamentos; ordens de serviço com máquina de estados, snapshots de preço e baixa de estoque transacional).**
 > Módulos de domínio restantes (serviços, produtos, ordens de serviço etc.)
 > serão implementados nas fases 3–8. Veja [Plano de fases](#plano-de-fases).
 
@@ -109,7 +109,7 @@ pnpm db:studio    # Prisma Studio
 ```bash
 pnpm lint         # ESLint (flat config, strict-type-checked)
 pnpm typecheck    # tsc --noEmit em todos os pacotes
-pnpm test         # Vitest (63 testes: money, state machine, auth, DI, UI, customers, vehicles)
+pnpm test         # Vitest (140 testes: money, state machines, auth, DI, UI, catálogos, estoque, agendamentos, OS)
 pnpm build        # builds de produção
 pnpm --filter @mechanic-system/api smoke   # smoke test ponta a ponta da API
 ```
@@ -140,8 +140,12 @@ Empacotamento com electron-builder será adicionado na Fase 8
 - [x] **Fase 3** — Serviços + Produtos (estoque centralizado) + Fornecedores
       (CRUD dos catálogos, CNPJ/código únicos, movimentações de estoque
       transacionais com trilha audível, alerta de estoque mínimo, UI completa)
-- [ ] **Fase 4** — Agendamento (regras de conflito no backend)
-- [ ] **Fase 5** — Ordens de Serviço (state machine, snapshots, transações)
+- [x] **Fase 4** — Agendamento (regras de conflito no backend: um veículo não
+      pode ter dois agendamentos ativos no mesmo horário; máquina de estados
+      compartilhada; UI de agenda com transições de status)
+- [x] **Fase 5** — Ordens de Serviço (state machine §11, snapshots de preço
+      §35, reserva/estorno de estoque em transação §36, UI completa com gestão
+      de itens e totais)
 - [ ] **Fase 6** — Histórico de manutenção (derivado) + Imagens (StorageService)
 - [ ] **Fase 7** — Retirada/Entrega de veículos
 - [ ] **Fase 8** — Dashboard, relatórios, empacotamento, E2E (Playwright)

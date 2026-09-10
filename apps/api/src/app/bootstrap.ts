@@ -25,6 +25,7 @@ export async function bootstrapApi(env: Env): Promise<RunningApi> {
   process.env.JWT_ACCESS_EXPIRES = env.JWT_ACCESS_EXPIRES;
   process.env.JWT_REFRESH_EXPIRES = env.JWT_REFRESH_EXPIRES;
   process.env.LOG_LEVEL = env.LOG_LEVEL;
+  process.env.STORAGE_DIR = env.STORAGE_DIR;
 
   // Errors/warnings must ALWAYS be visible (spec §26/§27) — `logger: false`
   // would silence the exception filter's logging of unhandled errors.

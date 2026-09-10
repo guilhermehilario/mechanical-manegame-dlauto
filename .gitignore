@@ -48,3 +48,5 @@ Thumbs.db
 backups/
 *.bak
 .turbo/cache
+# Uploaded files (Fase 6 images — never commit binary blobs)
+data/

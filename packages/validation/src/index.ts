@@ -7,3 +7,5 @@ export * from './service';
 export * from './supplier';
 export * from './product';
 export * from './appointment';
+export * from './work-order';
+export * from './work-order-image';

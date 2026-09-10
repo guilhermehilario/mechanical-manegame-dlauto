@@ -10,6 +10,8 @@ import { ServicesPage } from '../modules/services/services-page';
 import { SuppliersPage } from '../modules/suppliers/suppliers-page';
 import { ProductsPage } from '../modules/products/products-page';
 import { AppointmentsPage } from '../modules/appointments/appointments-page';
+import { WorkOrdersPage } from '../modules/work-orders/work-orders-page';
+import { WorkOrderDetailPage } from '../modules/work-orders/work-order-detail-page';
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuth();
@@ -43,10 +45,8 @@ export function AppRouter() {
         <Route path="products" element={<ProductsPage />} />
         <Route path="suppliers" element={<SuppliersPage />} />
         <Route path="appointments" element={<AppointmentsPage />} />
-        <Route
-          path="work-orders"
-          element={<PlaceholderPage title="Ordens de Serviço" phase="Fase 5" />}
-        />
+        <Route path="work-orders" element={<WorkOrdersPage />} />
+        <Route path="work-orders/:id" element={<WorkOrderDetailPage />} />
         <Route
           path="pickups"
           element={<PlaceholderPage title="Retirada/Entrega" phase="Fase 7" />}

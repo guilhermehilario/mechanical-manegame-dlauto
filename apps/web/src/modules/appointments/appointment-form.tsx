@@ -49,7 +49,7 @@ export function AppointmentForm({ appointment, onClose, onSaved }: AppointmentFo
   const customersQuery = useQuery({
     queryKey: ['customers', 'for-appointment-select'],
     queryFn: () => listCustomers({ limit: 100 }),
-    enabled: !isEdit || !appointment?.customerId,
+    enabled: !isEdit || appointment.customerId === '',
   });
 
   const vehiclesQuery = useQuery({
@@ -61,7 +61,7 @@ export function AppointmentForm({ appointment, onClose, onSaved }: AppointmentFo
   const servicesQuery = useQuery({
     queryKey: ['services', 'for-appointment-select'],
     queryFn: () => listServices({ limit: 100 }),
-    enabled: !isEdit || !appointment?.serviceId,
+    enabled: !isEdit || appointment.serviceId === '',
   });
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {

@@ -3,8 +3,11 @@ import { InsufficientStockError, NotFoundError } from '../../common/errors/domai
 import { ErrorCodes } from '@mechanic-system/types';
 import type { CreateStockMovementInput } from '@mechanic-system/validation';
 import type { StockMovementDto } from '@mechanic-system/types';
-import type { StockMovement } from '@prisma/client';
+import type { Prisma, StockMovement, Product } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+
+/** Transaction client type — shared with modules that compose transactions. */
+export type TxClient = Prisma.TransactionClient;
 
 function toDto(movement: StockMovement, productName: string): StockMovementDto {
   return {
@@ -30,52 +33,63 @@ function toDto(movement: StockMovement, productName: string): StockMovementDto {
 export class StockService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async register(userId: string, input: CreateStockMovementInput): Promise<StockMovementDto> {
-    const { movement, productName } = await this.prisma.$transaction(async (tx) => {
-      // SQLite serializes writes; read-modify-write inside one interactive
-      // transaction is race-free for our single-node, embedded deployment.
-      const product = await tx.product.findFirst({
-        where: { id: input.productId, deletedAt: null },
-      });
-      if (!product) {
-        throw new NotFoundError(ErrorCodes.PRODUCT_NOT_FOUND, 'Produto não encontrado');
-      }
+  /**
+   * Core movement logic, callable with an external transaction client so
+   * multi-step operations (e.g. work order items) compose atomically.
+   */
+  async applyInTransaction(
+    tx: TxClient,
+    userId: string,
+    input: CreateStockMovementInput,
+  ): Promise<{ movement: StockMovement; product: Product }> {
+    // SQLite serializes writes; read-modify-write inside one interactive
+    // transaction is race-free for our single-node, embedded deployment.
+    const product = await tx.product.findFirst({
+      where: { id: input.productId, deletedAt: null },
+    });
+    if (!product) {
+      throw new NotFoundError(ErrorCodes.PRODUCT_NOT_FOUND, 'Produto não encontrado');
+    }
 
-      let newStock: number;
-      if (input.type === 'ADJUSTMENT') {
-        newStock = input.quantity;
-      } else {
-        const delta = input.type === 'IN' ? input.quantity : -input.quantity;
-        newStock = product.stockQuantity + delta;
-      }
+    let newStock: number;
+    if (input.type === 'ADJUSTMENT') {
+      newStock = input.quantity;
+    } else {
+      const delta = input.type === 'IN' ? input.quantity : -input.quantity;
+      newStock = product.stockQuantity + delta;
+    }
 
-      if (newStock < 0) {
-        throw new InsufficientStockError(
-          `Estoque insuficiente para ${product.name} (disponível: ${product.stockQuantity})`,
-        );
-      }
+    if (newStock < 0) {
+      throw new InsufficientStockError(
+        `Estoque insuficiente para ${product.name} (disponível: ${product.stockQuantity})`,
+      );
+    }
 
-      const created = await tx.stockMovement.create({
-        data: {
-          productId: product.id,
-          type: input.type,
-          quantity: input.quantity,
-          reason: input.reason,
-          previousStock: product.stockQuantity,
-          newStock,
-          userId,
-        },
-      });
-
-      await tx.product.update({
-        where: { id: product.id },
-        data: { stockQuantity: newStock },
-      });
-
-      return { movement: created, productName: product.name };
+    const movement = await tx.stockMovement.create({
+      data: {
+        productId: product.id,
+        type: input.type,
+        quantity: input.quantity,
+        reason: input.reason,
+        previousStock: product.stockQuantity,
+        newStock,
+        userId,
+      },
     });
 
-    return toDto(movement, productName);
+    await tx.product.update({
+      where: { id: product.id },
+      data: { stockQuantity: newStock },
+    });
+
+    return { movement, product };
+  }
+
+  async register(userId: string, input: CreateStockMovementInput): Promise<StockMovementDto> {
+    const { movement, product } = await this.prisma.$transaction((tx) =>
+      this.applyInTransaction(tx, userId, input),
+    );
+    return toDto(movement, product.name);
   }
 
   /**

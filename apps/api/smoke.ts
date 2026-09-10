@@ -487,6 +487,211 @@ async function main(): Promise<void> {
     headers: authHeaders,
   });
 
+  // ─── Fase 5: Ordens de Serviço (§11/§35/§36) ───
+
+  // Customer + vehicle for the WO flow (unique per run).
+  const woCpf = generateUniqueCpf();
+  const woCustomer = await fetch(`${base}/customers`, {
+    method: 'POST',
+    headers: authHeaders,
+    body: JSON.stringify({ name: 'Cliente OS', cpf: woCpf, phone: '11999998888' }),
+  });
+  const woCustomerBody = (await woCustomer.json()) as { success: boolean; data?: { id: string } };
+  if (!woCustomerBody.success || !woCustomerBody.data) {
+    throw new Error('smoke: WO customer failed');
+  }
+  const woPlate = generateUniquePlate();
+  const woVehicle = await fetch(`${base}/vehicles`, {
+    method: 'POST',
+    headers: authHeaders,
+    body: JSON.stringify({
+      customerId: woCustomerBody.data.id,
+      plate: woPlate,
+      brand: 'Toyota',
+      model: 'Corolla',
+      year: 2022,
+    }),
+  });
+  const woVehicleBody = (await woVehicle.json()) as { success: boolean; data?: { id: string } };
+  if (!woVehicleBody.success || !woVehicleBody.data) {
+    throw new Error('smoke: WO vehicle failed');
+  }
+
+  // Catalog service + product with stock.
+  const woService = await fetch(`${base}/services`, {
+    method: 'POST',
+    headers: authHeaders,
+    body: JSON.stringify({ name: `Serviço OS ${Date.now()}`, priceCents: 20000 }),
+  });
+  const woServiceBody = (await woService.json()) as { success: boolean; data?: { id: string; priceCents: number } };
+  if (!woServiceBody.success || !woServiceBody.data) throw new Error('smoke: WO service failed');
+
+  const woProductCode = `WO-${Date.now()}`;
+  const woProduct = await fetch(`${base}/products`, {
+    method: 'POST',
+    headers: authHeaders,
+    body: JSON.stringify({
+      code: woProductCode,
+      name: 'Peça OS Smoke',
+      costPriceCents: 1000,
+      salePriceCents: 2500,
+      stockQuantity: 20,
+      minStock: 2,
+    }),
+  });
+  const woProductBody = (await woProduct.json()) as {
+    success: boolean;
+    data?: { id: string; stockQuantity: number };
+  };
+  if (!woProductBody.success || !woProductBody.data) throw new Error('smoke: WO product failed');
+
+  // 24. Open the work order
+  const woRes = await fetch(`${base}/work-orders`, {
+    method: 'POST',
+    headers: authHeaders,
+    body: JSON.stringify({
+      customerId: woCustomerBody.data.id,
+      vehicleId: woVehicleBody.data.id,
+    }),
+  });
+  const woBody = (await woRes.json()) as {
+    success: boolean;
+    data?: { id: string; orderNumber: number; status: string; totals: { totalCents: number } };
+  };
+  if (!woRes.ok || !woBody.success || !woBody.data) {
+    throw new Error('smoke: create work order failed');
+  }
+  if (woBody.data.status !== 'OPEN' || woBody.data.totals.totalCents !== 0) {
+    throw new Error('smoke: WO initial state mismatch');
+  }
+  console.log(`[smoke] create work order: OK (#${woBody.data.orderNumber})`);
+
+  // 25. Add service item — snapshot must copy catalog price
+  const addSvc = await fetch(`${base}/work-orders/${woBody.data.id}/service-items`, {
+    method: 'POST',
+    headers: authHeaders,
+    body: JSON.stringify({ serviceId: woServiceBody.data.id, quantity: 1 }),
+  });
+  const addSvcBody = (await addSvc.json()) as {
+    success: boolean;
+    data?: { serviceItems: { serviceName: string; unitPriceCents: number }[]; totals: { servicesCents: number } };
+  };
+  if (!addSvc.ok || !addSvcBody.success || !addSvcBody.data) {
+    throw new Error('smoke: add service item failed');
+  }
+  const svcItem = addSvcBody.data.serviceItems[0];
+  if (!svcItem || svcItem.unitPriceCents !== 20000 || addSvcBody.data.totals.servicesCents !== 20000) {
+    throw new Error('smoke: service snapshot mismatch');
+  }
+  console.log('[smoke] service item snapshot (20000 cents): OK');
+
+  // 26. Add product item — stock must be debited 20 → 18
+  const addPrd = await fetch(`${base}/work-orders/${woBody.data.id}/product-items`, {
+    method: 'POST',
+    headers: authHeaders,
+    body: JSON.stringify({ productId: woProductBody.data.id, quantity: 2, discountCents: 500 }),
+  });
+  const addPrdBody = (await addPrd.json()) as {
+    success: boolean;
+    data?: { productItems: { unitPriceCents: number }[]; totals: { productsCents: number } };
+  };
+  if (!addPrd.ok || !addPrdBody.success || !addPrdBody.data) {
+    throw new Error('smoke: add product item failed');
+  }
+  if (addPrdBody.data.totals.productsCents !== 4500) {
+    throw new Error(`smoke: product totals mismatch (${addPrdBody.data.totals.productsCents})`);
+  }
+  const stockCheck = await fetch(`${base}/products/${woProductBody.data.id}`, {
+    headers: authHeaders,
+  });
+  const stockCheckBody = (await stockCheck.json()) as { data?: { stockQuantity: number } };
+  if (stockCheckBody.data?.stockQuantity !== 18) {
+    throw new Error(`smoke: stock after reserve = ${stockCheckBody.data?.stockQuantity}, expected 18`);
+  }
+  console.log('[smoke] product item + stock reserve (20 → 18): OK');
+
+  // 26b. Remove product item while editable → stock returns 18 → 20
+  const woDetailEarly = await fetch(`${base}/work-orders/${woBody.data.id}`, {
+    headers: authHeaders,
+  });
+  const woDetailEarlyBody = (await woDetailEarly.json()) as {
+    data?: { productItems: { id: string }[] };
+  };
+  const productItemIdEarly = woDetailEarlyBody.data?.productItems[0]?.id;
+  if (!productItemIdEarly) throw new Error('smoke: product item id missing (early)');
+  const rmPrdEarly = await fetch(
+    `${base}/work-orders/${woBody.data.id}/product-items/${productItemIdEarly}`,
+    { method: 'DELETE', headers: authHeaders },
+  );
+  if (!rmPrdEarly.ok) {
+    throw new Error(`smoke: remove product item failed early (${rmPrdEarly.status})`);
+  }
+  const stockCheckEarly = await fetch(`${base}/products/${woProductBody.data.id}`, {
+    headers: authHeaders,
+  });
+  const stockCheckEarlyBody = (await stockCheckEarly.json()) as {
+    data?: { stockQuantity: number };
+  };
+  if (stockCheckEarlyBody.data?.stockQuantity !== 20) {
+    throw new Error(
+      `smoke: stock after early refund = ${stockCheckEarlyBody.data?.stockQuantity}, expected 20`,
+    );
+  }
+  console.log('[smoke] product item removal + stock refund (18 → 20): OK');
+
+  // Re-add the item for the lock test (stock 20 → 18 again).
+  const reAddPrd = await fetch(`${base}/work-orders/${woBody.data.id}/product-items`, {
+    method: 'POST',
+    headers: authHeaders,
+    body: JSON.stringify({ productId: woProductBody.data.id, quantity: 2, discountCents: 500 }),
+  });
+  if (!reAddPrd.ok) throw new Error('smoke: re-add product item failed');
+
+  // 27. OPEN → IN_ASSESSMENT (items still editable) → AWAITING_APPROVAL (locked)
+  const woStatus1 = await fetch(`${base}/work-orders/${woBody.data.id}/status`, {
+    method: 'PATCH',
+    headers: authHeaders,
+    body: JSON.stringify({ status: 'IN_ASSESSMENT' }),
+  });
+  if (!woStatus1.ok) throw new Error('smoke: WO transition to IN_ASSESSMENT failed');
+
+  const woStatus2 = await fetch(`${base}/work-orders/${woBody.data.id}/status`, {
+    method: 'PATCH',
+    headers: authHeaders,
+    body: JSON.stringify({ status: 'AWAITING_APPROVAL' }),
+  });
+  if (!woStatus2.ok) throw new Error('smoke: WO transition to AWAITING_APPROVAL failed');
+
+  const lockedAdd = await fetch(`${base}/work-orders/${woBody.data.id}/service-items`, {
+    method: 'POST',
+    headers: authHeaders,
+    body: JSON.stringify({ serviceId: woServiceBody.data.id, quantity: 1 }),
+  });
+  const lockedAddBody = (await lockedAdd.json()) as { error?: { code: string } };
+  if (lockedAdd.status !== 409 || lockedAddBody.error?.code !== 'WORK_ORDER_ITEMS_LOCKED') {
+    throw new Error(`expected 409 WORK_ORDER_ITEMS_LOCKED, got ${lockedAdd.status}`);
+  }
+  console.log('[smoke] items locked after IN_ASSESSMENT (409): OK');
+
+  // 28. Illegal jump OPEN-ish → DELIVERED must 409 (from IN_ASSESSMENT)
+  const illegalWo = await fetch(`${base}/work-orders/${woBody.data.id}/status`, {
+    method: 'PATCH',
+    headers: authHeaders,
+    body: JSON.stringify({ status: 'DELIVERED' }),
+  });
+  const illegalWoBody = (await illegalWo.json()) as { error?: { code: string } };
+  if (illegalWo.status !== 409 || illegalWoBody.error?.code !== 'INVALID_WORK_ORDER_TRANSITION') {
+    throw new Error(`expected 409 INVALID_WORK_ORDER_TRANSITION, got ${illegalWo.status}`);
+  }
+  console.log('[smoke] illegal WO transition rejected (409): OK');
+
+  // 29. Cleanup (WO cascade-deletes items)
+  await fetch(`${base}/work-orders/${woBody.data.id}`, { method: 'DELETE', headers: authHeaders });
+  await fetch(`${base}/vehicles/${woVehicleBody.data.id}`, { method: 'DELETE', headers: authHeaders });
+  await fetch(`${base}/customers/${woCustomerBody.data.id}`, { method: 'DELETE', headers: authHeaders });
+  await fetch(`${base}/services/${woServiceBody.data.id}`, { method: 'DELETE', headers: authHeaders });
+  await fetch(`${base}/products/${woProductBody.data.id}`, { method: 'DELETE', headers: authHeaders });
+
   await api.close();
   console.log('[smoke] ALL CHECKS PASSED');
 }

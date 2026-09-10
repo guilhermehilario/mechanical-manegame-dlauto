@@ -32,7 +32,8 @@ apps/api/src/modules/
   services/    (implementado — Fase 3)
   products/    (implementado — Fase 3, inclui StockService)
   suppliers/   (implementado — Fase 3)
-  appointments/(Fase 4)
+  appointments/(implementado — Fase 4, conflito no backend)
+  work-orders/ (implementado — Fase 5, snapshots + estoque transacional)
   work-orders/ (Fase 5)
   vehicle-pickup/ (Fase 7)
 ```
@@ -59,7 +60,7 @@ interceptors, logging) e em `apps/api/src/prisma/` (acesso ao banco).
 | Pacote | Responsabilidade |
 |---|---|
 | `@mechanic-system/types` | Contratos de DTO/erros/códigos de erro (fonte única) |
-| `@mechanic-system/shared` | Money em centavos, máquina de estados da OS |
+| `@mechanic-system/shared` | Money em centavos, máquinas de estado (OS e agendamentos), regras de itens da OS |
 | `@mechanic-system/validation` | Schemas Zod usados pela API **e** pelos formulários |
 | `@mechanic-system/config` | Env validada no startup (a app não sobe inválida) |
 
