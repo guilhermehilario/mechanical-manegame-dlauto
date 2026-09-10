@@ -108,6 +108,20 @@ da inserção — alterar o catálogo nunca reescreve a OS. Itens de peça têm
 catálogo (**Restrict**). A linha de total é `unitPriceCents × quantity −
 discountCents` (nunca negativa).
 
+### work_order_images (Fase 6)
+Bytes no disco via `StorageService` (`STORAGE_DIR`, endereçamento por
+sha256 → dedup de conteúdo); no banco ficam apenas metadados: `storageKey`,
+`sha256`, `mimeType` (allowlist JPEG/PNG/WebP/GIF validada por **magic
+bytes**, não pelo header), `sizeBytes` (máx. 5 MB), `caption?`, `uploadedBy`
+(SetNull). DELETE da OS cascata nas imagens; bytes só são removidos quando a
+última referência ao mesmo conteúdo desaparece. Download serve bytes crus
+(`StreamableFile`, fora do envelope JSON) com Content-Type correto.
+
+### Histórico de manutenção (Fase 6 — derivado, §14)
+`GET /work-orders/vehicle/:vehicleId/history` — consulta derivada sobre
+work orders + itens snapshot, mais recente primeiro. **Sem tabela própria**:
+como os itens já carregam snapshot (§35), o histórico nunca diverge da OS.
+
 ### Regras da Fase 5 (OS — §11/§35/§36)
 - Máquina de estados compartilhada (`work-order-status`); transição inválida
   ou a partir de status final → `409 INVALID_WORK_ORDER_TRANSITION`.

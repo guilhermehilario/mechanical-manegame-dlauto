@@ -31,7 +31,7 @@ import type {
   WorkOrderQuery,
   WorkOrderStatusBody,
 } from '@mechanic-system/validation';
-import type { WorkOrderDto, Paginated } from '@mechanic-system/types';
+import type { VehicleHistoryEntryDto, WorkOrderDto, Paginated } from '@mechanic-system/types';
 import { AuthenticatedRequest } from '../auth/jwt-auth.guard';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RequireRoles, RolesGuard } from '../auth/roles.guard';
@@ -43,6 +43,15 @@ import { WorkOrdersService } from './work-orders.service';
 @Controller('work-orders')
 export class WorkOrdersController {
   constructor(private readonly workOrdersService: WorkOrdersService) {}
+
+  /** Derived maintenance history (Fase 6, §14) — before ':id' so Nest
+   * matches the literal segment first. */
+  @Get('vehicle/:vehicleId/history')
+  vehicleHistory(
+    @Param('vehicleId', new ZodValidationPipe(workOrderIdSchema, 'param')) vehicleId: string,
+  ): Promise<VehicleHistoryEntryDto[]> {
+    return this.workOrdersService.listVehicleHistory(vehicleId);
+  }
 
   @Get()
   list(

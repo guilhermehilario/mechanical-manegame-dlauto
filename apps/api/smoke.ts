@@ -685,7 +685,116 @@ async function main(): Promise<void> {
   }
   console.log('[smoke] illegal WO transition rejected (409): OK');
 
-  // 29. Cleanup (WO cascade-deletes items)
+  // ─── Fase 6: Imagens + Histórico derivado (§14) ───
+
+  // Minimal valid-by-magic PNG (server sniffs magic bytes, not the header).
+  const pngBytes = Buffer.from([
+    0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44,
+    0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x08, 0x06, 0x00, 0x00, 0x00, 0x1f,
+    0x15, 0xc4, 0x89, 0x00, 0x00, 0x00, 0x0a, 0x49, 0x44, 0x41, 0x54, 0x78, 0x9c, 0x63, 0x00,
+    0x01, 0x00, 0x00, 0x05, 0x00, 0x01, 0x0d, 0x0a, 0x2d, 0xb4, 0x00, 0x00, 0x00, 0x00, 0x49,
+    0x45, 0x4e, 0x44, 0xae, 0x42, 0x60, 0x82,
+  ]);
+
+  // 29. Upload an image to the work order (multipart/form-data)
+  const imageForm = new FormData();
+  imageForm.append(
+    'file',
+    new Blob([pngBytes], { type: 'image/png' }),
+    'foto-motor.png',
+  );
+  imageForm.append('caption', 'Foto do motor antes da troca');
+  const uploadRes = await fetch(`${base}/work-orders/${woBody.data.id}/images`, {
+    method: 'POST',
+    headers: { Authorization: authHeaders.Authorization },
+    body: imageForm,
+  });
+  const uploadBody = (await uploadRes.json()) as {
+    success: boolean;
+    data?: { id: string; sha256: string; mimeType: string; sizeBytes: number; url: string };
+  };
+  if (!uploadRes.ok || !uploadBody.success || !uploadBody.data) {
+    throw new Error(`smoke: image upload failed (${uploadRes.status})`);
+  }
+  if (uploadBody.data.mimeType !== 'image/png' || uploadBody.data.sizeBytes !== pngBytes.length) {
+    throw new Error('smoke: image metadata mismatch');
+  }
+  console.log('[smoke] image upload (sha256-addressed): OK');
+
+  // 30. Download the image — raw bytes, no envelope, correct Content-Type
+  const downloadRes = await fetch(`${base}${uploadBody.data.url}`, {
+    headers: { Authorization: authHeaders.Authorization },
+  });
+  if (!downloadRes.ok) throw new Error(`smoke: image download failed (${downloadRes.status})`);
+  if (downloadRes.headers.get('content-type') !== 'image/png') {
+    throw new Error('smoke: image content-type mismatch');
+  }
+  const downloadedBytes = Buffer.from(await downloadRes.arrayBuffer());
+  if (!downloadedBytes.equals(pngBytes)) {
+    throw new Error('smoke: downloaded bytes differ from upload');
+  }
+  console.log('[smoke] image download (raw bytes, no envelope): OK');
+
+  // 31. Reject a non-image upload with 415
+  const badForm = new FormData();
+  badForm.append('file', new Blob([Buffer.from('definitely not an image')], { type: 'text/plain' }), 'x.txt');
+  const badUpload = await fetch(`${base}/work-orders/${woBody.data.id}/images`, {
+    method: 'POST',
+    headers: { Authorization: authHeaders.Authorization },
+    body: badForm,
+  });
+  const badUploadBody = (await badUpload.json()) as { error?: { code: string } };
+  if (badUpload.status !== 415 || badUploadBody.error?.code !== 'UNSUPPORTED_MEDIA_TYPE') {
+    throw new Error(`expected 415 UNSUPPORTED_MEDIA_TYPE, got ${badUpload.status}`);
+  }
+  console.log('[smoke] non-image upload rejected (415): OK');
+
+  // 32. Derived vehicle history — one entry with the snapshot items
+  const historyRes = await fetch(
+    `${base}/work-orders/vehicle/${woVehicleBody.data.id}/history`,
+    { headers: authHeaders },
+  );
+  const historyBody = (await historyRes.json()) as {
+    success: boolean;
+    data?: Array<{
+      orderNumber: number;
+      services: { name: string; unitPriceCents: number; quantity: number }[];
+      products: { name: string; quantity: number }[];
+      totalCents: number;
+    }>;
+  };
+  if (!historyRes.ok || !historyBody.success || !historyBody.data) {
+    throw new Error(`smoke: vehicle history failed (${historyRes.status})`);
+  }
+  const historyEntry = historyBody.data[0];
+  if (
+    !historyEntry ||
+    historyEntry.orderNumber !== woBody.data.orderNumber ||
+    historyEntry.services[0]?.unitPriceCents !== 20000 ||
+    historyEntry.products.length !== 1 ||
+    historyEntry.totalCents !== 24500
+  ) {
+    throw new Error(`smoke: history entry mismatch (${JSON.stringify(historyEntry)})`);
+  }
+  console.log('[smoke] derived vehicle history (service+product snapshots): OK');
+
+  // 33. Delete the image, then the bytes must 404
+  const deleteImageRes = await fetch(
+    `${base}/work-orders/${woBody.data.id}/images/${uploadBody.data.id}`,
+    { method: 'DELETE', headers: authHeaders },
+  );
+  if (deleteImageRes.status !== 204) {
+    throw new Error(`smoke: image delete failed (${deleteImageRes.status})`);
+  }
+  const deletedDownload = await fetch(`${base}${uploadBody.data.url}`, {
+    headers: { Authorization: authHeaders.Authorization },
+  });
+  if (deletedDownload.status !== 404) {
+    throw new Error(`expected 404 after image delete, got ${deletedDownload.status}`);
+  }
+  console.log('[smoke] image delete + 404 on bytes: OK');
+
+  // 34. Cleanup (WO cascade-deletes items and any remaining image rows)
   await fetch(`${base}/work-orders/${woBody.data.id}`, { method: 'DELETE', headers: authHeaders });
   await fetch(`${base}/vehicles/${woVehicleBody.data.id}`, { method: 'DELETE', headers: authHeaders });
   await fetch(`${base}/customers/${woCustomerBody.data.id}`, { method: 'DELETE', headers: authHeaders });

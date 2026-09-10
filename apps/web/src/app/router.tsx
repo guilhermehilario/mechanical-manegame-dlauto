@@ -6,6 +6,7 @@ import { PlaceholderPage } from './placeholder-page';
 import { CustomersPage } from '../modules/customers/customers-page';
 import { CustomerDetailPage } from '../modules/customers/customer-detail-page';
 import { VehiclesPage } from '../modules/vehicles/vehicles-page';
+import { VehicleHistoryPage } from '../modules/vehicles/vehicle-history-page';
 import { ServicesPage } from '../modules/services/services-page';
 import { SuppliersPage } from '../modules/suppliers/suppliers-page';
 import { ProductsPage } from '../modules/products/products-page';
@@ -41,6 +42,7 @@ export function AppRouter() {
         <Route path="customers" element={<CustomersPage />} />
         <Route path="customers/:id" element={<CustomerDetailPage />} />
         <Route path="vehicles" element={<VehiclesPage />} />
+        <Route path="vehicles/:vehicleId/history" element={<VehicleHistoryPage />} />
         <Route path="services" element={<ServicesPage />} />
         <Route path="products" element={<ProductsPage />} />
         <Route path="suppliers" element={<SuppliersPage />} />

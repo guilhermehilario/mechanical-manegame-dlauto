@@ -179,6 +179,15 @@ export function VehiclesPage() {
                     <button
                       type="button"
                       onClick={() => {
+                        window.location.assign(`/vehicles/${vehicle.id}/history`);
+                      }}
+                      className="mr-3 text-xs font-medium text-blue-600 hover:underline"
+                    >
+                      Histórico
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
                         handleDelete(vehicle);
                       }}
                       className="text-xs font-medium text-red-600 hover:underline"

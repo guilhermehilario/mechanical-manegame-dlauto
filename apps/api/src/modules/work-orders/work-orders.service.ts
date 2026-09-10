@@ -15,6 +15,7 @@ import type {
   UpdateWorkOrderInput,
 } from '@mechanic-system/validation';
 import type {
+  VehicleHistoryEntryDto,
   WorkOrderDto,
   WorkOrderProductItemDto,
   WorkOrderServiceItemDto,
@@ -309,6 +310,40 @@ export class WorkOrdersService {
   async delete(id: string): Promise<void> {
     await this.getWorkOrderOrThrow(id);
     await this.prisma.workOrder.delete({ where: { id } });
+  }
+
+  /**
+   * Derived maintenance history (Fase 6, spec §14): work-order snapshots for
+   * one vehicle, newest first. No separate storage — derived queries only.
+   */
+  async listVehicleHistory(vehicleId: string): Promise<VehicleHistoryEntryDto[]> {
+    const vehicle = await this.vehiclesRepository.findById(vehicleId);
+    if (!vehicle) {
+      throw new NotFoundError(ErrorCodes.VEHICLE_NOT_FOUND, 'Veículo não encontrado');
+    }
+    const workOrders = await this.workOrdersRepository.listByVehicleForHistory(vehicleId);
+    return workOrders.map((workOrder) => {
+      const totals = computeTotals(workOrder);
+      return {
+        workOrderId: workOrder.id,
+        orderNumber: workOrder.orderNumber,
+        status: workOrder.status,
+        openedAt: workOrder.createdAt.toISOString(),
+        completedAt: workOrder.completedAt?.toISOString() ?? null,
+        services: workOrder.serviceItems.map((item) => ({
+          name: item.serviceName,
+          quantity: item.quantity,
+          unitPriceCents: item.unitPriceCents,
+        })),
+        products: workOrder.productItems.map((item) => ({
+          name: item.productName,
+          quantity: item.quantity,
+          unitPriceCents: item.unitPriceCents,
+          discountCents: item.discountCents,
+        })),
+        totalCents: totals.totalCents,
+      };
+    });
   }
 }
 

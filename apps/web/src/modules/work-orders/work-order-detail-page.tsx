@@ -25,6 +25,7 @@ import {
   WORK_ORDER_STATUS_BADGES,
   WORK_ORDER_STATUS_LABELS,
 } from './work-orders-page';
+import { WorkOrderImagesPanel } from './work-order-images-panel';
 
 const inputClass =
   'w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none';
@@ -427,6 +428,11 @@ export function WorkOrderDetailPage() {
             já foi debitado.
           </p>
         )}
+      </div>
+
+      {/* Images (Fase 6) */}
+      <div className="mb-4">
+        <WorkOrderImagesPanel workOrderId={workOrder.id} />
       </div>
 
       {/* Totals */}

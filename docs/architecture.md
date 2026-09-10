@@ -33,13 +33,14 @@ apps/api/src/modules/
   products/    (implementado — Fase 3, inclui StockService)
   suppliers/   (implementado — Fase 3)
   appointments/(implementado — Fase 4, conflito no backend)
-  work-orders/ (implementado — Fase 5, snapshots + estoque transacional)
-  work-orders/ (Fase 5)
+  work-orders/ (implementado — Fase 5/6, snapshots + estoque transacional,
+               imagens com StorageService, histórico derivado por veículo)
   vehicle-pickup/ (Fase 7)
 ```
 
 Código transversal fica em `apps/api/src/common/` (erros, pipes, filtros,
-interceptors, logging) e em `apps/api/src/prisma/` (acesso ao banco).
+interceptors, logging, **storage** — Fase 6) e em `apps/api/src/prisma/`
+(acesso ao banco).
 
 ## Comunicação Electron ↔ React ↔ NestJS
 

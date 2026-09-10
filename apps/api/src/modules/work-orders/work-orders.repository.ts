@@ -74,6 +74,18 @@ export class WorkOrdersRepository {
   }
 
   /**
+   * Derived maintenance history for one vehicle (Fase 6, spec §14): newest
+   * first, with snapshot items — history is a QUERY, never a table.
+   */
+  listByVehicleForHistory(vehicleId: string): Promise<WorkOrderWithRelations[]> {
+    return this.prisma.workOrder.findMany({
+      where: { vehicleId },
+      orderBy: { orderNumber: 'desc' },
+      include: WORK_ORDER_INCLUDE,
+    });
+  }
+
+  /**
    * Creates the OS with its next sequential orderNumber inside the caller's
    * transaction (SQLite single-writer makes MAX+1 safe here).
    */

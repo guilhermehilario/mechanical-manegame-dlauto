@@ -16,6 +16,24 @@ interface ErrorBody {
   details?: unknown;
 }
 
+/** Multer raises plain Errors with a `code` — translate them to stable codes. */
+interface MulterLikeError extends Error {
+  code?: string;
+}
+
+const MULTER_ERROR_MAP: Record<string, { status: number; code: string; message: string }> = {
+  LIMIT_FILE_SIZE: {
+    status: 413,
+    code: ErrorCodes.IMAGE_TOO_LARGE,
+    message: 'Arquivo excede o limite de 5 MB',
+  },
+  LIMIT_UNEXPECTED_FILE: {
+    status: 400,
+    code: ErrorCodes.VALIDATION_ERROR,
+    message: 'Campo de arquivo inesperado (use "file")',
+  },
+};
+
 /**
  * Translates every thrown error into the standard envelope (spec §27):
  *   { success: false, error: { code, message, details? } }
@@ -62,6 +80,16 @@ export class AllExceptionsFilter implements ExceptionFilter {
           code: errorBody.code ?? this.mapHttpStatusToCode(status),
           message,
           ...(isDev && errorBody.details !== undefined ? { details: errorBody.details } : {}),
+        },
+      };
+    } else if (exception instanceof Error && exception.name === 'MulterError') {
+      const mapped = MULTER_ERROR_MAP[(exception as MulterLikeError).code ?? ''];
+      status = mapped?.status ?? HttpStatus.INTERNAL_SERVER_ERROR;
+      body = {
+        success: false,
+        error: {
+          code: mapped?.code ?? ErrorCodes.INTERNAL_ERROR,
+          message: mapped?.message ?? 'Falha no upload do arquivo',
         },
       };
     } else {
