@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { CustomerDto } from '@mechanic-system/types';
 import { ApiClientError } from '../../services/api-client';
@@ -7,17 +8,7 @@ import {
   listCustomers,
 } from '../../services/customers.service';
 import { CustomerForm } from './customer-form';
-
-function formatCpf(cpf: string): string {
-  return cpf.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, '$1.$2.$3-$4');
-}
-
-function formatPhone(phone: string): string {
-  const digits = phone.replace(/\D/g, '');
-  if (digits.length === 11) return digits.replace(/^(\d{2})(\d{5})(\d{4})$/, '($1) $2-$3');
-  if (digits.length === 10) return digits.replace(/^(\d{2})(\d{4})(\d{4})$/, '($1) $2-$3');
-  return phone;
-}
+import { formatCpf, formatPhone } from '../../utils/format';
 
 export function CustomersPage() {
   const queryClient = useQueryClient();
@@ -138,7 +129,14 @@ export function CustomersPage() {
             ) : (
               items.map((customer) => (
                 <tr key={customer.id} className="border-b border-slate-100 last:border-0">
-                  <td className="px-4 py-3 font-medium text-slate-800">{customer.name}</td>
+                  <td className="px-4 py-3 font-medium text-slate-800">
+                    <Link
+                      to={`/customers/${customer.id}`}
+                      className="text-blue-600 hover:underline"
+                    >
+                      {customer.name}
+                    </Link>
+                  </td>
                   <td className="px-4 py-3 text-slate-600">{formatCpf(customer.cpf)}</td>
                   <td className="px-4 py-3 text-slate-600">{formatPhone(customer.phone)}</td>
                   <td className="px-4 py-3">

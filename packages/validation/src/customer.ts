@@ -59,6 +59,10 @@ export type CreateCustomerInput = z.infer<typeof createCustomerSchema>;
 
 export const updateCustomerSchema = createCustomerSchema
   .partial()
+  .extend({
+    /** Logical (de)activation — soft-delete convention (spec §34). */
+    active: z.boolean().optional(),
+  })
   .refine((data) => Object.keys(data).length > 0, {
     message: 'pelo menos um campo deve ser enviado',
   });

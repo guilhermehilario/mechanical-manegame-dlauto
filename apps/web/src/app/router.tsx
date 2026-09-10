@@ -4,6 +4,7 @@ import { LoginPage } from '../modules/auth/login-page';
 import { AppLayout } from './layout/app-layout';
 import { PlaceholderPage } from './placeholder-page';
 import { CustomersPage } from '../modules/customers/customers-page';
+import { CustomerDetailPage } from '../modules/customers/customer-detail-page';
 import { VehiclesPage } from '../modules/vehicles/vehicles-page';
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
@@ -32,6 +33,7 @@ export function AppRouter() {
       >
         <Route index element={<PlaceholderPage title="Dashboard" phase="Fase 8" />} />
         <Route path="customers" element={<CustomersPage />} />
+        <Route path="customers/:id" element={<CustomerDetailPage />} />
         <Route path="vehicles" element={<VehiclesPage />} />
         <Route path="services" element={<PlaceholderPage title="Serviços" phase="Fase 3" />} />
         <Route path="products" element={<PlaceholderPage title="Produtos" phase="Fase 3" />} />

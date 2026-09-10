@@ -89,6 +89,7 @@ export class CustomersService {
       ...(input.email !== undefined ? { email: input.email || null } : {}),
       ...(input.address !== undefined ? { address: input.address || null } : {}),
       ...(input.notes !== undefined ? { notes: input.notes || null } : {}),
+      ...(input.active !== undefined ? { active: input.active } : {}),
     });
     return toDto(customer);
   }
