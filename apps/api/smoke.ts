@@ -794,7 +794,137 @@ async function main(): Promise<void> {
   }
   console.log('[smoke] image delete + 404 on bytes: OK');
 
-  // 34. Cleanup (WO cascade-deletes items and any remaining image rows)
+  // ─── Fase 7: Retirada/Entrega (1─1, transacional com → DELIVERED) ───
+
+  // At this point the OS is AWAITING_APPROVAL — moving to AWAITING_PICKUP
+  // requires the full happy path: APPROVED → IN_EXECUTION → COMPLETED.
+  const path1 = await fetch(`${base}/work-orders/${woBody.data.id}/status`, {
+    method: 'PATCH',
+    headers: authHeaders,
+    body: JSON.stringify({ status: 'APPROVED' }),
+  });
+  if (!path1.ok) throw new Error('smoke: WO transition to APPROVED failed');
+  const path2 = await fetch(`${base}/work-orders/${woBody.data.id}/status`, {
+    method: 'PATCH',
+    headers: authHeaders,
+    body: JSON.stringify({ status: 'IN_EXECUTION' }),
+  });
+  if (!path2.ok) throw new Error('smoke: WO transition to IN_EXECUTION failed');
+  const path3 = await fetch(`${base}/work-orders/${woBody.data.id}/status`, {
+    method: 'PATCH',
+    headers: authHeaders,
+    body: JSON.stringify({ status: 'COMPLETED' }),
+  });
+  if (!path3.ok) throw new Error('smoke: WO transition to COMPLETED failed');
+  const path4 = await fetch(`${base}/work-orders/${woBody.data.id}/status`, {
+    method: 'PATCH',
+    headers: authHeaders,
+    body: JSON.stringify({ status: 'AWAITING_PICKUP' }),
+  });
+  if (!path4.ok) throw new Error('smoke: WO transition to AWAITING_PICKUP failed');
+  console.log('[smoke] WO path to AWAITING_PICKUP: OK');
+
+  // 34. Registering a pickup on a non-AWAITING_PICKUP OS must 409
+  const wo2Res = await fetch(`${base}/work-orders`, {
+    method: 'POST',
+    headers: authHeaders,
+    body: JSON.stringify({
+      customerId: woCustomerBody.data.id,
+      vehicleId: woVehicleBody.data.id,
+    }),
+  });
+  const wo2Body = (await wo2Res.json()) as { success: boolean; data?: { id: string } };
+  if (!wo2Res.ok || !wo2Body.success || !wo2Body.data) {
+    throw new Error('smoke: second work order failed');
+  }
+  const earlyPickup = await fetch(`${base}/vehicle-pickups/work-order/${wo2Body.data.id}`, {
+    method: 'POST',
+    headers: authHeaders,
+    body: JSON.stringify({ receiverName: 'Maria Souza', receiverDoc: '52998224725' }),
+  });
+  const earlyPickupBody = (await earlyPickup.json()) as { error?: { code: string } };
+  if (
+    earlyPickup.status !== 409 ||
+    earlyPickupBody.error?.code !== 'WORK_ORDER_NOT_AWAITING_PICKUP'
+  ) {
+    throw new Error(`expected 409 WORK_ORDER_NOT_AWAITING_PICKUP, got ${earlyPickup.status}`);
+  }
+  console.log('[smoke] pickup on non-AWAITING_PICKUP OS rejected (409): OK');
+
+  // 35. Register the pickup — receipt + → DELIVERED in one transaction
+  const pickupRes = await fetch(`${base}/vehicle-pickups/work-order/${woBody.data.id}`, {
+    method: 'POST',
+    headers: authHeaders,
+    body: JSON.stringify({
+      receiverName: 'Maria Souza',
+      receiverDoc: '529.982.247-25',
+      receiverPhone: '(11) 99999-8888',
+      mileageKm: 45200,
+      signatureData: 'data:image/png;base64,iVBORw0KGgo=',
+      notes: 'Cliente satisfeito',
+    }),
+  });
+  const pickupBody = (await pickupRes.json()) as {
+    success: boolean;
+    data?: {
+      id: string;
+      orderNumber: number;
+      receiverDoc: string;
+      hasSignature: boolean;
+    };
+  };
+  if (!pickupRes.ok || !pickupBody.success || !pickupBody.data) {
+    throw new Error(`smoke: pickup register failed (${pickupRes.status})`);
+  }
+  if (pickupBody.data.receiverDoc !== '52998224725' || !pickupBody.data.hasSignature) {
+    throw new Error('smoke: pickup receipt content mismatch');
+  }
+  const woAfterPickup = await fetch(`${base}/work-orders/${woBody.data.id}`, {
+    headers: authHeaders,
+  });
+  const woAfterPickupBody = (await woAfterPickup.json()) as { data?: { status: string } };
+  if (woAfterPickupBody.data?.status !== 'DELIVERED') {
+    throw new Error(`expected OS DELIVERED after pickup, got ${woAfterPickupBody.data?.status}`);
+  }
+  console.log('[smoke] pickup registered + OS DELIVERED (transactional): OK');
+
+  // 36. Second receipt for the same OS must 409 — the OS is now DELIVERED,
+  // so the status guard fires first (the 1─1 is also DB-enforced via unique FK).
+  const dupPickup = await fetch(`${base}/vehicle-pickups/work-order/${woBody.data.id}`, {
+    method: 'POST',
+    headers: authHeaders,
+    body: JSON.stringify({ receiverName: 'Maria Souza', receiverDoc: '52998224725' }),
+  });
+  const dupPickupBody = (await dupPickup.json()) as { error?: { code: string } };
+  if (
+    dupPickup.status !== 409 ||
+    (dupPickupBody.error?.code !== 'WORK_ORDER_NOT_AWAITING_PICKUP' &&
+      dupPickupBody.error?.code !== 'PICKUP_ALREADY_EXISTS')
+  ) {
+    throw new Error(`expected 409 conflict for duplicate pickup, got ${dupPickup.status}`);
+  }
+  console.log('[smoke] duplicate pickup rejected (409): OK');
+
+  // 37. The receipts list shows the registered pickup
+  const pickupsList = await fetch(`${base}/vehicle-pickups?limit=10`, {
+    headers: authHeaders,
+  });
+  const pickupsListBody = (await pickupsList.json()) as {
+    success: boolean;
+    data?: { items: Array<{ id: string; orderNumber: number }>; total: number };
+  };
+  if (!pickupsList.ok || !pickupsListBody.success || !pickupsListBody.data) {
+    throw new Error('smoke: pickups list failed');
+  }
+  if (!pickupsListBody.data.items.some((p) => p.id === pickupBody.data?.id)) {
+    throw new Error('smoke: registered pickup missing from list');
+  }
+  console.log('[smoke] pickups list contains receipt: OK');
+
+  // Cleanup for the second WO used in the guard test.
+  await fetch(`${base}/work-orders/${wo2Body.data.id}`, { method: 'DELETE', headers: authHeaders });
+
+  // 38. Cleanup (WO cascade-deletes items and any remaining image rows)
   await fetch(`${base}/work-orders/${woBody.data.id}`, { method: 'DELETE', headers: authHeaders });
   await fetch(`${base}/vehicles/${woVehicleBody.data.id}`, { method: 'DELETE', headers: authHeaders });
   await fetch(`${base}/customers/${woCustomerBody.data.id}`, { method: 'DELETE', headers: authHeaders });

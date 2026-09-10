@@ -39,6 +39,7 @@ model User {
   auditLogs     AuditLog[]
   stockMovements StockMovement[]
   uploadedImages WorkOrderImage[]
+  registeredPickups VehiclePickup[]
 
   @@map("users")
 }
@@ -257,6 +258,7 @@ model WorkOrder {
   serviceItems   WorkOrderServiceItem[]
   productItems   WorkOrderProductItem[]
   images         WorkOrderImage[]
+  pickup         VehiclePickup?
 
   @@index([customerId])
   @@index([vehicleId])
@@ -330,6 +332,28 @@ model WorkOrderImage {
 
   @@index([workOrderId])
   @@map("work_order_images")
+}
+
+// ─────────────────────────────────────────────────────────────
+// Vehicle pickup/delivery (Fase 7): 1─1 with the work order. Registered when
+// the vehicle leaves the shop (AWAITING_PICKUP → DELIVERED in ONE transaction).
+// ─────────────────────────────────────────────────────────────
+
+model VehiclePickup {
+  id            String   @id @default(cuid())
+  workOrderId   String   @unique // 1─1 (spec §17)
+  workOrder     WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Restrict)
+  receiverName  String
+  receiverDoc   String // CPF/CNH bare digits
+  receiverPhone String?
+  mileageKm     Int?
+  signatureData String? // base64 PNG from the signature pad (optional)
+  notes         String?
+  registeredBy  String?
+  registeredByUser User? @relation(fields: [registeredBy], references: [id], onDelete: SetNull)
+  createdAt     DateTime @default(now())
+
+  @@map("vehicle_pickups")
 }
 
 // ─────────────────────────────────────────────────────────────

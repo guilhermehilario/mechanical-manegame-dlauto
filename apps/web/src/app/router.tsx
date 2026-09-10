@@ -13,6 +13,7 @@ import { ProductsPage } from '../modules/products/products-page';
 import { AppointmentsPage } from '../modules/appointments/appointments-page';
 import { WorkOrdersPage } from '../modules/work-orders/work-orders-page';
 import { WorkOrderDetailPage } from '../modules/work-orders/work-order-detail-page';
+import { VehiclePickupsPage } from '../modules/vehicle-pickups/vehicle-pickups-page';
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuth();
@@ -51,7 +52,7 @@ export function AppRouter() {
         <Route path="work-orders/:id" element={<WorkOrderDetailPage />} />
         <Route
           path="pickups"
-          element={<PlaceholderPage title="Retirada/Entrega" phase="Fase 7" />}
+          element={<VehiclePickupsPage />}
         />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />

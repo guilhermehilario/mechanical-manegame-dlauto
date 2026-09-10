@@ -117,6 +117,15 @@ bytes**, não pelo header), `sizeBytes` (máx. 5 MB), `caption?`, `uploadedBy`
 última referência ao mesmo conteúdo desaparece. Download serve bytes crus
 (`StreamableFile`, fora do envelope JSON) com Content-Type correto.
 
+### vehicle_pickups (Fase 7)
+Comprovante de retirada, **1─1** com a OS (`workOrderId @unique`). Guarda
+`receiverName`, `receiverDoc` (CPF/CNH, 11 dígitos), `receiverPhone?`,
+`mileageKm?`, `signatureData?` (PNG base64 do canvas — evidência, não valor
+legal), `notes?` e `registeredBy` (SetNull). O DELETE da OS é bloqueado
+(Restrict) enquanto o comprovante existir. O registro e a transição da OS
+para `DELIVERED` acontecem **na mesma transação** — nunca existe retirada
+"pela metade".
+
 ### Histórico de manutenção (Fase 6 — derivado, §14)
 `GET /work-orders/vehicle/:vehicleId/history` — consulta derivada sobre
 work orders + itens snapshot, mais recente primeiro. **Sem tabela própria**:
@@ -165,7 +174,7 @@ work_orders *─1 customers, *─1 vehicles
 work_orders 1─* work_order_service_items  (snapshot: name, price, qty)
 work_orders 1─* work_order_product_items  (snapshot: name, price, qty, discount)
 work_orders 1─* work_order_images         (storage key, mime, size, sha256)
-work_orders 1─1 vehicle_pickups
+work_orders 1─1 vehicle_pickups ✓ (Fase 7 — comprovante de retirada)
 products *─1 suppliers
 stock_movements (toda movimentação via StockService, dentro de transação — §36)
 ```
