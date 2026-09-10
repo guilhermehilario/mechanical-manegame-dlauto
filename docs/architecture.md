@@ -35,7 +35,8 @@ apps/api/src/modules/
   appointments/(implementado — Fase 4, conflito no backend)
   work-orders/ (implementado — Fase 5/6, snapshots + estoque transacional,
                imagens com StorageService, histórico derivado por veículo)
-  vehicle-pickup/ (Fase 7)
+  vehicle-pickups/ (implementado — Fase 7, comprovante 1─1 + → DELIVERED
+               transacional)
 ```
 
 Código transversal fica em `apps/api/src/common/` (erros, pipes, filtros,
