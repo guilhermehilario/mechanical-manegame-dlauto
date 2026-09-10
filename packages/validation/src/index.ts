@@ -6,3 +6,4 @@ export * from './vehicle';
 export * from './service';
 export * from './supplier';
 export * from './product';
+export * from './appointment';

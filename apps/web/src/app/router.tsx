@@ -9,6 +9,7 @@ import { VehiclesPage } from '../modules/vehicles/vehicles-page';
 import { ServicesPage } from '../modules/services/services-page';
 import { SuppliersPage } from '../modules/suppliers/suppliers-page';
 import { ProductsPage } from '../modules/products/products-page';
+import { AppointmentsPage } from '../modules/appointments/appointments-page';
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuth();
@@ -41,10 +42,7 @@ export function AppRouter() {
         <Route path="services" element={<ServicesPage />} />
         <Route path="products" element={<ProductsPage />} />
         <Route path="suppliers" element={<SuppliersPage />} />
-        <Route
-          path="appointments"
-          element={<PlaceholderPage title="Agendamentos" phase="Fase 4" />}
-        />
+        <Route path="appointments" element={<AppointmentsPage />} />
         <Route
           path="work-orders"
           element={<PlaceholderPage title="Ordens de Serviço" phase="Fase 5" />}

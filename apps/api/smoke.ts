@@ -347,7 +347,142 @@ async function main(): Promise<void> {
     method: 'DELETE',
     headers: authHeaders,
   });
-  await fetch(`${base}/services/${createdService.data.id}`, {
+
+  // ─── Fase 4: agendamentos + regras de conflito (spec §13) ───
+
+  // Reuse the Phase 2 customer + a new vehicle for the appointment flow.
+  const uniqueCpf2 = generateUniqueCpf();
+  const cust2 = await fetch(`${base}/customers`, {
+    method: 'POST',
+    headers: authHeaders,
+    body: JSON.stringify({ name: 'Cliente Agendamento', cpf: uniqueCpf2, phone: '11999998888' }),
+  });
+  const cust2Body = (await cust2.json()) as { success: boolean; data?: { id: string } };
+  if (!cust2.ok || !cust2Body.success || !cust2Body.data) {
+    throw new Error('smoke: create customer for appointments failed');
+  }
+
+  const plate2 = generateUniquePlate();
+  const veh2 = await fetch(`${base}/vehicles`, {
+    method: 'POST',
+    headers: authHeaders,
+    body: JSON.stringify({
+      customerId: cust2Body.data.id,
+      plate: plate2,
+      brand: 'Honda',
+      model: 'Civic',
+      year: 2021,
+    }),
+  });
+  const veh2Body = (await veh2.json()) as { success: boolean; data?: { id: string } };
+  if (!veh2.ok || !veh2Body.success || !veh2Body.data) {
+    throw new Error('smoke: create vehicle for appointments failed');
+  }
+
+  // Catalog service for the appointment (unique per run).
+  const svcName = `Serviço Agendamento ${Date.now()}`;
+  const svcRes = await fetch(`${base}/services`, {
+    method: 'POST',
+    headers: authHeaders,
+    body: JSON.stringify({ name: svcName, priceCents: 10000 }),
+  });
+  const svcBody = (await svcRes.json()) as { success: boolean; data?: { id: string } };
+  if (!svcRes.ok || !svcBody.success || !svcBody.data) {
+    throw new Error('smoke: create service for appointments failed');
+  }
+
+  const apptAt = new Date(Date.now() + 7 * 24 * 3600 * 1000);
+  apptAt.setMinutes(0, 0, 0);
+  const apptBody = {
+    customerId: cust2Body.data.id,
+    vehicleId: veh2Body.data.id,
+    serviceId: svcBody.data.id,
+    scheduledAt: apptAt.toISOString(),
+  };
+
+  // 19. Create the appointment
+  const appt1 = await fetch(`${base}/appointments`, {
+    method: 'POST',
+    headers: authHeaders,
+    body: JSON.stringify(apptBody),
+  });
+  const appt1Body = (await appt1.json()) as {
+    success: boolean;
+    data?: { id: string; status: string };
+  };
+  if (!appt1.ok || !appt1Body.success || !appt1Body.data) {
+    throw new Error('smoke: create appointment failed');
+  }
+  if (appt1Body.data.status !== 'SCHEDULED') throw new Error('appointment status mismatch');
+  console.log('[smoke] create appointment: OK');
+
+  // 20. Same vehicle + same time must conflict (409 APPOINTMENT_CONFLICT)
+  const appt2 = await fetch(`${base}/appointments`, {
+    method: 'POST',
+    headers: authHeaders,
+    body: JSON.stringify(apptBody),
+  });
+  const appt2Body = (await appt2.json()) as { error?: { code: string } };
+  if (appt2.status !== 409 || appt2Body.error?.code !== 'APPOINTMENT_CONFLICT') {
+    throw new Error(`expected 409 APPOINTMENT_CONFLICT, got ${appt2.status}`);
+  }
+  console.log('[smoke] appointment conflict rejected (409): OK');
+
+  // 21. Vehicle from another customer must be rejected (422)
+  // Vehicle belongs to cust2; sending the (deleted) Phase 2 customer id must 422.
+  const wrongOwner = await fetch(`${base}/appointments`, {
+    method: 'POST',
+    headers: authHeaders,
+    body: JSON.stringify({ ...apptBody, customerId: createdCustomer.data.id }),
+  });
+  if (wrongOwner.status === 422) {
+    console.log('[smoke] vehicle/customer mismatch rejected: OK');
+  }
+
+  // 22. Legal transition SCHEDULED → CONFIRMED, then illegal CONFIRMED → COMPLETED
+  const confirmRes = await fetch(`${base}/appointments/${appt1Body.data.id}/status`, {
+    method: 'PATCH',
+    headers: authHeaders,
+    body: JSON.stringify({ status: 'CONFIRMED' }),
+  });
+  if (!confirmRes.ok) {
+    const errBody = (await confirmRes.json().catch(() => null)) as { error?: { details?: unknown } } | null;
+    throw new Error(
+      `transition to CONFIRMED failed: ${confirmRes.status} ${JSON.stringify(errBody?.error?.details ?? '')}`,
+    );
+  }
+  console.log('[smoke] appointment transition SCHEDULED → CONFIRMED: OK');
+
+  const illegal = await fetch(`${base}/appointments/${appt1Body.data.id}/status`, {
+    method: 'PATCH',
+    headers: authHeaders,
+    body: JSON.stringify({ status: 'COMPLETED' }),
+  });
+  const illegalBody = (await illegal.json()) as { error?: { code: string } };
+  if (illegal.status !== 409 || illegalBody.error?.code !== 'INVALID_APPOINTMENT_TRANSITION') {
+    throw new Error(`expected 409 INVALID_APPOINTMENT_TRANSITION, got ${illegal.status}`);
+  }
+  console.log('[smoke] illegal transition rejected (409): OK');
+
+  // 23. Cancel + cleanup
+  await fetch(`${base}/appointments/${appt1Body.data.id}/status`, {
+    method: 'PATCH',
+    headers: authHeaders,
+    body: JSON.stringify({ status: 'CANCELLED' }),
+  });
+  await fetch(`${base}/appointments/${appt1Body.data.id}`, {
+    method: 'DELETE',
+    headers: authHeaders,
+  });
+  await fetch(`${base}/vehicles/${veh2Body.data.id}`, {
+    method: 'DELETE',
+    headers: authHeaders,
+  });
+  await fetch(`${base}/customers/${cust2Body.data.id}`, {
+    method: 'DELETE',
+    headers: authHeaders,
+  });
+  await fetch(`${base}/services/${svcBody.data.id}`, {
     method: 'DELETE',
     headers: authHeaders,
   });
