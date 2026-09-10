@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@mechanic-system/types": "workspace:*",
+    "@mechanic-system/shared": "workspace:*",
     "@mechanic-system/validation": "workspace:*",
     "@tanstack/react-query": "^5.62.11",
     "react": "^18.3.1",

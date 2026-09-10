@@ -9,6 +9,9 @@ import { AuthModule } from '../modules/auth/auth.module';
 import { UsersModule } from '../modules/users/users.module';
 import { CustomersModule } from '../modules/customers/customers.module';
 import { VehiclesModule } from '../modules/vehicles/vehicles.module';
+import { ServicesModule } from '../modules/services/services.module';
+import { SuppliersModule } from '../modules/suppliers/suppliers.module';
+import { ProductsModule } from '../modules/products/products.module';
 import { HealthController } from './health.controller';
 
 /**
@@ -27,6 +30,9 @@ import { HealthController } from './health.controller';
     UsersModule,
     CustomersModule,
     VehiclesModule,
+    ServicesModule,
+    SuppliersModule,
+    ProductsModule,
   ],
   controllers: [HealthController],
   providers: [

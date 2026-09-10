@@ -6,6 +6,9 @@ import { PlaceholderPage } from './placeholder-page';
 import { CustomersPage } from '../modules/customers/customers-page';
 import { CustomerDetailPage } from '../modules/customers/customer-detail-page';
 import { VehiclesPage } from '../modules/vehicles/vehicles-page';
+import { ServicesPage } from '../modules/services/services-page';
+import { SuppliersPage } from '../modules/suppliers/suppliers-page';
+import { ProductsPage } from '../modules/products/products-page';
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuth();
@@ -35,9 +38,9 @@ export function AppRouter() {
         <Route path="customers" element={<CustomersPage />} />
         <Route path="customers/:id" element={<CustomerDetailPage />} />
         <Route path="vehicles" element={<VehiclesPage />} />
-        <Route path="services" element={<PlaceholderPage title="Serviços" phase="Fase 3" />} />
-        <Route path="products" element={<PlaceholderPage title="Produtos" phase="Fase 3" />} />
-        <Route path="suppliers" element={<PlaceholderPage title="Fornecedores" phase="Fase 3" />} />
+        <Route path="services" element={<ServicesPage />} />
+        <Route path="products" element={<ProductsPage />} />
+        <Route path="suppliers" element={<SuppliersPage />} />
         <Route
           path="appointments"
           element={<PlaceholderPage title="Agendamentos" phase="Fase 4" />}

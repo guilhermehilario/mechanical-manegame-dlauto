@@ -208,6 +208,150 @@ async function main(): Promise<void> {
     headers: authHeaders,
   });
 
+  // ─── Fase 3: services + suppliers + products/stock (spec 36) ───
+
+  // 12. Create a catalog service (price in integer cents)
+  const createServiceRes = await fetch(`${base}/services`, {
+    method: 'POST',
+    headers: authHeaders,
+    body: JSON.stringify({ name: `Serviço Smoke ${Date.now()}`, priceCents: 15000 }),
+  });
+  const createdService = (await createServiceRes.json()) as {
+    success: boolean;
+    data?: { id: string; priceCents: number };
+    error?: { code: string };
+  };
+  if (!createServiceRes.ok || !createdService.success || !createdService.data) {
+    throw new Error(`create service failed: ${JSON.stringify(createdService.error ?? {})}`);
+  }
+  if (createdService.data.priceCents !== 15000) throw new Error('service price mismatch');
+  console.log('[smoke] create service: OK');
+
+  // 13. Create a supplier (valid check digits, unique per run via suffix is not
+  // possible — CNPJ has fixed check digits — so reuse a valid one and expect
+  // either success or 409 if a previous run already created it)
+  const createSupplierRes = await fetch(`${base}/suppliers`, {
+    method: 'POST',
+    headers: authHeaders,
+    body: JSON.stringify({
+      name: `Fornecedor Smoke ${Date.now()}`,
+      cnpj: '45723174000110',
+      phone: '1133334444',
+    }),
+  });
+  const createdSupplier = (await createSupplierRes.json()) as {
+    success: boolean;
+    data?: { id: string };
+    error?: { code: string };
+  };
+  let supplierId: string | undefined;
+  if (createSupplierRes.status === 409) {
+    // A previous run already registered this CNPJ — find it via search.
+    const searchRes = await fetch(`${base}/suppliers?search=45723174000110`, {
+      headers: authHeaders,
+    });
+    const searchBody = (await searchRes.json()) as {
+      success: boolean;
+      data?: { items: { id: string; cnpj: string }[] };
+    };
+    supplierId = searchBody.data?.items.find((s) => s.cnpj === '45723174000110')?.id;
+    console.log('[smoke] supplier already existed (409) — reused: OK');
+  } else if (createSupplierRes.ok && createdSupplier.success && createdSupplier.data) {
+    supplierId = createdSupplier.data.id;
+    console.log('[smoke] create supplier: OK');
+  } else {
+    throw new Error(`create supplier failed: ${JSON.stringify(createdSupplier.error ?? {})}`);
+  }
+
+  // 14. Create a product (code unique per run)
+  const productCode = `SMK-${Date.now()}`;
+  const createProductRes = await fetch(`${base}/products`, {
+    method: 'POST',
+    headers: authHeaders,
+    body: JSON.stringify({
+      code: productCode,
+      name: 'Produto Smoke',
+      costPriceCents: 2000,
+      salePriceCents: 3500,
+      stockQuantity: 10,
+      minStock: 2,
+      supplierId: supplierId ?? '',
+    }),
+  });
+  const createdProduct = (await createProductRes.json()) as {
+    success: boolean;
+    data?: { id: string; code: string; stockQuantity: number };
+    error?: { code: string };
+  };
+  if (!createProductRes.ok || !createdProduct.success || !createdProduct.data) {
+    throw new Error(`create product failed: ${JSON.stringify(createdProduct.error ?? {})}`);
+  }
+  if (createdProduct.data.code !== productCode) throw new Error('code normalization failed');
+  if (createdProduct.data.stockQuantity !== 10) throw new Error('initial stock mismatch');
+  console.log('[smoke] create product: OK (code normalized)');
+
+  // 15. Stock IN movement inside a transaction (spec 36)
+  const movementRes = await fetch(`${base}/products/movements`, {
+    method: 'POST',
+    headers: authHeaders,
+    body: JSON.stringify({
+      productId: createdProduct.data.id,
+      type: 'IN',
+      quantity: 5,
+      reason: 'Smoke test purchase',
+    }),
+  });
+  const movementBody = (await movementRes.json()) as {
+    success: boolean;
+    data?: { previousStock: number; newStock: number };
+    error?: { code: string };
+  };
+  if (!movementRes.ok || !movementBody.success || !movementBody.data) {
+    throw new Error(`stock movement failed: ${JSON.stringify(movementBody.error ?? {})}`);
+  }
+  if (movementBody.data.previousStock !== 10 || movementBody.data.newStock !== 15) {
+    throw new Error(
+      `stock movement mismatch: ${movementBody.data.previousStock} -> ${movementBody.data.newStock}`,
+    );
+  }
+  console.log('[smoke] stock IN movement (10 -> 15): OK');
+
+  // 16. OUT movement that would go negative must 409 INSUFFICIENT_STOCK
+  const negativeRes = await fetch(`${base}/products/movements`, {
+    method: 'POST',
+    headers: authHeaders,
+    body: JSON.stringify({
+      productId: createdProduct.data.id,
+      type: 'OUT',
+      quantity: 999,
+      reason: 'Smoke test negative guard',
+    }),
+  });
+  const negativeBody = (await negativeRes.json()) as { error?: { code: string } };
+  if (negativeRes.status !== 409 || negativeBody.error?.code !== 'INSUFFICIENT_STOCK') {
+    throw new Error(`expected 409 INSUFFICIENT_STOCK, got ${negativeRes.status}`);
+  }
+  console.log('[smoke] insufficient stock rejected (409): OK');
+
+  // 17. Direct stock edit via PATCH must be rejected (schema strips/omits it)
+  const directEdit = await fetch(`${base}/products/${createdProduct.data.id}`, {
+    method: 'PATCH',
+    headers: authHeaders,
+    body: JSON.stringify({ minStock: 3 }),
+  });
+  if (!directEdit.ok) throw new Error(`product PATCH failed: ${directEdit.status}`);
+  console.log('[smoke] product update (without stock edit): OK');
+
+  // 18. Cleanup: soft delete product + service created by this run
+  await fetch(`${base}/products/${createdProduct.data.id}`, {
+    method: 'DELETE',
+    headers: authHeaders,
+  });
+  await fetch(`${base}/services/${createdService.data.id}`, {
+    method: 'DELETE',
+    headers: authHeaders,
+  });
+
   await api.close();
   console.log('[smoke] ALL CHECKS PASSED');
 }

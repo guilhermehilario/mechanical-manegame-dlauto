@@ -144,6 +144,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@mechanic-system/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
       '@mechanic-system/types':
         specifier: workspace:*
         version: link:../../packages/types

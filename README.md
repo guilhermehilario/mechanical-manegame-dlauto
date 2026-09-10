@@ -4,7 +4,7 @@ Aplicação desktop **offline-first** para gerenciamento de oficinas mecânicas,
 construída como monorepo TypeScript com foco em segurança, manutenibilidade,
 testabilidade e evolução incremental.
 
-> **Status: Fase 1 (infraestrutura) e Fase 2 (clientes + veículos) concluídas.**
+> **Status: Fases 1–3 concluídas (infraestrutura, clientes + veículos, serviços + produtos/estoque + fornecedores).**
 > Módulos de domínio restantes (serviços, produtos, ordens de serviço etc.)
 > serão implementados nas fases 3–8. Veja [Plano de fases](#plano-de-fases).
 
@@ -137,7 +137,9 @@ Empacotamento com electron-builder será adicionado na Fase 8
       envelope de erros, logs estruturados, rate limit, CI de qualidade local
 - [x] **Fase 2** — Clientes + Veículos (CRUD, CPF/placa únicos, soft delete,
       busca, paginação, UI de listagem e formulários)
-- [ ] **Fase 3** — Serviços + Produtos (estoque centralizado) + Fornecedores
+- [x] **Fase 3** — Serviços + Produtos (estoque centralizado) + Fornecedores
+      (CRUD dos catálogos, CNPJ/código únicos, movimentações de estoque
+      transacionais com trilha audível, alerta de estoque mínimo, UI completa)
 - [ ] **Fase 4** — Agendamento (regras de conflito no backend)
 - [ ] **Fase 5** — Ordens de Serviço (state machine, snapshots, transações)
 - [ ] **Fase 6** — Histórico de manutenção (derivado) + Imagens (StorageService)

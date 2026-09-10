@@ -37,6 +37,7 @@ model User {
 
   refreshTokens RefreshToken[]
   auditLogs     AuditLog[]
+  stockMovements StockMovement[]
 
   @@map("users")
 }
@@ -97,6 +98,93 @@ model Vehicle {
 
   @@index([customerId])
   @@map("vehicles")
+}
+
+// ─────────────────────────────────────────────────────────────
+// Catalogs + stock (Fase 3 — spec §17/§34/§35/§36)
+// Money is ALWAYS integer cents. Catalogs use soft delete (active/deletedAt).
+// Every stock change goes through StockService inside a transaction (§36).
+// ─────────────────────────────────────────────────────────────
+
+enum StockMovementType {
+  IN
+  OUT
+  ADJUSTMENT
+}
+
+model Service {
+  id               String   @id @default(cuid())
+  name             String
+  description      String?
+  priceCents       Int
+  estimatedMinutes Int?
+  active           Boolean  @default(true)
+  deletedAt        DateTime?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([name])
+  @@map("services")
+}
+
+model Supplier {
+  id        String    @id @default(cuid())
+  name      String
+  cnpj      String    @unique // stored as bare 14 digits
+  phone     String
+  email     String?
+  address   String?
+  notes     String?
+  active    Boolean   @default(true)
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  products Product[]
+
+  @@index([name])
+  @@map("suppliers")
+}
+
+model Product {
+  id             String   @id @default(cuid())
+  code           String   @unique // normalized uppercase
+  name           String
+  description    String?
+  costPriceCents Int
+  salePriceCents Int
+  stockQuantity  Int      @default(0)
+  minStock       Int      @default(0)
+  location       String?
+  supplierId     String?
+  supplier       Supplier? @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  active         Boolean  @default(true)
+  deletedAt      DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  stockMovements StockMovement[]
+
+  @@index([name])
+  @@index([supplierId])
+  @@map("products")
+}
+
+model StockMovement {
+  id            String           @id @default(cuid())
+  productId     String
+  product       Product          @relation(fields: [productId], references: [id], onDelete: Restrict)
+  type          StockMovementType
+  quantity      Int // IN: added / OUT: removed / ADJUSTMENT: new absolute stock
+  reason        String
+  previousStock Int // snapshot for auditability (spec §36)
+  newStock      Int
+  userId        String?
+  user          User?            @relation(fields: [userId], references: [id], onDelete: SetNull)
+  createdAt     DateTime         @default(now())
+
+  @@index([productId, createdAt])
+  @@map("stock_movements")
 }
 
 // ─────────────────────────────────────────────────────────────

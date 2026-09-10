@@ -11,12 +11,15 @@
 | Snapshot histórico | Itens da OS copiam nome/preço/quantidade no momento da execução — alterar cadastro **nunca** reescreve OS antiga (§35) |
 | Migrations | Única forma de mudar o schema (`prisma migrate dev`) — nunca ALTER manual |
 
-## Modelo atual (Fases 1–2)
+## Modelo atual (Fases 1–3)
 
 ```
 users ──< refresh_tokens
 users ──< audit_logs
+users ──< stock_movements
 customers ──< vehicles
+suppliers ──< products ──< stock_movements
+services (catálogo)
 sync_outbox (fila para sync futuro)
 ```
 
@@ -39,6 +42,34 @@ formato antigo `AAA9999` e Mercosul `AAA9A99`), `brand`, `model`, `year?`,
   (`deletedAt` + `active=false`), preservando histórico de OS futura (§35).
 - Busca em clientes por nome/CPF/telefone; em veículos por placa/marca/modelo.
   Paginação com limite máximo de 100 (§25).
+
+### services (catálogo — Fase 3)
+`name`, `description?`, `priceCents` (**Int em centavos**, §18),
+`estimatedMinutes?` + soft delete e timestamps. Índice em `name`. Editar o
+catálogo nunca reescreve OS antiga — os itens da OS carregam snapshot
+próprio (§35).
+
+### suppliers (Fase 3)
+`name`, `cnpj` (unique, armazenado como 14 dígitos, validado com dígitos
+verificadores), `phone`, `email?`, `address?`, `notes?` + soft delete e
+timestamps. Duplicata → `409 CNPJ_ALREADY_EXISTS`.
+
+### products (Fase 3)
+`code` (unique, normalizado para maiúsculas), `name`, `description?`,
+`costPriceCents`, `salePriceCents`, `stockQuantity` (Int ≥ 0), `minStock`,
+`location?`, `supplierId?` FK (**onDelete: SetNull**) + soft delete e
+timestamps. Duplicata de código → `409 PRODUCT_CODE_ALREADY_EXISTS`.
+
+### Regras da Fase 3 (estoque — §36)
+- `stockQuantity` **nunca** é editado direto: toda mudança passa por
+  `POST /products/movements` dentro de transação (grava a movimentação e
+  atualiza o produto atomicamente).
+- Tipos de movimentação: `IN` (entrada), `OUT` (saída), `ADJUSTMENT`
+  (define o total absoluto). Cada registro guarda `previousStock`/`newStock`
+  (trilha audível) e `userId`.
+- Saída que deixaria o estoque negativo → `409 INSUFFICIENT_STOCK`.
+- Filtro `lowStock=true` lista produtos com `stockQuantity <= minStock`
+  (comparação entre colunas via raw SQL no SQLite).
 
 ### users
 | Campo | Tipo | Notas |
@@ -81,7 +112,7 @@ derivada sobre work orders por veículo (§14, sem duplicação de dados).
 
 ## Índices e constraints (planejados)
 
-- `customers.cpf` unique ✓ (Fase 2); `vehicles.plate` unique ✓ (Fase 2); `products.code` unique; `work_orders.orderNumber` unique
+- `customers.cpf` unique ✓ (Fase 2); `vehicles.plate` unique ✓ (Fase 2); `products.code` unique ✓ (Fase 3); `suppliers.cnpj` unique ✓ (Fase 3); `work_orders.orderNumber` unique
 - `(vehicleId, scheduledAt)` para checagem de conflito de agendamento
 - FKs com `onDelete` explícito (Cascade em tokens, Restrict/Protect em
   registros históricos, SetNull em auditoria)

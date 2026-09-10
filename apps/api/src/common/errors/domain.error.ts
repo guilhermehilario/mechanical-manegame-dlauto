@@ -40,3 +40,10 @@ export class ForbiddenError extends DomainError {
     super(code, message, 403);
   }
 }
+
+/** Raised when a stock movement would take stock below zero (spec section 36). */
+export class InsufficientStockError extends DomainError {
+  constructor(message: string) {
+    super('INSUFFICIENT_STOCK', message, 409);
+  }
+}

@@ -9,7 +9,8 @@
 /** Monetary amount in cents (integer). */
 export type Cents = number;
 
-const MAX_SAFE_CENTS = 900_000_000_00; // ~R$ 900 million safety ceiling
+/** ~R$ 900 million safety ceiling — shared with validation schemas. */
+export const MAX_SAFE_CENTS = 900_000_000_00;
 
 /** Type guard: value must be a finite integer within safe bounds. */
 export function isCents(value: unknown): value is Cents {
