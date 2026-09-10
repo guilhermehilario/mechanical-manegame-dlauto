@@ -4,9 +4,10 @@ Aplicação desktop **offline-first** para gerenciamento de oficinas mecânicas,
 construída como monorepo TypeScript com foco em segurança, manutenibilidade,
 testabilidade e evolução incremental.
 
-> **Status: Fases 1–7 concluídas (infraestrutura; clientes + veículos; catálogos + estoque; agendamentos; ordens de serviço com máquina de estados e snapshots; histórico derivado + imagens; retirada/entrega de veículos).**
-> Módulos de domínio restantes (serviços, produtos, ordens de serviço etc.)
-> serão implementados nas fases 3–8. Veja [Plano de fases](#plano-de-fases).
+> **Status: Fases 1–8 concluídas (infraestrutura; clientes + veículos; catálogos
+> + estoque; agendamentos; ordens de serviço com máquina de estados e
+> snapshots; histórico derivado + imagens; retirada/entrega de veículos;
+> dashboard + relatórios + empacotamento autocontido + E2E).**
 
 ## Objetivo
 
@@ -109,10 +110,15 @@ pnpm db:studio    # Prisma Studio
 ```bash
 pnpm lint         # ESLint (flat config, strict-type-checked)
 pnpm typecheck    # tsc --noEmit em todos os pacotes
-pnpm test         # Vitest (140 testes: money, state machines, auth, DI, UI, catálogos, estoque, agendamentos, OS)
+pnpm test         # Vitest (unitários da API, web e pacotes)
+pnpm test:e2e     # Playwright (faz build; login, criar cliente e relatórios no stack real)
 pnpm build        # builds de produção
 pnpm --filter @mechanic-system/api smoke   # smoke test ponta a ponta da API
 ```
+
+> `test:e2e` roda contra um banco limpo (`database/prisma/e2e.db`, recriado a
+> cada execução antes de os servidores subirem — evita o engine do Prisma
+> reter um inode de banco antigo).
 
 ## Variáveis de ambiente
 
@@ -122,14 +128,30 @@ inválida (spec §30). Nunca versione `.env` real.
 
 ## Empacotamento (Electron)
 
+Empacotamento **autocontido** para a oficina com electron-builder — não depende
+de Node nem de conexão com a internet na máquina de destino:
+
 ```bash
-pnpm build        # compila api + desktop (tsc)
-cd apps/desktop && pnpm start
+pnpm --filter @mechanic-system/desktop package:dir  # teste local: release/linux-unpacked/
+pnpm --filter @mechanic-system/desktop package      # instaladores (AppImage/deb/…)
 ```
 
-Empacotamento com electron-builder será adicionado na Fase 8
-(distribuição para a oficina). A entry da API em produção é
-`apps/api/dist/platform.js` (configurável via `MECHANIC_API_ENTRY`).
+Layout do app empacotado (tudo real, fora do asar):
+
+- `resources/api/` — API autocontida (bundle esbuild + `node_modules` de
+  produção + schema/migrations Prisma). Roda no Node **embutido** do Electron
+  (`ELECTRON_RUN_AS_NODE`) em `127.0.0.1:<porta efêmera>`, com banco em
+  `userData/mechanic.db` e segredos JWT gerados/persistidos em
+  `userData/secrets.json`.
+- `resources/renderer/` — build do React (HashRouter, carregado via `file://`).
+- Primeira execução: `prisma migrate deploy` aplica as migrations antes de a
+  API subir.
+
+> Por que a API não fica no asar: o engine nativo do Prisma e imports ESM não
+> executam de dentro de `app.asar`. O electron-builder ignora qualquer pasta
+> chamada `node_modules` na **raiz de um fileSet**; contornamos isso montando
+> `extraResources` com `from` apontando para o próprio `node_modules` (nome
+> real, resolução ESM/CJS intacta, binários nativos fora do asar).
 
 ## Plano de fases
 
@@ -154,7 +176,10 @@ Empacotamento com electron-builder será adicionado na Fase 8
       por OS (quem retira, documento CPF/CNH, KM, assinatura em canvas),
       registrado em **transação única** com a transição da OS para
       `DELIVERED`; fila "Aguardando retirada" + histórico de retiradas na UI
-- [ ] **Fase 8** — Dashboard, relatórios, empacotamento, E2E (Playwright)
+- [x] **Fase 8** — Dashboard (KPIs do dia) + relatórios (receita, top
+      serviços/produtos, status das OS) com períodos; empacotamento
+      autocontido (electron-builder, API sidecar offline-first com migrate de
+      primeira execução); E2E com Playwright
 
 ## Documentação
 

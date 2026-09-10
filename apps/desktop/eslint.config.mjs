@@ -4,6 +4,6 @@ export default [
   ...baseConfig,
   nodeConfig,
   {
-    ignores: ['dist/**', 'node_modules/**'],
+    ignores: ['dist/**', 'node_modules/**', 'staging/**', 'release/**'],
   },
 ];
