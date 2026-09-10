@@ -1,0 +1,139 @@
+// Mechanic System — database schema (spec §17)
+// Conventions:
+//  - Money is ALWAYS integer cents (Int) — never float (spec §18)
+//  - Soft delete via deletedAt + active flag on catalogs (spec §34)
+//  - Historical snapshots live on work order items (spec §35)
+//  - Every table has createdAt/updatedAt
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────────────────────────
+// Auth / users
+// ─────────────────────────────────────────────────────────────
+
+enum UserRole {
+  ADMIN
+  MANAGER
+  MECHANIC
+  ATTENDANT
+}
+
+model User {
+  id           String    @id @default(cuid())
+  name         String
+  email        String    @unique
+  passwordHash String
+  role         UserRole  @default(ATTENDANT)
+  active       Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  refreshTokens RefreshToken[]
+  auditLogs     AuditLog[]
+
+  @@map("users")
+}
+
+model RefreshToken {
+  id          String   @id @default(cuid())
+  tokenHash   String   @unique
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt   DateTime
+  revokedAt   DateTime?
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+// ─────────────────────────────────────────────────────────────
+// Customers + Vehicles (Fase 2 — spec §17/§34)
+// Catalogs use soft delete: `active` flag (logical deactivation, visible as
+// "inactive" in the UI) + `deletedAt` (soft delete — record disappears from
+// lists but stays for historical work orders, spec §35).
+// ─────────────────────────────────────────────────────────────
+
+model Customer {
+  id        String    @id @default(cuid())
+  name      String
+  cpf       String    @unique
+  phone     String
+  email     String?
+  address   String?
+  notes     String?
+  active    Boolean   @default(true)
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  vehicles Vehicle[]
+
+  @@index([name])
+  @@map("customers")
+}
+
+model Vehicle {
+  id         String    @id @default(cuid())
+  customerId String
+  customer   Customer  @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  plate      String    @unique
+  brand      String
+  model      String
+  year       Int?
+  color      String?
+  mileage    Int?
+  active     Boolean   @default(true)
+  deletedAt  DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@index([customerId])
+  @@map("vehicles")
+}
+
+// ─────────────────────────────────────────────────────────────
+// Offline-first sync foundation (spec §39)
+// Services append domain operations here; the future sync worker
+// drains this queue to a central server when online.
+// ─────────────────────────────────────────────────────────────
+
+model SyncOutbox {
+  id        String    @id @default(cuid())
+  entity    String
+  entityId  String
+  operation String // CREATE | UPDATE | DELETE
+  payload   String? // JSON snapshot, no PII beyond what sync requires
+  createdAt DateTime  @default(now())
+  syncedAt  DateTime?
+
+  @@index([syncedAt])
+  @@index([entity, entityId])
+  @@map("sync_outbox")
+}
+
+// ─────────────────────────────────────────────────────────────
+// Audit (spec §26) — critical events, no PII in payload
+// ─────────────────────────────────────────────────────────────
+
+model AuditLog {
+  id         String    @id @default(cuid())
+  userId     String?
+  user       User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action     String
+  entity     String
+  entityId   String?
+  metadata   String?
+  createdAt  DateTime  @default(now())
+
+  @@index([entity, entityId])
+  @@index([userId])
+  @@map("audit_logs")
+}

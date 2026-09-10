@@ -1,0 +1,50 @@
+{
+  "name": "mechanic-system",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Workshop management system - monorepo (React + NestJS + Electron + Prisma/SQLite)",
+  "packageManager": "pnpm@9.15.9",
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "scripts": {
+    "dev": "node scripts/dev.mjs",
+    "dev:api": "node scripts/dev.mjs --api-only",
+    "dev:web": "node scripts/dev.mjs --web-only",
+    "dev:desktop": "turbo run dev --filter=@mechanic-system/desktop",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "lint:fix": "turbo run lint -- --fix",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,yml,yaml}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md,yml,yaml}\"",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "test:e2e": "turbo run test:e2e",
+    "db:generate": "turbo run db:generate --filter=@mechanic-system/api",
+    "db:migrate": "turbo run db:migrate --filter=@mechanic-system/api",
+    "db:seed": "turbo run db:seed --filter=@mechanic-system/api",
+    "db:studio": "turbo run db:studio --filter=@mechanic-system/api",
+    "prepare": "husky || true"
+  },
+  "devDependencies": {
+    "@mechanic-system/eslint-config": "workspace:*",
+    "@mechanic-system/prettier-config": "workspace:*",
+    "@mechanic-system/tsconfig": "workspace:*",
+    "@types/node": "^22.10.2",
+    "eslint": "^9.17.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^15.3.0",
+    "prettier": "^3.4.2",
+    "turbo": "^2.3.3",
+    "typescript": "^5.7.2"
+  },
+  "lint-staged": {
+    "*.{ts,tsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md,yml,yaml}": [
+      "prettier --write"
+    ]
+  }
+}

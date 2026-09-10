@@ -1,0 +1,52 @@
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { ApiClient } from './api-client';
+
+const mockFetch = (status: number, body: unknown) =>
+  vi.fn().mockResolvedValue(
+    new Response(JSON.stringify(body), {
+      status,
+      headers: { 'Content-Type': 'application/json' },
+    }),
+  );
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
+
+describe('ApiClient', () => {
+  it('unwraps success envelopes', async () => {
+    global.fetch = mockFetch(200, { success: true, data: { hello: 'world' } });
+    const client = new ApiClient({ baseUrl: 'http://x' });
+    await expect(client.get('/thing')).resolves.toEqual({ hello: 'world' });
+  });
+
+  it('throws typed errors from error envelopes', async () => {
+    global.fetch = mockFetch(404, {
+      success: false,
+      error: { code: 'USER_NOT_FOUND', message: 'User not found' },
+    });
+    const client = new ApiClient({ baseUrl: 'http://x' });
+    await expect(client.get('/users/1')).rejects.toMatchObject({
+      code: 'USER_NOT_FOUND',
+      status: 404,
+    });
+  });
+
+  it('maps network failures to NETWORK_ERROR without leaking details', async () => {
+    global.fetch = vi.fn().mockRejectedValue(new Error('ECONNREFUSED boom secret'));
+    const client = new ApiClient({ baseUrl: 'http://x' });
+    await expect(client.get('/users')).rejects.toMatchObject({
+      code: 'NETWORK_ERROR',
+      status: 0,
+    });
+  });
+
+  it('attaches the bearer token when available', async () => {
+    const fetchMock = mockFetch(200, { success: true, data: null });
+    global.fetch = fetchMock;
+    const client = new ApiClient({ baseUrl: 'http://x', getToken: () => 'tok-123' });
+    await client.get('/me');
+    const request = fetchMock.mock.calls[0]?.[1] as RequestInit;
+    expect((request.headers as Record<string, string>).Authorization).toBe('Bearer tok-123');
+  });
+});

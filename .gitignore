@@ -1,0 +1,49 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Builds
+dist/
+build/
+out/
+release/
+*.tsbuildinfo
+
+# Environment - never commit secrets
+.env
+.env.local
+.env.*.local
+
+# Database - local data files
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+database/prisma/dev.db*
+
+# Testing
+coverage/
+playwright-report/
+test-results/
+
+# Electron
+.vite/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# Backups
+backups/
+*.bak

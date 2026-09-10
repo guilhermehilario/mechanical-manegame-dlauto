@@ -1,0 +1,9 @@
+{
+  "extends": "@mechanic-system/tsconfig/nestjs.json",
+  "compilerOptions": {
+    "outDir": "dist",
+    "rootDir": "src",
+    "declaration": false
+  },
+  "include": ["src"]
+}

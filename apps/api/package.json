@@ -1,0 +1,47 @@
+{
+  "name": "@mechanic-system/api",
+  "version": "0.1.0",
+  "private": true,
+  "main": "dist/app/bootstrap.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "ts-node src/platform.ts",
+    "start": "node dist/platform.js",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "smoke": "ts-node smoke.ts",
+    "db:generate": "prisma generate --schema ../../database/prisma/schema.prisma"
+  },
+  "dependencies": {
+    "@mechanic-system/config": "workspace:*",
+    "@mechanic-system/shared": "workspace:*",
+    "@mechanic-system/types": "workspace:*",
+    "@mechanic-system/validation": "workspace:*",
+    "@nestjs/common": "^10.4.15",
+    "@nestjs/core": "^10.4.15",
+    "@nestjs/jwt": "^10.2.0",
+    "@nestjs/platform-express": "^10.4.15",
+    "@nestjs/throttler": "^6.3.0",
+    "@node-rs/argon2": "^2.0.2",
+    "@prisma/client": "^6.2.1",
+    "dotenv": "^16.4.7",
+    "helmet": "^8.0.1",
+    "nestjs-pino": "^4.2.0",
+    "pino": "^9.6.0",
+    "pino-http": "^10.3.0",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.1",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@mechanic-system/eslint-config": "workspace:*",
+    "@mechanic-system/tsconfig": "workspace:*",
+    "@types/express": "^4.17.21",
+    "prisma": "^6.2.1",
+    "ts-node": "^10.9.2",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  }
+}

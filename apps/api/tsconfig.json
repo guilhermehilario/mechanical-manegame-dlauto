@@ -1,0 +1,11 @@
+{
+  "extends": "@mechanic-system/tsconfig/nestjs.json",
+  "compilerOptions": {
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "outDir": "dist",
+    "declaration": true
+  },
+  "include": ["src", "tests", "smoke.ts", "vitest.config.ts"],
+  "exclude": ["dist", "node_modules"]
+}
