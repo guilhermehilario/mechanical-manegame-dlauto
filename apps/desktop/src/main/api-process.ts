@@ -1,10 +1,12 @@
 import { spawn, type ChildProcessByStdio } from 'node:child_process';
+import { randomBytes } from 'node:crypto';
 import type { Readable } from 'node:stream';
+import { app } from 'electron';
 
 /** Spawn result with piped stdout/stderr (stdin ignored): streams are non-null. */
 type ApiChildProcess = ChildProcessByStdio<null, Readable, Readable>;
 import { join, resolve } from 'node:path';
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 
 export interface RunningApiProcess {
   baseUrl: string;
@@ -24,18 +26,31 @@ const HEALTH_INTERVAL_MS: number = 250;
  */
 export async function startApiProcess(): Promise<RunningApiProcess> {
   const apiEntry = resolveApiEntry();
+
+  if (app.isPackaged) {
+    await migrateDatabaseIfNeeded();
+  }
+
   const child = spawn(process.execPath, [apiEntry], {
     env: {
       ...process.env,
       ELECTRON_RUN_AS_NODE: '1',
-      NODE_ENV: process.env.NODE_ENV ?? 'production',
+      NODE_ENV: 'production',
       API_PORT: '0',
-      // TODO (Fase 8 — empacotamento): em produção empacotada, DATABASE_URL
-      // deve apontar para o diretório de dados do usuário (app.getPath
-      // ('userData')), nunca para dentro do bundle (somente leitura).
-      DATABASE_URL: process.env.DATABASE_URL ?? 'file:./dev.db',
-      JWT_ACCESS_SECRET: process.env.JWT_ACCESS_SECRET ?? '',
-      JWT_REFRESH_SECRET: process.env.JWT_REFRESH_SECRET ?? '',
+      // Packaged: everything lives in userData (writable); never inside the
+      // read-only bundle. Secrets are generated once and persisted there.
+      ...(app.isPackaged
+        ? {
+            DATABASE_URL: databaseUrl(),
+            STORAGE_DIR: join(userDataDir(), 'storage'),
+            JWT_ACCESS_SECRET: loadOrCreateSecret('jwt-access-secret'),
+            JWT_REFRESH_SECRET: loadOrCreateSecret('jwt-refresh-secret'),
+          }
+        : {
+            DATABASE_URL: process.env.DATABASE_URL ?? 'file:./dev.db',
+            JWT_ACCESS_SECRET: process.env.JWT_ACCESS_SECRET ?? '',
+            JWT_REFRESH_SECRET: process.env.JWT_REFRESH_SECRET ?? '',
+          }),
       LOG_LEVEL: process.env.LOG_LEVEL ?? 'info',
     },
     stdio: ['ignore', 'pipe', 'pipe'],
@@ -61,7 +76,20 @@ export async function startApiProcess(): Promise<RunningApiProcess> {
   };
 }
 
+// ─── Packaged layout (Fase 8) ───────────────────────────────────────────────
+
+/**
+ * Packaged app layout (electron-builder): a API roda 100% de arquivos REAIS
+ * em resources/api/ (extraResources — fora do asar), porque o CLI do Prisma usa
+ * import ESM e binários nativos não executam de dentro do asar.
+ *   resources/api/           → API autocontida (bundle esbuild + node_modules prod)
+ *   resources/renderer/      → build do web (asar)
+ *   resources/api/prisma/    → schema + migrations (migrate deploy na 1ª execução)
+ */
 function resolveApiEntry(): string {
+  if (app.isPackaged) {
+    return join(process.resourcesPath, 'api', 'dist', 'platform.js');
+  }
   // Packaged/env override first; dev fallback walks to the API build output.
   const override = process.env.MECHANIC_API_ENTRY;
   if (override && existsSync(override)) return resolve(override);
@@ -73,6 +101,81 @@ function resolveApiEntry(): string {
   throw new Error(
     `API entry not found. Build @mechanic-system/api first (looked at: ${devPath}).`,
   );
+}
+
+function userDataDir(): string {
+  return app.getPath('userData');
+}
+
+function databaseUrl(): string {
+  const dbPath = join(userDataDir(), 'mechanic.db');
+  return `file:${dbPath}`;
+}
+
+/** Reads a persisted secret from userData, generating + persisting on first run. */
+function loadOrCreateSecret(fileName: string): string {
+  const secretsPath = join(userDataDir(), 'secrets.json');
+  if (existsSync(secretsPath)) {
+    try {
+      const stored = JSON.parse(readFileSync(secretsPath, 'utf8')) as Record<string, string>;
+      const existing = stored[fileName];
+      if (typeof existing === 'string' && existing.length >= 32) return existing;
+    } catch {
+      // corrupt file → regenerate below
+    }
+  }
+  const secret = randomBytes(48).toString('base64');
+  const stored = existsSync(secretsPath)
+    ? (JSON.parse(readFileSync(secretsPath, 'utf8')) as Record<string, string>)
+    : {};
+  stored[fileName] = secret;
+  writeFileSync(secretsPath, JSON.stringify(stored, null, 2), { mode: 0o600 });
+  return secret;
+}
+
+/**
+ * First run: applies the embedded migrations via the deployed Prisma CLI
+ * (resources/api/node_modules/prisma), creating SQLite under userData.
+ * Subsequent runs keep the existing DB untouched.
+ */
+async function migrateDatabaseIfNeeded(): Promise<void> {
+  const dbPath = join(userDataDir(), 'mechanic.db');
+  if (existsSync(dbPath)) return;
+
+  const prismaCli = join(
+    process.resourcesPath,
+    'api',
+    'node_modules',
+    'prisma',
+    'build',
+    'index.js',
+  );
+  const schemaPath = join(process.resourcesPath, 'api', 'prisma', 'schema.prisma');
+  if (!existsSync(prismaCli) || !existsSync(schemaPath)) {
+    throw new Error('Empacotamento inválido: Prisma CLI ou schema ausentes em resources/api.');
+  }
+
+  await new Promise<void>((resolveMigrate, reject) => {
+    const migrated = spawn(
+      process.execPath,
+      [prismaCli, 'migrate', 'deploy', '--schema', schemaPath],
+      {
+env: {
+          ...process.env,
+          ELECTRON_RUN_AS_NODE: '1',
+          DATABASE_URL: databaseUrl(),
+        },
+        stdio: 'inherit',
+      },
+    );
+    migrated.on('exit', (code) => {
+      if (code === 0) resolveMigrate();
+      else reject(new Error(`Falha ao inicializar o banco de dados (prisma migrate, code ${code}).`));
+    });
+    migrated.on('error', (error) => {
+      reject(error);
+    });
+  });
 }
 
 async function waitForPort(apiEntry: string, child: ApiChildProcess): Promise<number> {

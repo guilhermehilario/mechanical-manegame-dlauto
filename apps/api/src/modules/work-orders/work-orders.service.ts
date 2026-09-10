@@ -3,6 +3,7 @@ import { ConflictError, NotFoundError } from '../../common/errors/domain.error';
 import { ErrorCodes } from '@mechanic-system/types';
 import {
   canTransition,
+  computeWorkOrderTotals,
   isTerminalWorkOrderStatus,
   isWorkOrderItemsEditable,
   itemLineTotalCents,
@@ -52,25 +53,7 @@ function toProductItemDto(item: WorkOrderProductItem): WorkOrderProductItemDto {
 }
 
 function computeTotals(workOrder: WorkOrderWithRelations) {
-  const servicesCents = workOrder.serviceItems.reduce(
-    (sum, item) => sum + itemLineTotalCents(item.unitPriceCents, item.quantity, 0),
-    0,
-  );
-  const productsCents = workOrder.productItems.reduce(
-    (sum, item) =>
-      sum + itemLineTotalCents(item.unitPriceCents, item.quantity, item.discountCents),
-    0,
-  );
-  const discountsCents = workOrder.productItems.reduce(
-    (sum, item) => sum + item.discountCents,
-    0,
-  );
-  return {
-    servicesCents,
-    productsCents,
-    discountsCents,
-    totalCents: servicesCents + productsCents,
-  };
+  return computeWorkOrderTotals(workOrder.serviceItems, workOrder.productItems);
 }
 
 function toDto(workOrder: WorkOrderWithRelations): WorkOrderDto {

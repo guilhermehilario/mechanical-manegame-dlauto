@@ -19,6 +19,9 @@ let apiProcess: RunningApiProcess | null = null;
 
 /** Locates the built web app. Returns null when not built yet. */
 function resolveWebEntry(): string | null {
+  if (app.isPackaged) {
+    return join(process.resourcesPath, 'renderer', 'index.html');
+  }
   // main.js is at apps/desktop/dist/main/main.js → web build at apps/web/dist
   const devPath = join(__dirname, '..', '..', '..', 'web', 'dist', 'index.html');
   if (existsSync(devPath)) return devPath;

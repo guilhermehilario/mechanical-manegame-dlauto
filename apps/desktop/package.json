@@ -2,19 +2,84 @@
   "name": "@mechanic-system/desktop",
   "version": "0.1.0",
   "private": true,
+  "description": "Mechanic System — aplicativo de oficina offline-first",
+  "author": "Mechanic System",
   "main": "dist/main/main.js",
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "dev": "pnpm run build && electron .",
     "start": "electron .",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "stage": "node scripts/stage.mjs",
+    "package": "pnpm run build && pnpm run stage && electron-builder --linux",
+    "package:dir": "pnpm run build && pnpm run stage && electron-builder --linux dir"
   },
   "devDependencies": {
     "@mechanic-system/api": "workspace:*",
     "@mechanic-system/eslint-config": "workspace:*",
     "@mechanic-system/tsconfig": "workspace:*",
     "electron": "^33.2.1",
+    "electron-builder": "^26.0.12",
+    "esbuild": "^0.24.2",
     "typescript": "^5.7.2"
+  },
+  "build": {
+    "appId": "br.com.mechanic.dlauto",
+    "productName": "Mechanic DLAuto",
+    "asar": true,
+    "files": [
+      "dist/**"
+    ],
+    "extraResources": [
+      {
+        "from": "staging/api",
+        "to": "api",
+        "filter": [
+          "**/*"
+        ]
+      },
+      {
+        "from": "staging/api/node_modules",
+        "to": "api/node_modules",
+        "filter": [
+          "**/*"
+        ]
+      },
+      {
+        "from": "staging/renderer",
+        "to": "renderer",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ],
+    "directories": {
+      "output": "release"
+    },
+    "linux": {
+      "target": [
+        "dir",
+        "AppImage"
+      ],
+      "category": "Office",
+      "artifactName": "mechanic-dlauto-${version}-${arch}.${ext}",
+      "executableName": "mechanic-dlauto",
+      "synopsis": "Gestão de oficina mecânica offline-first"
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "artifactName": "mechanic-dlauto-${version}-setup.${ext}"
+    },
+    "mac": {
+      "target": [
+        "dmg"
+      ],
+      "artifactName": "mechanic-dlauto-${version}-${arch}.${ext}"
+    },
+    "npmRebuild": false,
+    "buildDependenciesFromSource": false
   }
 }

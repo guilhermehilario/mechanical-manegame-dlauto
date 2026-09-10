@@ -15,6 +15,9 @@ import { ProductsModule } from '../modules/products/products.module';
 import { AppointmentsModule } from '../modules/appointments/appointments.module';
 import { WorkOrdersModule } from '../modules/work-orders/work-orders.module';
 import { VehiclePickupsModule } from '../modules/vehicle-pickups/vehicle-pickups.module';
+import { AnalyticsModule } from '../modules/analytics/analytics.module';
+import { DashboardModule } from '../modules/dashboard/dashboard.module';
+import { ReportsModule } from '../modules/reports/reports.module';
 import { HealthController } from './health.controller';
 
 /**
@@ -39,6 +42,9 @@ import { HealthController } from './health.controller';
     AppointmentsModule,
     WorkOrdersModule,
     VehiclePickupsModule,
+    AnalyticsModule,
+    DashboardModule,
+    ReportsModule,
   ],
   controllers: [HealthController],
   providers: [

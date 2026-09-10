@@ -31,6 +31,14 @@ function generateUniquePlate(): string {
   return `SMK${p4}${p5}${p67}`;
 }
 
+/** Local "YYYY-MM-DD" for a Date (report input format). */
+function formatYmd(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 async function main(): Promise<void> {
   for (const candidate of ['.env', '../../.env']) {
     const path = resolve(process.cwd(), candidate);
@@ -921,10 +929,100 @@ async function main(): Promise<void> {
   }
   console.log('[smoke] pickups list contains receipt: OK');
 
+  // ─── Fase 8: Dashboard + Relatórios (derived queries) ───
+
+  // 38. Dashboard summary reflects the data created by this run.
+  const dashboardRes = await fetch(`${base}/dashboard/summary`, { headers: authHeaders });
+  const dashboardBody = (await dashboardRes.json()) as {
+    success: boolean;
+    data?: {
+      counts: { customers: number; activeWorkOrders: number; awaitingPickup: number; todayAppointments: number; lowStockProducts: number };
+      revenue: { currentMonthCents: number; previousMonthCents: number };
+      workOrdersByStatus: Array<{ status: string; count: number }>;
+      upcomingAppointments: unknown[];
+      recentWorkOrders: Array<{ orderNumber: number }>;
+      lowStockProducts: unknown[];
+    };
+  };
+  if (!dashboardRes.ok || !dashboardBody.success || !dashboardBody.data) {
+    throw new Error(`smoke: dashboard summary failed (${dashboardRes.status})`);
+  }
+  const dashData = dashboardBody.data;
+  if (dashData.counts.customers < 1 || dashData.counts.activeWorkOrders < 0) {
+    throw new Error('smoke: dashboard counters invalid');
+  }
+  if (
+    typeof dashData.revenue.currentMonthCents !== 'number' ||
+    typeof dashData.revenue.previousMonthCents !== 'number'
+  ) {
+    throw new Error('smoke: dashboard revenue buckets invalid');
+  }
+  if (!dashData.workOrdersByStatus.some((row) => row.status === 'DELIVERED' && row.count >= 1)) {
+    throw new Error('smoke: dashboard status distribution missing DELIVERED OS');
+  }
+  console.log('[smoke] dashboard summary (counters + revenue + status): OK');
+
+  // 39. Revenue report over a wide period includes today's delivered OS.
+  const reportFrom = formatYmd(new Date(Date.now() - 365 * 24 * 3600 * 1000));
+  const reportTo = formatYmd(new Date());
+  const revenueRes = await fetch(
+    `${base}/reports/revenue?from=${reportFrom}&to=${reportTo}`,
+    { headers: authHeaders },
+  );
+  const revenueBody = (await revenueRes.json()) as {
+    success: boolean;
+    data?: { from: string; to: string; totalCents: number; items: Array<{ totalCents: number }> };
+  };
+  if (!revenueRes.ok || !revenueBody.success || !revenueBody.data) {
+    throw new Error(`smoke: revenue report failed (${revenueRes.status})`);
+  }
+  if (revenueBody.data.totalCents <= 0 || revenueBody.data.items.length < 1) {
+    throw new Error(`smoke: revenue report empty (${JSON.stringify(revenueBody.data)})`);
+  }
+  console.log('[smoke] revenue report (delivered OS totaled): OK');
+
+  // 40. Top services/products rank the snapshots of the delivered OS.
+  const topSvcRes = await fetch(
+    `${base}/reports/top-services?from=${reportFrom}&to=${reportTo}`,
+    { headers: authHeaders },
+  );
+  const topSvcBody = (await topSvcRes.json()) as {
+    success: boolean;
+    data?: { items: Array<{ name: string; revenueCents: number }> };
+  };
+  if (!topSvcRes.ok || !topSvcBody.success || !topSvcBody.data || topSvcBody.data.items.length < 1) {
+    throw new Error('smoke: top-services report failed');
+  }
+  const topService = topSvcBody.data.items[0];
+  if (!topService || !(topService.revenueCents >= 20000)) {
+    throw new Error(
+      `smoke: top-services did not include this run's OS (${JSON.stringify(topSvcBody.data.items)})`,
+    );
+  }
+  console.log('[smoke] top-services report (snapshot ranking): OK');
+
+  // 41. Work-order status report fills every status (including zeros).
+  const woReportRes = await fetch(
+    `${base}/reports/work-orders?from=${reportFrom}&to=${reportTo}`,
+    { headers: authHeaders },
+  );
+  const woReportBody = (await woReportRes.json()) as {
+    success: boolean;
+    data?: { items: Array<{ status: string; count: number }> };
+  };
+  if (!woReportRes.ok || !woReportBody.success || !woReportBody.data) {
+    throw new Error(`smoke: work-order report failed (${woReportRes.status})`);
+  }
+  const deliveredRow = woReportBody.data.items.find((row) => row.status === 'DELIVERED');
+  if (!deliveredRow || deliveredRow.count < 1) {
+    throw new Error(`smoke: work-order report missing DELIVERED (${JSON.stringify(woReportBody.data)})`);
+  }
+  console.log('[smoke] work-order status report (full matrix): OK');
+
   // Cleanup for the second WO used in the guard test.
   await fetch(`${base}/work-orders/${wo2Body.data.id}`, { method: 'DELETE', headers: authHeaders });
 
-  // 38. Cleanup (WO cascade-deletes items and any remaining image rows)
+  // 42. Cleanup (WO cascade-deletes items and any remaining image rows)
   await fetch(`${base}/work-orders/${woBody.data.id}`, { method: 'DELETE', headers: authHeaders });
   await fetch(`${base}/vehicles/${woVehicleBody.data.id}`, { method: 'DELETE', headers: authHeaders });
   await fetch(`${base}/customers/${woCustomerBody.data.id}`, { method: 'DELETE', headers: authHeaders });

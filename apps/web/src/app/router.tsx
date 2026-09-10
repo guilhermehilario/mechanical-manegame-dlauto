@@ -2,7 +2,8 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import { useAuth } from '../modules/auth/use-auth';
 import { LoginPage } from '../modules/auth/login-page';
 import { AppLayout } from './layout/app-layout';
-import { PlaceholderPage } from './placeholder-page';
+import { DashboardPage } from '../modules/dashboard/dashboard-page';
+import { ReportsPage } from '../modules/reports/reports-page';
 import { CustomersPage } from '../modules/customers/customers-page';
 import { CustomerDetailPage } from '../modules/customers/customer-detail-page';
 import { VehiclesPage } from '../modules/vehicles/vehicles-page';
@@ -39,7 +40,7 @@ export function AppRouter() {
           </RequireAuth>
         }
       >
-        <Route index element={<PlaceholderPage title="Dashboard" phase="Fase 8" />} />
+        <Route index element={<DashboardPage />} />
         <Route path="customers" element={<CustomersPage />} />
         <Route path="customers/:id" element={<CustomerDetailPage />} />
         <Route path="vehicles" element={<VehiclesPage />} />
@@ -54,6 +55,7 @@ export function AppRouter() {
           path="pickups"
           element={<VehiclePickupsPage />}
         />
+        <Route path="reports" element={<ReportsPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

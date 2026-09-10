@@ -53,3 +53,15 @@ export const TERMINAL_WORK_ORDER_STATUSES: readonly WorkOrderStatus[] = (
 export function isTerminalWorkOrderStatus(status: WorkOrderStatus): boolean {
   return TERMINAL_WORK_ORDER_STATUSES.includes(status);
 }
+
+/**
+ * Statuses that represent work still in the shop (not yet delivered or
+ * cancelled). Used by the dashboard "open work orders" counter.
+ */
+export const ACTIVE_WORK_ORDER_STATUSES: readonly WorkOrderStatus[] = (
+  WORK_ORDER_STATUSES as readonly WorkOrderStatus[]
+).filter((status) => !isTerminalWorkOrderStatus(status));
+
+export function isActiveWorkOrderStatus(status: WorkOrderStatus): boolean {
+  return ACTIVE_WORK_ORDER_STATUSES.includes(status);
+}

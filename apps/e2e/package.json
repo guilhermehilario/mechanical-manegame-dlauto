@@ -1,0 +1,19 @@
+{
+  "name": "@mechanic-system/e2e",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "test:e2e": "node scripts/prepare-e2e-db.mjs && playwright test",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+"devDependencies": {
+    "@mechanic-system/api": "workspace:*",
+    "@mechanic-system/eslint-config": "workspace:*",
+    "@mechanic-system/tsconfig": "workspace:*",
+    "@mechanic-system/web": "workspace:*",
+    "@playwright/test": "^1.49.1",
+    "@types/node": "^22.10.2",
+    "typescript": "^5.7.2"
+  }
+}

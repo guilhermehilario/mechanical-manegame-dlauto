@@ -11,6 +11,7 @@ const NAV_ITEMS = [
   { to: '/appointments', label: 'Agendamentos' },
   { to: '/work-orders', label: 'Ordens de Serviço' },
   { to: '/pickups', label: 'Retirada/Entrega' },
+  { to: '/reports', label: 'Relatórios' },
 ] as const;
 
 export function AppLayout() {

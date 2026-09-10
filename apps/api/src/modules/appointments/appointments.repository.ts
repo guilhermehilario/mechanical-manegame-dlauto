@@ -114,6 +114,16 @@ export class AppointmentsRepository {
     return this.prisma.appointment.count({ where: this.listWhere(filters) });
   }
 
+  /** Active-status appointments within an inclusive time window (Fase 8). */
+  countActiveBetween(from: Date, to: Date): Promise<number> {
+    return this.prisma.appointment.count({
+      where: {
+        status: { in: [...ACTIVE_APPOINTMENT_STATUSES] },
+        scheduledAt: { gte: from, lte: to },
+      },
+    });
+  }
+
   create(data: {
     customerId: string;
     vehicleId: string;

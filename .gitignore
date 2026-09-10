@@ -28,6 +28,7 @@ test-results/
 
 # Electron
 .vite/
+apps/desktop/staging/
 
 # Logs
 logs/
