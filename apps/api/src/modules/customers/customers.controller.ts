@@ -24,13 +24,12 @@ import type {
 } from '@mechanic-system/validation';
 import type { CustomerDto, Paginated } from '@mechanic-system/types';
 import { CustomersService } from './customers.service';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RequireRoles, RolesGuard } from '../auth/roles.guard';
 import { UseGuards } from '@nestjs/common';
 
 // NOTE: global APP_INTERCEPTOR provides the response envelope (spec §27).
 // Every attendant-facing role manages customers (front-desk operation).
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(RolesGuard)
 @Controller('customers')
 export class CustomersController {
   constructor(private readonly customersService: CustomersService) {}

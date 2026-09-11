@@ -26,11 +26,10 @@ import type {
 } from '@mechanic-system/validation';
 import type { Paginated, VehicleDto } from '@mechanic-system/types';
 import { VehiclesService } from './vehicles.service';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RequireRoles, RolesGuard } from '../auth/roles.guard';
 
 // NOTE: global APP_INTERCEPTOR provides the response envelope (spec §27).
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(RolesGuard)
 @Controller('vehicles')
 export class VehiclesController {
   constructor(private readonly vehiclesService: VehiclesService) {}

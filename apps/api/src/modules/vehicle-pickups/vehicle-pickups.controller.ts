@@ -18,7 +18,7 @@ import type { CreateVehiclePickupInput } from '@mechanic-system/validation';
 import { paginationQuerySchema } from '@mechanic-system/validation';
 import type { PaginationQuery } from '@mechanic-system/validation';
 import type { Paginated, VehiclePickupDto } from '@mechanic-system/types';
-import { AuthenticatedRequest, JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { AuthenticatedRequest } from '../auth/jwt-auth.guard';
 import { RequireRoles, RolesGuard } from '../auth/roles.guard';
 import { VehiclePickupsService } from './vehicle-pickups.service';
 
@@ -26,7 +26,7 @@ import { VehiclePickupsService } from './vehicle-pickups.service';
  * Vehicle handover (Fase 7). Front desk/mechanics register the receipt;
  * viewing is open to all roles.
  */
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(RolesGuard)
 @Controller('vehicle-pickups')
 export class VehiclePickupsController {
   constructor(private readonly pickupsService: VehiclePickupsService) {}

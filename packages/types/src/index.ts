@@ -9,3 +9,4 @@ export * from './work-order-image';
 export * from './vehicle-pickup';
 export * from './dashboard';
 export * from './reports';
+export * from './backup';

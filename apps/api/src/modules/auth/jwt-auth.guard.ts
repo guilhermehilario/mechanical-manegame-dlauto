@@ -3,9 +3,11 @@ import {
   type ExecutionContext,
   Injectable,
 } from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
 import { UnauthorizedError } from '../../common/errors/domain.error';
 import { ErrorCodes, type UserRole } from '@mechanic-system/types';
 import { TokenService } from './token.service';
+import { IS_PUBLIC_KEY } from './public.decorator';
 import type { Request } from 'express';
 
 export interface AuthenticatedRequest extends Request {
@@ -18,12 +20,17 @@ export interface AuthenticatedRequest extends Request {
 }
 
 /**
- * Route protection (spec §20). Bearer-token based; the renderer stores the
- * access token in memory only (never localStorage) to limit XSS impact.
+ * Authentication (spec §20). Registered GLOBALLY as APP_GUARD in AppModule
+ * (R5/SEC-05): every route requires a valid bearer token UNLESS explicitly
+ * marked @Public() (health, auth/login, auth/refresh). Controllers no longer
+ * declare JwtAuthGuard per route — deny-by-default is the rule.
  */
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
-  constructor(private readonly tokens: TokenService) {}
+  constructor(
+    private readonly reflector: Reflector,
+    private readonly tokens: TokenService,
+  ) {}
 
   private extractToken(request: Request): string | null {
     const header = request.headers.authorization;
@@ -32,6 +39,12 @@ export class JwtAuthGuard implements CanActivate {
   }
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
+    const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
+      context.getHandler(),
+      context.getClass(),
+    ]);
+    if (isPublic) return true;
+
     const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
     const token = this.extractToken(request);
     if (!token) {

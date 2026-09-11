@@ -11,14 +11,14 @@ import type {
   WorkOrderStatusReportDto,
 } from '@mechanic-system/types';
 import { ReportsService } from './reports.service';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+
 import { RequireRoles, RolesGuard } from '../auth/roles.guard';
 
 /**
  * R3 (SEC-02): reports are financial/business data — restricted to
  * management roles for every route of this controller.
  */
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(RolesGuard)
 @RequireRoles('ADMIN', 'MANAGER')
 @Controller('reports')
 export class ReportsController {

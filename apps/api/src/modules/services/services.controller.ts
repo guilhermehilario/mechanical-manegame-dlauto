@@ -25,12 +25,11 @@ import type {
 } from '@mechanic-system/validation';
 import type { ServiceDto, Paginated } from '@mechanic-system/types';
 import { ServicesService } from './services.service';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RequireRoles, RolesGuard } from '../auth/roles.guard';
 
 // Catalog management: read for all roles, write for back-office roles
 // (mechanics consume the catalog but do not edit it).
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(RolesGuard)
 @Controller('services')
 export class ServicesController {
   constructor(private readonly servicesService: ServicesService) {}

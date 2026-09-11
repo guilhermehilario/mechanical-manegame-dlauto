@@ -33,13 +33,12 @@ import type {
 } from '@mechanic-system/validation';
 import type { VehicleHistoryEntryDto, WorkOrderDto, Paginated } from '@mechanic-system/types';
 import { AuthenticatedRequest } from '../auth/jwt-auth.guard';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RequireRoles, RolesGuard } from '../auth/roles.guard';
 import { WorkOrdersService } from './work-orders.service';
 
 // Mechanics actively work orders (status + items); front desk opens them;
 // only ADMIN/MANAGER can hard-delete.
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(RolesGuard)
 @Controller('work-orders')
 export class WorkOrdersController {
   constructor(private readonly workOrdersService: WorkOrdersService) {}

@@ -27,11 +27,10 @@ import type {
 } from '@mechanic-system/validation';
 import type { AppointmentDto, Paginated } from '@mechanic-system/types';
 import { AppointmentsService } from './appointments.service';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RequireRoles, RolesGuard } from '../auth/roles.guard';
 
 // All roles can read/manage appointments (front-desk + mechanics need access).
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(RolesGuard)
 @Controller('appointments')
 export class AppointmentsController {
   constructor(private readonly appointmentsService: AppointmentsService) {}

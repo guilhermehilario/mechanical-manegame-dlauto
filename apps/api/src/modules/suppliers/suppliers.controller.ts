@@ -25,11 +25,10 @@ import type {
 } from '@mechanic-system/validation';
 import type { SupplierDto, Paginated } from '@mechanic-system/types';
 import { SuppliersService } from './suppliers.service';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RequireRoles, RolesGuard } from '../auth/roles.guard';
 
 // Supplier management is back-office work: mechanics do not edit suppliers.
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(RolesGuard)
 @Controller('suppliers')
 export class SuppliersController {
   constructor(private readonly suppliersService: SuppliersService) {}

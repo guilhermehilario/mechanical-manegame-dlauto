@@ -1,6 +1,7 @@
 import { spawn, type ChildProcessByStdio } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
 import type { Readable } from 'node:stream';
+import { chmodSync, mkdirSync } from 'node:fs';
 import { app } from 'electron';
 
 /** Spawn result with piped stdout/stderr (stdin ignored): streams are non-null. */
@@ -28,6 +29,7 @@ export async function startApiProcess(): Promise<RunningApiProcess> {
   const apiEntry = resolveApiEntry();
 
   if (app.isPackaged) {
+    hardenUserDataDirs();
     await migrateDatabaseIfNeeded();
   }
 
@@ -43,6 +45,8 @@ export async function startApiProcess(): Promise<RunningApiProcess> {
         ? {
             DATABASE_URL: databaseUrl(),
             STORAGE_DIR: join(userDataDir(), 'storage'),
+            // Fase 10 (R7/SEC-07): backups live beside the data they protect.
+            BACKUP_DIR: join(userDataDir(), 'backups'),
             JWT_ACCESS_SECRET: loadOrCreateSecret('jwt-access-secret'),
             JWT_REFRESH_SECRET: loadOrCreateSecret('jwt-refresh-secret'),
             // R2 (SEC-03): authorize the file:// renderer for the desktop
@@ -109,6 +113,26 @@ function resolveApiEntry(): string {
 
 function userDataDir(): string {
   return app.getPath('userData');
+}
+
+/**
+ * R7/SEC-07 (Fase 10): the packaged app's local data (database, uploads,
+ * backups) is PII-bearing — its directories get owner-only permissions
+ * (0700; on Windows this maps to the equivalent owner-only ACL).
+ */
+function hardenUserDataDirs(): void {
+  for (const dir of [
+    userDataDir(),
+    join(userDataDir(), 'storage'),
+    join(userDataDir(), 'backups'),
+  ]) {
+    try {
+      mkdirSync(dir, { recursive: true, mode: 0o700 });
+      chmodSync(dir, 0o700);
+    } catch {
+      // Best-effort on filesystems without POSIX modes — never block boot.
+    }
+  }
 }
 
 /**

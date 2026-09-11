@@ -21,6 +21,9 @@ export const envSchema = z.object({
   /** Root directory for uploaded files (Fase 6 images). Relative → cwd. */
   STORAGE_DIR: z.string().min(1).default('./data/storage'),
 
+  /** Backup destination (Fase 10). Relative → cwd. Created with mode 0700. */
+  BACKUP_DIR: z.string().min(1).default('./data/backups'),
+
   JWT_ACCESS_SECRET: z.string().min(16),
   JWT_REFRESH_SECRET: z.string().min(16),
   JWT_ACCESS_EXPIRES: z.string().default('15m'),
@@ -61,6 +64,7 @@ export function testEnv(): Env {
     CORS_ORIGIN: 'http://localhost:5173',
     DATABASE_URL: isTest ? 'file:./test.db' : 'file:./dev.db',
     STORAGE_DIR: isTest ? './data/storage-test' : './data/storage',
+    BACKUP_DIR: isTest ? './data/backups-test' : './data/backups',
     JWT_ACCESS_SECRET: 'test-access-secret-0123456789abcdef',
     JWT_REFRESH_SECRET: 'test-refresh-secret-0123456789abcdef',
     JWT_ACCESS_EXPIRES: '15m',

@@ -22,14 +22,14 @@ Fase 9** (2026-09-11 — ver changelog do plano); restam:
 | R2 | ✅ **Aplicado (Fase 9):** preload síncrono via `additionalArguments`, bridge tipada `() => string`, `CORS_ORIGIN` injetada no processo da API. *Pendente: revalidar o binário empacotado de ponta a ponta* | 1 — imediato | ✔ Aplicado (revalidação de binário pendente) |
 | R3 | ✅ **Aplicado (Fase 9):** `@RequireRoles('ADMIN','MANAGER')` em `/users/:id`, `/dashboard/*`, `/reports/*` + verificação E2E no smoke (ATTENDANT → 403) | 1 — imediato | ✔ Concluído |
 | R4 | ✅ **Aplicado (Fase 9):** sem credenciais padrão — seed/smoke exigem `SEED_ADMIN_*` do env; e2e gera senha aleatória por execução (`.e2e-admin-password` gitignored); first-run admin do empacotado sem default | 1 — imediato | ✔ Concluído |
-| R5 | Guard global de autenticação (`JwtAuthGuard` como `APP_GUARD` + decorator `@Public()`): hoje uma rota nova "esquecida" nasce pública; só `ThrottlerGuard` é global | 2 — curto prazo | ❌ Pendente |
+| R5 | ✅ **Aplicado (Fase 9):** `JwtAuthGuard` global (`APP_GUARD`, deny-by-default) + `@Public()` com allowlist explícita (`/health`, `/auth/login`, `/auth/refresh`); `RolesGuard` permanece por rota | 2 — curto prazo | ✔ Concluído |
 | R6 | ✅ **Aplicado (Fase 9):** Electron 33.2.1 → **43.7.0** (linha estável atual). *Pendente: revalidar o binário empacotado* | 2 — curto prazo | ✔ Aplicado (revalidação de binário pendente) |
 | R7 | Permissões (`mode 0700`) em `userData`/`storage` + avaliar cifragem (AES-GCM para imagens/assinaturas, SQLCipher para o banco) com trade-off de desempenho documentado | 3 — médio prazo | ❌ Pendente |
 | R8 | Políticas de sessão (15 min/7 dias) e integridade verificável da assinatura (`signatureData` é imagem, não artefato criptográfico) | 4 — futuro | ❌ Pendente |
 
-> **Nota:** R5 (guard global) é o próximo item de segurança mais valioso —
-> barato de aplicar e elimina a classe inteira de "rota nova nasce pública".
-> A revalidação do binário empacotado (R2+R6) exige rodar `pnpm --filter
+> **Nota:** com R5 aplicado, restam da auditoria apenas R7 (permissões/
+> cifragem) e R8 (políticas de sessão/assinatura), além da revalidação do
+> binário empacotado (R2+R6), que exige rodar `pnpm --filter
 > @mechanic-system/desktop package` e testar login/render na máquina alvo.
 
 ---
@@ -107,8 +107,8 @@ gates: lint + typecheck + testes + build + smoke/e2e):
 
 | Fase | Escopo | Por quê primeiro |
 |---|---|---|
-| **Fase 9** | ✅ **Concluída (2026-09-11):** R1 + R2 + R3 + R4 + R6 aplicados (ver changelog do plano de remediação). Restam como acompanhamento: revalidar o binário empacotado e R5 (guard global) | Fecha 4 achados de segurança de alta prioridade; bridge do renderer empacotado sincronizada |
-| **Fase 10** | Backup/restauração (§3) + permissões 0700 (R7) + R5 (guard global) | Protege o dado mais valioso do negócio (local-only hoje) |
+| **Fase 9** | ✅ **Concluída (2026-09-11):** R1 + R2 + R3 + R4 + R5 + R6 aplicados (ver changelog do plano de remediação). Restam como acompanhamento: revalidar o binário empacotado | Fecha 5 achados de segurança de alta prioridade; rota nova só nasce pública com @Public() explícito |
+| **Fase 10** | Backup/restauração (§3) + permissões 0700 (R7) | Protege o dado mais valioso do negócio (local-only hoje) |
 | **Fase 11** | Pagamentos na OS (§3) | Fecha o ciclo financeiro: orçamento → execução → recebimento |
 | **Fase 12** | Sync offline-first (§2): outbox nos services + worker + ADR de conflitos | O grande diferencial de produto; exige servidor central |
 | **Fase 13+** | Impressão, nota fiscal, estoque avançado, integrações, S3 (§3) | Expansão, conforme demanda do produto |

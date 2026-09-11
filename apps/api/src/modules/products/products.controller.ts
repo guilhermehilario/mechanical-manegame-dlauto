@@ -33,10 +33,10 @@ import { ErrorCodes } from '@mechanic-system/types';
 import { UnauthorizedError } from '../../common/errors/domain.error';
 import { ProductsService } from './products.service';
 import { StockService } from './stock.service';
-import { JwtAuthGuard, AuthenticatedRequest } from '../auth/jwt-auth.guard';
+import { AuthenticatedRequest } from '../auth/jwt-auth.guard';
 import { RequireRoles, RolesGuard } from '../auth/roles.guard';
 
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(RolesGuard)
 @Controller('products')
 export class ProductsController {
   constructor(

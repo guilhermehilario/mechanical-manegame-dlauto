@@ -25,11 +25,11 @@ import type {
 } from '@mechanic-system/validation';
 import type { AuthUser, Paginated } from '@mechanic-system/types';
 import { UsersService } from './users.service';
-import { AuthenticatedRequest, JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { AuthenticatedRequest } from '../auth/jwt-auth.guard';
 import { RequireRoles, RolesGuard } from '../auth/roles.guard';
 
 // NOTE: global APP_INTERCEPTOR provides the response envelope (spec §27).
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(RolesGuard)
 @Controller('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}

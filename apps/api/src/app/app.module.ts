@@ -1,6 +1,10 @@
 import { Module } from '@nestjs/common';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { JwtAuthGuard } from '../modules/auth/jwt-auth.guard';
+import { SecurityModule } from '../modules/auth/security.module';
+import { HardeningModule } from '../common/hardening/hardening.module';
+import { BackupModule } from '../common/backup/backup.module';
 import { AppLoggingModule } from '../common/logging/logging.module';
 import { AllExceptionsFilter } from '../common/filters/all-exceptions.filter';
 import { EnvelopeInterceptor } from '../common/interceptors/envelope.interceptor';
@@ -24,14 +28,21 @@ import { HealthController } from './health.controller';
  * Global cross-cutting concerns live here (spec §26, §27, §20):
  *  - structured logging with PII redaction;
  *  - uniform response envelope (success and error);
- *  - rate limiting on every route.
+ *  - rate limiting on every route;
+ *  - authentication (R5/SEC-05): JwtAuthGuard as APP_GUARD — every route is
+ *    protected unless explicitly @Public() (deny-by-default).
  * Domain modules are imported and stay free of these concerns.
  */
 @Module({
   imports: [
     AppLoggingModule,
     PrismaModule,
+    HardeningModule,
+    BackupModule,
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 120 }]),
+    // Direct import so TokenService (JwtAuthGuard's dep) is visible to the
+    // APP_GUARD instantiated in THIS module's injector (R5/SEC-05).
+    SecurityModule,
     AuthModule,
     UsersModule,
     CustomersModule,
@@ -50,7 +61,9 @@ import { HealthController } from './health.controller';
   providers: [
     { provide: APP_FILTER, useClass: AllExceptionsFilter },
     { provide: APP_INTERCEPTOR, useClass: EnvelopeInterceptor },
+    // Guard order matters: Throttler first (cheap, no deps), then auth.
     { provide: APP_GUARD, useClass: ThrottlerGuard },
+    { provide: APP_GUARD, useClass: JwtAuthGuard },
   ],
 })
 export class AppModule {}

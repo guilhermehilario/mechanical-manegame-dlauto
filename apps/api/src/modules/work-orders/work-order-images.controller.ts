@@ -24,7 +24,6 @@ import {
   workOrderImageIdSchema,
 } from '@mechanic-system/validation';
 import type { WorkOrderImageDto } from '@mechanic-system/types';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { AuthenticatedRequest } from '../auth/jwt-auth.guard';
 import { RequireRoles, RolesGuard } from '../auth/roles.guard';
 import { WorkOrderImagesService } from './work-order-images.service';
@@ -37,7 +36,7 @@ interface UploadedImageFile {
 }
 
 /** Images are shop floor evidence: all roles may view/upload, fewer delete. */
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(RolesGuard)
 @Controller('work-orders/:workOrderId/images')
 export class WorkOrderImagesController {
   constructor(private readonly imagesService: WorkOrderImagesService) {}

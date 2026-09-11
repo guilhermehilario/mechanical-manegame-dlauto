@@ -19,8 +19,14 @@ Princípio: **validar tudo na fronteira, confiar em nada do frontend**
 
 ## Autorização
 
-- `JwtAuthGuard` protege rotas; `RolesGuard` + `@RequireRoles(...)` para
-  permissões por papel (ADMIN, MANAGER, MECHANIC, ATTENDANT).
+- **Autenticação global (R5/SEC-05, deny-by-default):** `JwtAuthGuard` está
+  registrado como `APP_GUARD` no `AppModule` — toda rota exige token Bearer,
+  exceto as explicitamente marcadas com `@Public()` (allowlist atual:
+  `/health`, `/auth/login`, `/auth/refresh`). Uma rota nova "esquecida" nunca
+  nasce pública.
+- `RolesGuard` + `@RequireRoles(...)` para permissões por papel
+  (ADMIN, MANAGER, MECHANIC, ATTENDANT), declarado por rota/controller onde
+  aplicável.
 - Menor privilégio por padrão: papel inicial de novos usuários é ATTENDANT.
 
 ## Proteção da API
