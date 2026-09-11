@@ -7,6 +7,16 @@
   "engines": {
     "node": ">=22.0.0"
   },
+  "pnpm": {
+    "overrides": {
+      "multer@>2.0.0": ">=2.3.0",
+      "qs@>2.0.0": ">=6.16.0",
+      "body-parser@>1.0.0": ">=1.20.6",
+      "file-type@>20.0.0": ">=21.3.2",
+      "file-type@>=13.0.0 <20.0.0": ">=21.3.1",
+      "deepmerge-ts@>1.0.0": ">=8.0.0"
+    }
+  },
   "scripts": {
     "dev": "node scripts/dev.mjs",
     "dev:api": "node scripts/dev.mjs --api-only",

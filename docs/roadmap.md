@@ -1,0 +1,116 @@
+# Roadmap — Trabalho Pendente
+
+> Status de referência: **Fases 1–8 concluídas** (ver [README](../README.md) —
+> plano de fases). Este documento lista **tudo que está pendente** para
+> planejarmos as próximas fases de desenvolvimento.
+>
+> Fontes: `docs/security/remediation-plan.md` (auditoria de segurança),
+> `docs/architecture.md` (evolução planejada), análise do código atual.
+> Última atualização: 2026-09-11.
+
+---
+
+## 1. Pendências da auditoria de segurança (correção prioritária)
+
+A auditoria (`docs/security/findings.md`, 8 achados + 1 funcional) gerou um
+plano em `docs/security/remediation-plan.md`. **R1–R4 e R6 foram aplicados na
+Fase 9** (2026-09-11 — ver changelog do plano); restam:
+
+| Ref | Item | Prioridade | Status |
+|---|---|---|---|
+| R1 | ✅ **Aplicado (Fase 9):** overrides + bumps (`multer≥2.3`, `qs`, `body-parser`, `file-type`, `deepmerge-ts`, `react-router`) — 18 vulns → 1 resíduo aceito (CVE-2026-35515 `@nestjs/core`, exige `@Sse()` que a API não usa; fix = migração Nest 10→11) | 1 — imediato | ✔ Concluído (resíduo aceito) |
+| R2 | ✅ **Aplicado (Fase 9):** preload síncrono via `additionalArguments`, bridge tipada `() => string`, `CORS_ORIGIN` injetada no processo da API. *Pendente: revalidar o binário empacotado de ponta a ponta* | 1 — imediato | ✔ Aplicado (revalidação de binário pendente) |
+| R3 | ✅ **Aplicado (Fase 9):** `@RequireRoles('ADMIN','MANAGER')` em `/users/:id`, `/dashboard/*`, `/reports/*` + verificação E2E no smoke (ATTENDANT → 403) | 1 — imediato | ✔ Concluído |
+| R4 | ✅ **Aplicado (Fase 9):** sem credenciais padrão — seed/smoke exigem `SEED_ADMIN_*` do env; e2e gera senha aleatória por execução (`.e2e-admin-password` gitignored); first-run admin do empacotado sem default | 1 — imediato | ✔ Concluído |
+| R5 | Guard global de autenticação (`JwtAuthGuard` como `APP_GUARD` + decorator `@Public()`): hoje uma rota nova "esquecida" nasce pública; só `ThrottlerGuard` é global | 2 — curto prazo | ❌ Pendente |
+| R6 | ✅ **Aplicado (Fase 9):** Electron 33.2.1 → **43.7.0** (linha estável atual). *Pendente: revalidar o binário empacotado* | 2 — curto prazo | ✔ Aplicado (revalidação de binário pendente) |
+| R7 | Permissões (`mode 0700`) em `userData`/`storage` + avaliar cifragem (AES-GCM para imagens/assinaturas, SQLCipher para o banco) com trade-off de desempenho documentado | 3 — médio prazo | ❌ Pendente |
+| R8 | Políticas de sessão (15 min/7 dias) e integridade verificável da assinatura (`signatureData` é imagem, não artefato criptográfico) | 4 — futuro | ❌ Pendente |
+
+> **Nota:** R5 (guard global) é o próximo item de segurança mais valioso —
+> barato de aplicar e elimina a classe inteira de "rota nova nasce pública".
+> A revalidação do binário empacotado (R2+R6) exige rodar `pnpm --filter
+> @mechanic-system/desktop package` e testar login/render na máquina alvo.
+
+---
+
+## 2. Offline-first: sync (spec §39) — fundamentos prontos, worker ausente
+
+A infraestrutura existe, mas **nenhum código de sincronização foi escrito**
+(0 referências a `syncOutbox` fora do schema):
+
+- ❌ **Escrita no outbox:** os services de domínio ainda não registram
+  operações na `sync_outbox` (tabela existe no schema, sem uso).
+- ❌ **Worker de sync:** drenar o outbox para um servidor central.
+- ❌ **Resolução de conflitos:** LWW em `updatedAt` + regras por entidade
+  crítica (especificar em **ADR próprio** — ver `docs/architecture.md` §Offline-first).
+- ❌ **Servidor central / API de sincronização** (contrato, autenticação, lote).
+
+Pré-requisitos já no lugar: PKs `cuid` client-generated, timestamps UTC,
+soft delete, `sync_outbox` no schema.
+
+---
+
+## 3. Evolução planejada (spec — "não implementado")
+
+Listados em `docs/architecture.md` como evolution planejada; a arquitetura foi
+desenhada para acomodá-los sem rewrites:
+
+- ❌ **Backup/restauração** do banco SQLite (nenhuma referência no código;
+  incluir checkpoint WAL — ver nota em `ADR-001`). Crítico para o contexto
+  real da oficina (dados financeiros + histórico + PII só existem localmente).
+- ❌ **Impressão** (OS, recibo de retirada, relatórios) — não há fluxo de
+  impressão no renderer nem template.
+- ❌ **Pagamentos** (múltiplas formas, parcial, baixa de receita) — hoje a OS
+  tem totais/desconto, mas não há entidade de pagamento.
+- ❌ **Emissão de nota fiscal** (NFSe/NFCe — dependerá de decisão de produto
+  e certificado digital).
+- ❌ **Estoque avançado** (entradas por compra/NF, reservas além do fluxo
+  atual de itens de OS, inventário).
+- ❌ **Múltiplos usuários/filiais** (multi-tenant, sync multi-oficina).
+- ❌ **Integrações:** WhatsApp (confirmação de agendamento/OS pronta), mapas
+  (endereço do cliente).
+- ❌ **Armazenamento S3** para imagens (a interface `StorageService` já isola
+  a implementação — troca planejada).
+
+---
+
+## 4. Melhorias de qualidade (oportunidades, não bloqueiam)
+
+- **E2E:** só existe `core-flow.spec.ts` (login + cliente + relatórios).
+  Ampliar para os fluxos críticos criados nas Fases 4–7: agendamento com
+  conflito, ciclo completo da OS (itens → aprovação → execução → retirada),
+  upload de imagem, histórico do veículo.
+- **Acessibilidade/UX:** auditoria de teclado/foco nos modais e no signature pad;
+  estados de carregamento/vazio consistentes entre páginas.
+- **Observabilidade:** pino já estruturado; adicionar correlação de requestId
+  por operação de negócio (base para suporte da oficina).
+- **CI remota:** a qualidade hoje é "CI local" (husky + turbo); adicionar
+  pipeline remoto (GitHub Actions) com os mesmos gates + e2e + smoke.
+
+---
+
+## 5. Dívida técnica conhecida (pequena)
+
+- `pnpm audit` hoje conta **dependências de produção** com CVEs (ver R1) —
+  após correção, considerar gate automático de audit no CI.
+- Nem todas as decisões recentes têm ADR (ex.: StorageService content-addressed,
+  padrão transacional de estoque/retirada, bridge síncrona do Electron quando
+  R2 for feito). Criar ADR-006+ para as próximas decisões relevantes.
+
+---
+
+## 6. Sugerido para as próximas fases
+
+Ordenação proposta (cada fase = ~1 entrega coesa, mantendo o padrão atual de
+gates: lint + typecheck + testes + build + smoke/e2e):
+
+| Fase | Escopo | Por quê primeiro |
+|---|---|---|
+| **Fase 9** | ✅ **Concluída (2026-09-11):** R1 + R2 + R3 + R4 + R6 aplicados (ver changelog do plano de remediação). Restam como acompanhamento: revalidar o binário empacotado e R5 (guard global) | Fecha 4 achados de segurança de alta prioridade; bridge do renderer empacotado sincronizada |
+| **Fase 10** | Backup/restauração (§3) + permissões 0700 (R7) + R5 (guard global) | Protege o dado mais valioso do negócio (local-only hoje) |
+| **Fase 11** | Pagamentos na OS (§3) | Fecha o ciclo financeiro: orçamento → execução → recebimento |
+| **Fase 12** | Sync offline-first (§2): outbox nos services + worker + ADR de conflitos | O grande diferencial de produto; exige servidor central |
+| **Fase 13+** | Impressão, nota fiscal, estoque avançado, integrações, S3 (§3) | Expansão, conforme demanda do produto |
+
+> Atualize este documento ao concluir cada fase (mesmo padrão do README).

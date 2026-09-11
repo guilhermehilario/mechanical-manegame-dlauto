@@ -27,7 +27,7 @@
     "@prisma/client": "^6.2.1",
     "dotenv": "^16.4.7",
     "helmet": "^8.0.1",
-    "multer": "2.0.2",
+    "multer": "^2.3.0",
     "nestjs-pino": "^4.2.0",
     "pino": "^9.6.0",
     "pino-http": "^10.3.0",

@@ -52,6 +52,19 @@ async function main(): Promise<void> {
   const { bootstrapApi } = await import('./src/app/bootstrap');
   const env = loadEnv();
 
+  // R4/SEC-04: no default credentials. The smoke logs in with the SAME admin
+  // the developer seeded (SEED_ADMIN_*), read from the environment/.env
+  // (dotenv above already merged the file into process.env).
+  const adminEmail = process.env.SEED_ADMIN_EMAIL?.trim().toLowerCase();
+  const adminPassword = process.env.SEED_ADMIN_PASSWORD;
+  if (!adminEmail || !adminPassword) {
+    throw new Error(
+      'Smoke aborted: SEED_ADMIN_EMAIL/SEED_ADMIN_PASSWORD não definidos. ' +
+        'R4/SEC-04 — este projeto não tem credenciais padrão; configure-as no .env ' +
+        '(as mesmas usadas no `pnpm db:seed`).',
+    );
+  }
+
   const api = await bootstrapApi({ ...env, API_PORT: 0 });
   const port = api.port;
   const base = `http://127.0.0.1:${port}/api/v1`;
@@ -68,11 +81,11 @@ async function main(): Promise<void> {
   if (anon.status !== 401) throw new Error(`expected 401 for anonymous /users, got ${anon.status}`);
   console.log('[smoke] anonymous /users blocked (401): OK');
 
-  // 3. Login with seeded admin
+  // 3. Login with the seeded admin (env-provided, R4)
   const login = await fetch(`${base}/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email: 'admin@oficina.local', password: 'admin1234' }),
+    body: JSON.stringify({ email: adminEmail, password: adminPassword }),
   });
   const loginBody = (await login.json()) as {
     success: boolean;
@@ -92,7 +105,7 @@ async function main(): Promise<void> {
     success: boolean;
     data?: { email: string; role: string };
   };
-  if (!me.ok || !meBody.success || meBody.data?.email !== 'admin@oficina.local') {
+  if (!me.ok || !meBody.success || meBody.data?.email !== adminEmail) {
     throw new Error('auth/me failed');
   }
   console.log(`[smoke] auth/me: OK (role ${meBody.data.role})`);
@@ -1028,6 +1041,59 @@ async function main(): Promise<void> {
   await fetch(`${base}/customers/${woCustomerBody.data.id}`, { method: 'DELETE', headers: authHeaders });
   await fetch(`${base}/services/${woServiceBody.data.id}`, { method: 'DELETE', headers: authHeaders });
   await fetch(`${base}/products/${woProductBody.data.id}`, { method: 'DELETE', headers: authHeaders });
+
+  // 43. R3/SEC-02: financial routes reject ATTENDANT (403) but accept ADMIN.
+  const attendantEmail = `smoke-attendant-${Date.now()}@oficina.local`;
+  const attendantPassword = `smoke-${Date.now()}-pass`;
+  const createAttendantRes = await fetch(`${base}/users`, {
+    method: 'POST',
+    headers: authHeaders,
+    body: JSON.stringify({
+      name: 'Smoke Attendant',
+      email: attendantEmail,
+      password: attendantPassword,
+      role: 'ATTENDANT',
+    }),
+  });
+  if (!createAttendantRes.ok) {
+    throw new Error(`smoke: failed to create ATTENDANT (${createAttendantRes.status})`);
+  }
+  const attendantLogin = await fetch(`${base}/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: attendantEmail, password: attendantPassword }),
+  });
+  const attendantBody = (await attendantLogin.json()) as {
+    success: boolean;
+    data?: { accessToken: string };
+  };
+  if (!attendantLogin.ok || !attendantBody.data) {
+    throw new Error('smoke: ATTENDANT login failed');
+  }
+  const attendantHeaders = { Authorization: `Bearer ${attendantBody.data.accessToken}` };
+
+  const attendantReportsRes = await fetch(`${base}/reports/revenue`, { headers: attendantHeaders });
+  if (attendantReportsRes.status !== 403) {
+    throw new Error(`expected 403 for ATTENDANT on /reports/revenue, got ${attendantReportsRes.status}`);
+  }
+  const attendantUsersRes = await fetch(`${base}/users`, { headers: attendantHeaders });
+  if (attendantUsersRes.status !== 403) {
+    throw new Error(`expected 403 for ATTENDANT on /users, got ${attendantUsersRes.status}`);
+  }
+  console.log('[smoke] R3: ATTENDANT blocked on financial/user routes (403): OK');
+
+  // Cleanup the smoke attendant.
+  const attendantListRes = await fetch(`${base}/users?search=${encodeURIComponent(attendantEmail)}`, {
+    headers: authHeaders,
+  });
+  const attendantListBody = (await attendantListRes.json()) as {
+    success: boolean;
+    data?: { items?: Array<{ id: string; email: string }> };
+  };
+  const createdAttendant = attendantListBody.data?.items?.find((u) => u.email === attendantEmail);
+  if (createdAttendant) {
+    await fetch(`${base}/users/${createdAttendant.id}`, { method: 'DELETE', headers: authHeaders });
+  }
 
   await api.close();
   console.log('[smoke] ALL CHECKS PASSED');

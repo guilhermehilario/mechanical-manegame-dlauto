@@ -76,8 +76,9 @@ pnpm db:migrate                 # cria database/prisma/dev.db + aplica migration
 pnpm db:seed                    # cria o usuário admin inicial
 ```
 
-> O seed usa `SEED_ADMIN_PASSWORD` (env) ou o padrão de desenvolvimento
-> `admin1234` — **apenas para ambiente local**. O Prisma CLI lê
+> **R4/SEC-04 — sem credenciais padrão**: o seed EXIGE `SEED_ADMIN_EMAIL` e
+> `SEED_ADMIN_PASSWORD` (defina-os no `.env` — veja `.env.example`). Sem eles,
+> o seed falha com mensagem explicativa. O Prisma CLI lê
 > `database/prisma/.env` (caminho relativo ao schema).
 
 ## Execução
@@ -180,6 +181,12 @@ Layout do app empacotado (tudo real, fora do asar):
       serviços/produtos, status das OS) com períodos; empacotamento
       autocontido (electron-builder, API sidecar offline-first com migrate de
       primeira execução); E2E com Playwright
+- [x] **Fase 9** — Estabilização de segurança (auditoria R1–R4 + R6):
+      dependências com CVEs atualizadas (18 vulns → 1 resíduo aceito),
+      renderer empacotado funcional (preload síncrono + CORS injetada),
+      menor privilégio em rotas financeiras/usuários, **nenhuma credencial
+      padrão** (seed/smoke exigem env; e2e gera senha aleatória por execução),
+      Electron 33 → 43. Detalhes em `docs/security/remediation-plan.md`
 
 ## Documentação
 
@@ -187,4 +194,5 @@ Layout do app empacotado (tudo real, fora do asar):
 - [docs/security.md](docs/security.md) — modelo de segurança
 - [docs/database.md](docs/database.md) — modelagem e convenções
 - [docs/development.md](docs/development.md) — guia de desenvolvimento
+- [docs/roadmap.md](docs/roadmap.md) — trabalho pendente e próximas fases
 - [docs/decisions/](docs/decisions/) — ADRs (decisões arquiteturais)

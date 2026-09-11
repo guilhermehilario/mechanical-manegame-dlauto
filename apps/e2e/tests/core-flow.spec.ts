@@ -1,15 +1,18 @@
 import { expect, test, type Page } from '@playwright/test';
+import { E2E_ADMIN_EMAIL, readE2EAdminPassword } from '../support/credentials';
 
 /**
  * End-to-end smoke (spec §Fase 8): the full stack (API real + web real)
  * against a clean seeded database. Exercises the happy path a person would
  * click through the packaged app.
+ *
+ * R4/SEC-04: credentials are generated per run — never hardcoded.
  */
 
 async function login(page: Page): Promise<void> {
   await page.goto('/#/login');
-  await page.getByLabel('E-mail').fill('admin@oficina.local');
-  await page.getByLabel('Senha').fill('admin1234');
+  await page.getByLabel('E-mail').fill(E2E_ADMIN_EMAIL);
+  await page.getByLabel('Senha').fill(readE2EAdminPassword());
   await page.getByRole('button', { name: 'Entrar' }).click();
   await expect(page).toHaveURL(/#\/?$/);
 }

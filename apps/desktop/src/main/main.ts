@@ -39,6 +39,11 @@ function createWindow(apiBaseUrl: string): void {
       sandbox: true,
       nodeIntegration: false,
       webSecurity: true,
+      // R2 (REL-01): deliver the base URL synchronously to the preload —
+      // it lands in process.argv, so getApiBaseUrl() never needs async IPC.
+      additionalArguments: [
+        `--mechanic-api-base-url=${encodeURIComponent(apiBaseUrl)}`,
+      ],
     },
   });
 
@@ -93,6 +98,8 @@ void app.whenReady().then(async () => {
 
   const startedApi = apiProcess;
   registerIpcHandlers(() => startedApi.baseUrl);
+  // R2: main also pushes the URL to the preload's argv via additionalArguments
+  // (createWindow) and notifies listeners after every load (api:ready).
   createWindow(startedApi.baseUrl);
 
   app.on('activate', () => {

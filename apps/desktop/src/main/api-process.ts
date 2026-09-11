@@ -45,6 +45,10 @@ export async function startApiProcess(): Promise<RunningApiProcess> {
             STORAGE_DIR: join(userDataDir(), 'storage'),
             JWT_ACCESS_SECRET: loadOrCreateSecret('jwt-access-secret'),
             JWT_REFRESH_SECRET: loadOrCreateSecret('jwt-refresh-secret'),
+            // R2 (SEC-03): authorize the file:// renderer for the desktop
+            // flow. All real routes sit behind the JWT guard — the loopback
+            // CORS entry alone grants no data access.
+            CORS_ORIGIN: corsOriginForPackaged(),
           }
         : {
             DATABASE_URL: process.env.DATABASE_URL ?? 'file:./dev.db',
@@ -105,6 +109,16 @@ function resolveApiEntry(): string {
 
 function userDataDir(): string {
   return app.getPath('userData');
+}
+
+/**
+ * CORS origin for the packaged desktop flow (R2/SEC-03).
+ * The renderer is loaded from file:// (Origin `null` on fetch); dev servers
+ * keep using their http origins. Nothing else is authorized, and every
+ * domain route remains behind the JWT guard.
+ */
+function corsOriginForPackaged(): string {
+  return process.env.CORS_ORIGIN?.trim() || 'null';
 }
 
 function databaseUrl(): string {

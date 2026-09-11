@@ -51,3 +51,4 @@ backups/
 .turbo/cache
 # Uploaded files (Fase 6 images — never commit binary blobs)
 data/
+.e2e-admin-password

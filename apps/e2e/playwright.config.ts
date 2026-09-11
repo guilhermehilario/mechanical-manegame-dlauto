@@ -1,5 +1,11 @@
 import { defineConfig, devices } from '@playwright/test';
 
+/**
+ * R4/SEC-04: the admin password is generated randomly per run by
+ * scripts/prepare-e2e-db.mjs and read by the tests via support/credentials.
+ * No default credential exists in the repository.
+ */
+
 const apiEnv = {
   ...process.env,
   NODE_ENV: 'production',

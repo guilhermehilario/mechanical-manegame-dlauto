@@ -43,6 +43,8 @@ export class UsersController {
   }
 
   @Get(':id')
+  // R3 (SEC-02): PII (email/role) must not leak to lower roles.
+  @RequireRoles('ADMIN', 'MANAGER')
   async getById(
     @Param('id', new ZodValidationPipe(idSchema, 'param')) id: string,
   ): Promise<AuthUser> {

@@ -11,7 +11,7 @@
 pnpm install
 cp .env.example .env      # preencha os segredos JWT
 pnpm db:migrate           # aplica migrations (cria database/prisma/dev.db)
-pnpm db:seed              # admin@oficina.local / admin1234 (dev)
+pnpm db:seed              # cria o ADMIN — exige SEED_ADMIN_EMAIL/SEED_ADMIN_PASSWORD no .env (R4: sem padrões)
 ```
 
 ## Comandos

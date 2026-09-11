@@ -25,6 +25,14 @@ export const envSchema = z.object({
   JWT_REFRESH_SECRET: z.string().min(16),
   JWT_ACCESS_EXPIRES: z.string().default('15m'),
   JWT_REFRESH_EXPIRES: z.string().default('7d'),
+
+  /**
+   * First-run admin (packaged desktop flow, R4/SEC-04): used ONLY when the
+   * database has no active ADMIN. No defaults on purpose — missing values
+   * with an empty admin table fail the boot with an actionable message.
+   */
+  FIRST_RUN_ADMIN_EMAIL: z.string().email().optional(),
+  FIRST_RUN_ADMIN_PASSWORD: z.string().min(8).optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;

@@ -58,7 +58,7 @@ export function CustomerDetailPage(): React.ReactNode {
     mutationFn: deleteCustomer,
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['customers'] });
-      navigate('/customers');
+      void navigate('/customers');
     },
     onError: () => {
       setActionError('Não foi possível excluir o cliente.');
