@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import type { ShopSettings, Prisma } from '@prisma/client';
+import type { ShopSettings } from '@prisma/client';
 import type { ShopSettingsDto } from '@mechanic-system/types';
 import type { ShopSettingsInput } from '@mechanic-system/validation';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -34,7 +34,7 @@ export class SettingsService {
 
   async update(input: ShopSettingsInput): Promise<ShopSettingsDto> {
     const current = await this.prisma.shopSettings.findFirst();
-    const data: Prisma.ShopSettingsUpdateInput = {
+    const data = {
       name: input.name,
       phone: input.phone ?? null,
       address: input.address ?? null,

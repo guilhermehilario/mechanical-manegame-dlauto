@@ -4,10 +4,7 @@ import { ErrorCodes } from '@mechanic-system/types';
 import { computeWorkOrderTotals } from '@mechanic-system/shared';
 import type { CreateVehiclePickupInput } from '@mechanic-system/validation';
 import type { VehiclePickupDto, VehiclePickupReceiptDto } from '@mechanic-system/types';
-import type {
-  VehiclePickupReceiptRow,
-  VehiclePickupWithRelations,
-} from './vehicle-pickups.repository';
+import type { VehiclePickupWithRelations } from './vehicle-pickups.repository';
 import { VehiclePickupsRepository } from './vehicle-pickups.repository';
 import { WorkOrdersRepository } from '../work-orders/work-orders.repository';
 import { PrismaService } from '../../prisma/prisma.service';

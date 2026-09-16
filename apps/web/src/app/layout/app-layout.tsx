@@ -12,6 +12,7 @@ const NAV_ITEMS = [
   { to: '/work-orders', label: 'Ordens de Serviço' },
   { to: '/pickups', label: 'Retirada/Entrega' },
   { to: '/reports', label: 'Relatórios' },
+  { to: '/settings', label: 'Configurações' },
 ] as const;
 
 /** Admin-only surface (the API enforces the role regardless). */

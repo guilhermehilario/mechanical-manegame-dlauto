@@ -65,15 +65,20 @@ Sem isso a OS não vira recebimento — é o maior bloqueio de produto.
 
 A oficina precisa entregar papel (OS, recibo). Hoje não existe fluxo algum.
 
-- [ ] **B1. Template de OS imprimível** (renderer): rota/print stylesheet
-  da OS com itens, totais, descontos, dados do cliente/veículo e da
-  oficina (nome/telefone/endereço — configuráveis, ver F2).
-- [ ] **B2. Recibo de retirada** imprimível: dados do comprovante
-  (`vehicle_pickups`) + assinatura renderizada + KM.
-- [ ] **B3. Estratégia de impressão**: `window.print()` com CSS `@media
-  print` dedicado (sem dependência externa — offline-first) OU
-  `webContents.print()` no Electron via bridge. Decidir e registrar em
-  ADR curto.
+- [x] **B1. Template de OS imprimível** ✅ 2026-09-16: botão "Imprimir OS"
+  na tela de detalhe monta o documento (cabeçalho da oficina, cliente,
+  veículo, serviços, peças com descontos, totais, observações, linhas de
+  assinatura) via `printWorkOrder` (`apps/web/src/utils/print.ts`).
+- [x] **B2. Recibo de retirada imprimível** ✅ 2026-09-16: botão "Recibo"
+  em cada retirada (e na fila, para casos anteriores) busca o comprovante
+  completo — novo endpoint `GET /vehicle-pickups/work-order/:id/receipt` com
+  assinatura (data URL), modelo do veículo e total da OS — e imprime com
+  termo de recebimento + assinatura renderizada.
+- [x] **B3. Estratégia de impressão** ✅ 2026-09-16: `window.print()` +
+  `#print-root` com CSS `@media print` dedicado (`index.css`) — zero
+  dependências externas, funciona igual no navegador e no Electron
+  empacotado (webContents imprime o mesmo DOM). Template removido do DOM
+  no `afterprint`.
 - [ ] **B4. Relatórios imprimíveis/exportáveis** (mínimo: imprimir a
   página; ideal: exportar CSV — sem libs externas).
 - [ ] **B5. Teste E2E** que abre a versão de impressão da OS.
@@ -138,9 +143,11 @@ A oficina precisa entregar papel (OS, recibo). Hoje não existe fluxo algum.
   senha do admin no primeiro login) ou assistente que escreve o segredo
   com permissão 0600. *(Verificar como o Electron main passa hoje essas
   vars ao sidecar e documentar.)*
-- [ ] **F2. Configurações da oficina**: entidade simples (singleton) com
-  nome, telefone, endereço e mensagem do rodapé de documentos — usada
-  pela OS impressa e recibo (B1/B2). UI em "Configurações" (admin).
+- [x] **F2. Configurações da oficina** ✅ 2026-09-16: entidade singleton
+  `shop_settings` (migration `add_shop_settings`) + módulo `settings` na API
+  (`GET/PUT /settings`, leitura para todos, escrita ADMIN/MANAGER) + página
+  "Configurações" no menu. Nome/telefone/endereço/rodapé alimentam o
+  cabeçalho e rodapé dos documentos impressos (B1/B2).
 - [ ] **F3. Dados de exemplo opcionais**: seed de catálogo básico
   (serviços comuns: troca de óleo, revisão...) desativado por padrão para
   facilitar a primeira semana de uso.

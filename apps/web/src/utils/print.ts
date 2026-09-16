@@ -55,7 +55,7 @@ function headerHtml(header: PrintHeader): string {
 }
 
 function footerHtml(settings: ShopSettingsDto | null): string {
-  const footer = settings?.documentFooter;
+  const footer = settings ? settings.documentFooter : null;
   return `
     <div class="doc-footer">
       ${footer ? `<div>${escapeHtml(footer)}</div>` : ''}
@@ -71,16 +71,16 @@ async function printDocument(bodyHtml: string, header: PrintHeader): Promise<voi
     ${bodyHtml}
     ${footerHtml(settings)}`;
 
-  let root = document.getElementById('print-root');
-  if (!root) {
-    root = document.createElement('div');
+  const existing = document.getElementById('print-root');
+  const root = existing ?? document.createElement('div');
+  if (!existing) {
     root.id = 'print-root';
     document.body.appendChild(root);
   }
   root.innerHTML = html;
 
   const cleanup = (): void => {
-    root?.remove();
+    root.remove();
     window.removeEventListener('afterprint', cleanup);
   };
   window.addEventListener('afterprint', cleanup);
