@@ -135,6 +135,7 @@ export function DashboardPage() {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
+        {/* Accrual revenue (Fase 8) + cash received (A5) side by side. */}
         <Card title="Receita realizada">
           <div className="space-y-4">
             <div>
@@ -166,9 +167,42 @@ export function DashboardPage() {
                   }}
                 />
               </div>
+              <p className="mt-2 text-xs text-slate-400">
+                OS entregues no mês (competência)
+              </p>
             </div>
             <Link to="/reports" className="text-sm font-medium text-blue-600 hover:underline">
               Ver relatórios →
+            </Link>
+          </div>
+        </Card>
+
+        <Card title="Recebido (caixa)">
+          <div className="space-y-4">
+            <div>
+              <div className="flex items-end justify-between">
+                <div>
+                  <p className="text-xs text-slate-500">Hoje</p>
+                  <p className="text-2xl font-bold text-green-700">
+                    {formatBRL(summary.cash.todayCents)}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs text-slate-500">Este mês</p>
+                  <p className="text-lg font-medium text-slate-600">
+                    {formatBRL(summary.cash.monthCents)}
+                  </p>
+                </div>
+              </div>
+              <p className="mt-2 text-xs text-slate-400">
+                Pagamentos efetivamente recebidos (regime de caixa)
+              </p>
+            </div>
+            <Link
+              to="/reports?tab=payments"
+              className="text-sm font-medium text-blue-600 hover:underline"
+            >
+              Receita por forma de pagamento →
             </Link>
           </div>
         </Card>
@@ -192,7 +226,7 @@ export function DashboardPage() {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
-        <Card title="Próximos agendamentos">
+        <Card title="Próximos agendamentos" data-testid="upcoming-appointments">
           {summary.upcomingAppointments.length === 0 ? (
             <p className="text-sm text-slate-500">Sem agendamentos por vir.</p>
           ) : (

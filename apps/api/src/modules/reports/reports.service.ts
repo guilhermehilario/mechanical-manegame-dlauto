@@ -1,17 +1,21 @@
 import { Injectable } from '@nestjs/common';
 import { WORK_ORDER_STATUSES, computeWorkOrderTotals } from '@mechanic-system/shared';
+import { PAYMENT_METHODS } from '@mechanic-system/types';
 import type { WorkOrderStatus } from '@mechanic-system/shared';
 import type {
   ReportPeriodQuery,
   TopReportQuery,
 } from '@mechanic-system/validation';
 import type {
+  PaymentMethodRevenueReportDto,
+  PaymentMethodRevenueRowDto,
   RevenueReportDto,
   RevenueReportRowDto,
   TopItemDto,
   TopItemsReportDto,
   WorkOrderStatusReportDto,
 } from '@mechanic-system/types';
+import type { PaymentMethod } from '@mechanic-system/types';
 import { AnalyticsRepository } from '../analytics/analytics.repository';
 import { endOfDay, offsetDays, parseReportDate, startOfDay, toYyyyMmDd } from '../../common/dates';
 
@@ -133,6 +137,42 @@ export class ReportsService {
     return {
       from: toYyyyMmDd(from),
       to: toYyyyMmDd(to),
+      items,
+    };
+  }
+
+  /**
+   * Cash-basis revenue by payment method (A5 — docs/todo-mvp.md):
+   * complements the accrual `revenue` report. Grouped by the payment row
+   * (each receipt counts once), dated by `paidAt`. Methods with no receipts
+   * in the period are omitted — the UI renders what actually happened.
+   */
+  async paymentMethods(query: ReportPeriodQuery): Promise<PaymentMethodRevenueReportDto> {
+    const { from, to } = this.resolvePeriod(query, 30);
+    const rows = await this.analyticsRepository.paymentTotalsByMethod({ from, to });
+
+    const byMethod = new Map<PaymentMethod, PaymentMethodRevenueRowDto>(
+      (PAYMENT_METHODS as readonly PaymentMethod[]).map((method) => [
+        method,
+        { method, count: 0, totalCents: 0 },
+      ]),
+    );
+    for (const row of rows) {
+      const entry = byMethod.get(row.method);
+      if (entry) {
+        entry.count += row.count;
+        entry.totalCents += row.totalCents;
+      }
+    }
+
+    const items = [...byMethod.values()]
+      .filter((entry) => entry.count > 0)
+      .sort((a, b) => b.totalCents - a.totalCents);
+
+    return {
+      from: toYyyyMmDd(from),
+      to: toYyyyMmDd(to),
+      totalCents: items.reduce((sum, item) => sum + item.totalCents, 0),
       items,
     };
   }

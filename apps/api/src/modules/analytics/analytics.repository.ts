@@ -3,6 +3,7 @@ import type { Prisma, WorkOrder } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ACTIVE_WORK_ORDER_STATUSES } from '@mechanic-system/shared';
 import type { WorkOrderStatus } from '@mechanic-system/shared';
+import type { PaymentMethod } from '@mechanic-system/types';
 
 /**
  * Delivered work order with the snapshot items (spec §35) plus the pickup
@@ -91,6 +92,38 @@ export class AnalyticsRepository {
       orderBy: { updatedAt: 'desc' },
       include: DELIVERED_INCLUDE,
     });
+  }
+
+  /**
+   * Money actually received (cash basis, A5): aggregate per payment method
+   * within an inclusive paidAt window. Dated by the payment itself, not by
+   * the delivery — money in the drawer is what pays the bills.
+   */
+  async paymentTotalsByMethod(
+    window: { from: Date; to: Date },
+  ): Promise<Array<{ method: PaymentMethod; count: number; totalCents: number }>> {
+    // Mapped to a plain shape here so callers never touch Prisma row types.
+    const rows = await this.prisma.payment.groupBy({
+      by: ['method'],
+      where: { paidAt: { gte: window.from, lte: window.to } },
+      _count: { _all: true },
+      _sum: { amountCents: true },
+    });
+    return rows.map((row) => ({
+      method: row.method,
+      count: row._count._all,
+      totalCents: row._sum.amountCents ?? 0,
+    }));
+  }
+
+  /** Total received in an inclusive paidAt window (cash-basis KPI). */
+  paymentTotal(window: { from: Date; to: Date }): Promise<number> {
+    return this.prisma.payment
+      .aggregate({
+        where: { paidAt: { gte: window.from, lte: window.to } },
+        _sum: { amountCents: true },
+      })
+      .then((result) => result._sum.amountCents ?? 0);
   }
 }
 

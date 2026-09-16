@@ -1,8 +1,10 @@
 import { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { formatBRL } from '@mechanic-system/shared';
-import type { WorkOrderStatusDto } from '@mechanic-system/types';
+import type { PaymentMethod, WorkOrderStatusDto } from '@mechanic-system/types';
 import {
+  getPaymentMethodsReport,
   getRevenueReport,
   getTopProducts,
   getTopServices,
@@ -23,14 +25,23 @@ const STATUS_BADGES: Record<WorkOrderStatusDto, string> = {
   CANCELLED: 'bg-red-50 text-red-600',
 };
 
-type ReportTab = 'revenue' | 'services' | 'products' | 'status';
+type ReportTab = 'revenue' | 'payments' | 'services' | 'products' | 'status';
 
 const TABS: Array<{ id: ReportTab; label: string }> = [
   { id: 'revenue', label: 'Receita' },
+  { id: 'payments', label: 'Recebimentos' },
   { id: 'services', label: 'Serviços' },
   { id: 'products', label: 'Produtos' },
   { id: 'status', label: 'Status das OS' },
 ];
+
+const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
+  CASH: 'Dinheiro',
+  PIX: 'Pix',
+  DEBIT_CARD: 'Cartão de débito',
+  CREDIT_CARD: 'Cartão de crédito',
+  TRANSFER: 'Transferência',
+};
 
 function toInputDate(date: Date): string {
   const year = date.getFullYear();
@@ -66,10 +77,18 @@ function Section({ children }: { children: React.ReactNode }) {
 }
 
 export function ReportsPage() {
+  const [searchParams] = useSearchParams();
+  const initialTab = ((): ReportTab => {
+    const requested = searchParams.get('tab');
+    return TABS.some((entry) => entry.id === requested)
+      ? (requested as ReportTab)
+      : 'revenue';
+  })();
+
   const [appliedPeriod, setAppliedPeriod] = useState(defaultPeriod);
   const [draftFrom, setDraftFrom] = useState(appliedPeriod.from);
   const [draftTo, setDraftTo] = useState(appliedPeriod.to);
-  const [tab, setTab] = useState<ReportTab>('revenue');
+  const [tab, setTab] = useState<ReportTab>(initialTab);
 
   const { from, to } = appliedPeriod;
 
@@ -77,6 +96,11 @@ export function ReportsPage() {
     queryKey: ['reports', 'revenue', from, to],
     queryFn: () => getRevenueReport(from, to),
     enabled: tab === 'revenue',
+  });
+  const paymentsQuery = useQuery({
+    queryKey: ['reports', 'payment-methods', from, to],
+    queryFn: () => getPaymentMethodsReport(from, to),
+    enabled: tab === 'payments',
   });
   const servicesQuery = useQuery({
     queryKey: ['reports', 'top-services', from, to],
@@ -103,11 +127,13 @@ export function ReportsPage() {
   const activeQuery =
     tab === 'revenue'
       ? revenueQuery
-      : tab === 'services'
-        ? servicesQuery
-        : tab === 'products'
-          ? productsQuery
-          : statusQuery;
+      : tab === 'payments'
+        ? paymentsQuery
+        : tab === 'services'
+          ? servicesQuery
+          : tab === 'products'
+            ? productsQuery
+            : statusQuery;
 
   return (
     <section className="space-y-6">
@@ -203,6 +229,7 @@ export function ReportsPage() {
           <ReportContent
             tab={tab}
             revenue={revenueQuery.data ?? null}
+            payments={paymentsQuery.data ?? null}
             services={servicesQuery.data ?? null}
             products={productsQuery.data ?? null}
             status={statusQuery.data ?? null}
@@ -216,16 +243,71 @@ export function ReportsPage() {
 function ReportContent({
   tab,
   revenue,
+  payments,
   services,
   products,
   status,
 }: {
   tab: ReportTab;
   revenue: Awaited<ReturnType<typeof getRevenueReport>> | null;
+  payments: Awaited<ReturnType<typeof getPaymentMethodsReport>> | null;
   services: Awaited<ReturnType<typeof getTopServices>> | null;
   products: Awaited<ReturnType<typeof getTopProducts>> | null;
   status: Awaited<ReturnType<typeof getWorkOrderStatusReport>> | null;
 }) {
+  if (tab === 'payments' && payments) {
+    const max = Math.max(1, ...payments.items.map((item) => item.totalCents));
+    return (
+      <div className="space-y-4">
+        <div className="flex items-baseline gap-3">
+          <span className="text-sm text-slate-500">Recebido no período (caixa)</span>
+          <span className="text-2xl font-bold text-green-700">
+            {formatBRL(payments.totalCents)}
+          </span>
+        </div>
+        {payments.items.length === 0 ? (
+          <p className="text-sm text-slate-500">
+            Nenhum pagamento recebido no período {payments.from} a {payments.to}.
+          </p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead className="border-b border-slate-200 text-xs uppercase text-slate-500">
+                <tr>
+                  <th className="px-3 py-2">Forma</th>
+                  <th className="px-3 py-2 text-right">Recebimentos</th>
+                  <th className="px-3 py-2"> </th>
+                  <th className="px-3 py-2 text-right">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {payments.items.map((item) => (
+                  <tr key={item.method} className="border-b border-slate-100 last:border-0">
+                    <td className="px-3 py-2 font-medium text-slate-800">
+                      {PAYMENT_METHOD_LABELS[item.method]}
+                    </td>
+                    <td className="px-3 py-2 text-right text-slate-600">{item.count}</td>
+                    <td className="px-3 py-2">
+                      <div className="h-2 w-24 overflow-hidden rounded-full bg-slate-100">
+                        <div
+                          className="h-full rounded-full bg-green-600"
+                          style={{ width: `${(item.totalCents / max) * 100}%` }}
+                        />
+                      </div>
+                    </td>
+                    <td className="px-3 py-2 text-right font-semibold text-slate-800">
+                      {formatBRL(item.totalCents)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    );
+  }
+
   if (tab === 'revenue' && revenue) {
     const maxDaily = Math.max(1, ...revenue.items.map((item) => item.totalCents));
     return (

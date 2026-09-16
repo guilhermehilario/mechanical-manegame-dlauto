@@ -1,4 +1,5 @@
 import type { AppointmentDto } from './appointment';
+import type { DashboardCashDto } from './reports';
 import type { WorkOrderDto, WorkOrderStatusDto } from './work-order';
 
 /**
@@ -35,7 +36,10 @@ export interface DashboardRevenueDto {
 
 export interface DashboardSummaryDto {
   counts: DashboardCountsDto;
+  /** Accrual view — delivered work orders (Fase 8). */
   revenue: DashboardRevenueDto;
+  /** Cash view — money actually received (A5). */
+  cash: DashboardCashDto;
   workOrdersByStatus: WorkOrderStatusCountDto[];
   upcomingAppointments: AppointmentDto[];
   recentWorkOrders: WorkOrderDto[];

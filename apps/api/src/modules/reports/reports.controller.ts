@@ -6,6 +6,7 @@ import {
 } from '@mechanic-system/validation';
 import type { ReportPeriodQuery, TopReportQuery } from '@mechanic-system/validation';
 import type {
+  PaymentMethodRevenueReportDto,
   RevenueReportDto,
   TopItemsReportDto,
   WorkOrderStatusReportDto,
@@ -50,5 +51,13 @@ export class ReportsController {
     @Query(new ZodValidationPipe(reportPeriodSchema, 'query')) query: ReportPeriodQuery,
   ): Promise<WorkOrderStatusReportDto> {
     return this.reportsService.workOrderStatus(query);
+  }
+
+  /** Cash-basis revenue by payment method (A5). */
+  @Get('payment-methods')
+  paymentMethods(
+    @Query(new ZodValidationPipe(reportPeriodSchema, 'query')) query: ReportPeriodQuery,
+  ): Promise<PaymentMethodRevenueReportDto> {
+    return this.reportsService.paymentMethods(query);
   }
 }

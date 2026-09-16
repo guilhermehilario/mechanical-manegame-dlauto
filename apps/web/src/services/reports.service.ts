@@ -1,4 +1,5 @@
 import type {
+  PaymentMethodRevenueReportDto,
   RevenueReportDto,
   TopItemsReportDto,
   WorkOrderStatusReportDto,
@@ -39,4 +40,12 @@ export function getWorkOrderStatusReport(
   to: string,
 ): Promise<WorkOrderStatusReportDto> {
   return api.get<WorkOrderStatusReportDto>(`/reports/work-orders?from=${from}&to=${to}`);
+}
+
+/** Cash-basis revenue by payment method (A5). */
+export function getPaymentMethodsReport(
+  from: string,
+  to: string,
+): Promise<PaymentMethodRevenueReportDto> {
+  return api.get<PaymentMethodRevenueReportDto>(`/reports/payment-methods?from=${from}&to=${to}`);
 }

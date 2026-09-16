@@ -37,6 +37,8 @@ export class DashboardService {
       lowStockTotal,
       currentMonthRevenue,
       previousMonthRevenue,
+      cashToday,
+      cashMonth,
       statusRows,
       recentWorkOrders,
       upcomingPage,
@@ -49,6 +51,8 @@ export class DashboardService {
       this.productsRepository.count(undefined, undefined, true),
       this.deliveredRevenue(monthStart, endOfMonth(now)),
       this.deliveredRevenue(previousMonthStart, endOfMonth(previousMonthStart)),
+      this.analyticsRepository.paymentTotal({ from: startOfDay(now), to: endOfDay(now) }),
+      this.analyticsRepository.paymentTotal({ from: monthStart, to: endOfMonth(now) }),
       this.analyticsRepository.workOrderCountByStatus(),
       this.workOrdersService.list(1, 5, {}),
       this.appointmentsService.list(1, 12, { from: now }),
@@ -74,6 +78,10 @@ export class DashboardService {
       revenue: {
         currentMonthCents: currentMonthRevenue,
         previousMonthCents: previousMonthRevenue,
+      },
+      cash: {
+        todayCents: cashToday,
+        monthCents: cashMonth,
       },
       workOrdersByStatus,
       upcomingAppointments,

@@ -1,4 +1,5 @@
 import type { WorkOrderStatusDto } from './work-order';
+import type { PaymentMethod } from './payment';
 
 /**
  * Report DTOs (Fase 8). All reports are derived queries over work orders
@@ -45,4 +46,33 @@ export interface WorkOrderStatusReportDto {
   from: string;
   to: string;
   items: WorkOrderStatusReportRowDto[];
+}
+
+/**
+ * Cash-flow view (Bloco A / A5 — docs/todo-mvp.md). Complements the
+ * accrual reports above (by DELIVERED work order): money actually
+ * received, dated by `paidAt`, grouped by payment method. Money stays in
+ * integer cents (§18).
+ */
+
+/** KPIs of money actually received (cash basis) — dashboard. */
+export interface DashboardCashDto {
+  /** Sum of payments with paidAt inside today (local workshop day). */
+  todayCents: number;
+  /** Sum of payments with paidAt inside the current local month. */
+  monthCents: number;
+}
+
+export interface PaymentMethodRevenueRowDto {
+  method: PaymentMethod;
+  /** Number of receipts (payment rows), not work orders. */
+  count: number;
+  totalCents: number;
+}
+
+export interface PaymentMethodRevenueReportDto {
+  from: string; // YYYY-MM-DD
+  to: string;
+  totalCents: number;
+  items: PaymentMethodRevenueRowDto[];
 }
