@@ -14,6 +14,8 @@ const apiEnv = {
   CORS_ORIGIN: 'http://localhost:5173',
   DATABASE_URL: 'file:./e2e.db',
   STORAGE_DIR: './data/e2e-storage',
+  // Deterministic runs: the automatic backup scheduler stays off in e2e.
+  BACKUP_AUTO_ENABLED: '0',
   JWT_ACCESS_SECRET: 'e2e-access-secret-0123456789abcdef',
   JWT_REFRESH_SECRET: 'e2e-refresh-secret-0123456789abcdef',
   JWT_ACCESS_EXPIRES: '15m',

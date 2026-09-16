@@ -24,6 +24,21 @@ export const envSchema = z.object({
   /** Backup destination (Fase 10). Relative → cwd. Created with mode 0700. */
   BACKUP_DIR: z.string().min(1).default('./data/backups'),
 
+  /**
+   * Automatic daily backup (Bloco E of docs/todo-mvp.md). Enabled by default:
+   * the whole business dataset is local-only, so the scheduler is the real
+   * safety net. Set BACKUP_AUTO_ENABLED=0 to disable (e.g. CI/e2e).
+   */
+  BACKUP_AUTO_ENABLED: z
+    .union([z.literal('0'), z.literal('1')])
+    .default('1'),
+  /** How often the scheduler tries to create a backup, in hours. */
+  BACKUP_INTERVAL_HOURS: z.coerce.number().int().min(1).max(168).default(24),
+  /** Dashboard warning threshold: hours without a backup before alerting. */
+  BACKUP_ALERT_AFTER_HOURS: z.coerce.number().int().min(1).max(720).default(24),
+  /** How many automatic backups to keep (oldest beyond this are deleted). */
+  BACKUP_KEEP: z.coerce.number().int().min(1).max(365).default(14),
+
   JWT_ACCESS_SECRET: z.string().min(16),
   JWT_REFRESH_SECRET: z.string().min(16),
   JWT_ACCESS_EXPIRES: z.string().default('15m'),
@@ -69,5 +84,9 @@ export function testEnv(): Env {
     JWT_REFRESH_SECRET: 'test-refresh-secret-0123456789abcdef',
     JWT_ACCESS_EXPIRES: '15m',
     JWT_REFRESH_EXPIRES: '7d',
+    BACKUP_AUTO_ENABLED: '0',
+    BACKUP_INTERVAL_HOURS: '24',
+    BACKUP_ALERT_AFTER_HOURS: '24',
+    BACKUP_KEEP: '14',
   });
 }

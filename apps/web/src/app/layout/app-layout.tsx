@@ -15,7 +15,10 @@ const NAV_ITEMS = [
 ] as const;
 
 /** Admin-only surface (the API enforces the role regardless). */
-const ADMIN_NAV_ITEMS = [{ to: '/backups', label: 'Backups' }] as const;
+const ADMIN_NAV_ITEMS = [
+  { to: '/backups', label: 'Backups' },
+  { to: '/users', label: 'Usuários' },
+] as const;
 
 export function AppLayout() {
   const { user, logout } = useAuth();
@@ -65,16 +68,24 @@ export function AppLayout() {
         {user ? (
           <div className="border-t border-slate-200 p-4">
             <p className="truncate text-sm font-medium text-slate-800">{user.name}</p>
-            <p className="mb-2 truncate text-xs text-slate-500">{user.email}</p>
-            <button
-              type="button"
-              onClick={() => {
-                void logout();
-              }}
-              className="text-xs font-medium text-red-600 hover:underline"
-            >
-              Sair
-            </button>
+            <p className="truncate text-xs text-slate-500">{user.email}</p>
+            <div className="mt-2 flex items-center gap-3">
+              <NavLink
+                to="/change-password"
+                className="text-xs font-medium text-blue-600 hover:underline"
+              >
+                Trocar senha
+              </NavLink>
+              <button
+                type="button"
+                onClick={() => {
+                  void logout();
+                }}
+                className="text-xs font-medium text-red-600 hover:underline"
+              >
+                Sair
+              </button>
+            </div>
           </div>
         ) : null}
       </aside>

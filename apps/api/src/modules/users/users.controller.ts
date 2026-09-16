@@ -6,6 +6,7 @@ import {
   HttpCode,
   HttpStatus,
   Param,
+  Patch,
   Post,
   Query,
   Req,
@@ -14,11 +15,15 @@ import {
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import { DomainError, UnauthorizedError } from '../../common/errors/domain.error';
 import {
+  adminResetPasswordSchema,
+  changePasswordSchema,
   createUserSchema,
   idSchema,
   paginationQuerySchema,
 } from '@mechanic-system/validation';
 import type {
+  AdminResetPasswordInput,
+  ChangePasswordInput,
   CreateUserInput,
   PaginationQuery,
   UpdateUserInput,
@@ -80,5 +85,44 @@ export class UsersController {
       throw new DomainError('CONFLICT', 'You cannot deactivate your own account', 409);
     }
     await this.usersService.update(id, { active: false } as UpdateUserInput);
+  }
+
+  /**
+   * Self-service password change (Bloco D) — ANY authenticated user.
+   * No @RequireRoles: every role can change its own password.
+   */
+  @Patch('me/password')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async changeMyPassword(
+    @Req() request: AuthenticatedRequest,
+    @Body(new ZodValidationPipe(changePasswordSchema)) input: ChangePasswordInput,
+  ): Promise<void> {
+    const actingUser = request.user;
+    if (!actingUser) {
+      throw new UnauthorizedError();
+    }
+    await this.usersService.changePassword(actingUser.id, input);
+  }
+
+  /**
+   * Admin reset of another user's password (Bloco D) — ADMIN only.
+   * Revokes the target's sessions (forced re-login with the new password).
+   */
+  @Patch(':id/password')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @RequireRoles('ADMIN')
+  async adminResetPassword(
+    @Param('id', new ZodValidationPipe(idSchema, 'param')) targetUserId: string,
+    @Req() request: AuthenticatedRequest,
+    @Body(new ZodValidationPipe(adminResetPasswordSchema)) input: AdminResetPasswordInput,
+  ): Promise<void> {
+    const actingUser = request.user;
+    if (!actingUser) {
+      throw new UnauthorizedError();
+    }
+    await this.usersService.adminResetPassword(targetUserId, {
+      newPassword: input.newPassword,
+      _actingAdminId: actingUser.id,
+    });
   }
 }

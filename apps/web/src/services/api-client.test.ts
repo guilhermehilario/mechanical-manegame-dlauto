@@ -49,4 +49,10 @@ describe('ApiClient', () => {
     const request = fetchMock.mock.calls[0]?.[1] as RequestInit;
     expect((request.headers as Record<string, string>).Authorization).toBe('Bearer tok-123');
   });
+
+  it('resolves void on 204 No Content (no envelope)', async () => {
+    global.fetch = vi.fn().mockResolvedValue(new Response(null, { status: 204 }));
+    const client = new ApiClient({ baseUrl: 'http://x' });
+    await expect(client.delete('/users/usr_1')).resolves.toBeUndefined();
+  });
 });

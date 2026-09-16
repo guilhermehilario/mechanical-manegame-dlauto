@@ -10,3 +10,4 @@ export * from './vehicle-pickup';
 export * from './dashboard';
 export * from './reports';
 export * from './backup';
+export * from './backup-status';

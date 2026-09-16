@@ -1,6 +1,7 @@
 export * from './common';
 export * from './auth';
 export * from './user';
+export * from './admin-reset-password';
 export * from './customer';
 export * from './vehicle';
 export * from './service';

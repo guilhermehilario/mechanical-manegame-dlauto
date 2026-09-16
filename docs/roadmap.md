@@ -114,3 +114,10 @@ gates: lint + typecheck + testes + build + smoke/e2e):
 | **Fase 13+** | Impressão, nota fiscal, estoque avançado, integrações, S3 (§3) | Expansão, conforme demanda do produto |
 
 > Atualize este documento ao concluir cada fase (mesmo padrão do README).
+
+---
+
+> **Nota (2026-09-16):** o detalhamento executável das tarefas pendentes até
+> o **produto viável (MVP)** — pagamentos, impressão, empacotamento/homologação,
+> sessão, backup automático e onboarding — está consolidado em
+> [docs/todo-mvp.md](todo-mvp.md).

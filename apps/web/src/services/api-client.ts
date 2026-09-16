@@ -51,6 +51,12 @@ export class ApiClient {
       throw new ApiClientError('NETWORK_ERROR', 'Servidor indisponível', 0);
     }
 
+    // 204 No Content (DELETE /users/:id, PATCH …/password): no envelope, no
+    // body — parsing it would only produce a confusing UNKNOWN error.
+    if (response.status === 204) {
+      return undefined as TResponse;
+    }
+
     const payload = (await response.json().catch(() => null)) as ApiResponse<TResponse> | null;
 
     if (!response.ok || !payload || !payload.success) {

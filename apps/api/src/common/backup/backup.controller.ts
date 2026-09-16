@@ -16,6 +16,7 @@ import {
   restoreBackupSchema,
   type RestoreBackupInput,
 } from './backup-validation';
+import { BackupSchedulerService } from './backup-scheduler.service';
 import { BackupService } from './backup.service';
 import { RequireRoles, RolesGuard } from '../../modules/auth/roles.guard';
 
@@ -29,7 +30,21 @@ import { RequireRoles, RolesGuard } from '../../modules/auth/roles.guard';
 @RequireRoles('ADMIN')
 @Controller('backups')
 export class BackupsController {
-  constructor(private readonly backups: BackupService) {}
+  constructor(
+    private readonly backups: BackupService,
+    private readonly scheduler: BackupSchedulerService,
+  ) {}
+
+  /**
+   * Backup health for the dashboard banner (Bloco E/E2). Deliberately
+   * class-level ADMIN like the rest of the controller: the status leaks
+   * backup timestamps/PII-adjacent metadata, and the dashboard itself is
+   * already ADMIN/MANAGER (R3).
+   */
+  @Get('status')
+  status() {
+    return this.scheduler.getStatus();
+  }
 
   @Post()
   @HttpCode(HttpStatus.CREATED)

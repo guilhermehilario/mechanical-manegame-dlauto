@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { formatBRL } from '@mechanic-system/shared';
 import type { WorkOrderStatusCountDto } from '@mechanic-system/types';
 import { getDashboardSummary } from '../../services/dashboard.service';
+import { BackupAlertBanner } from './backup-alert-banner';
 import { WORK_ORDER_STATUS_LABELS, WORK_ORDER_STATUS_BADGES } from '../work-orders/work-orders-page';
 import { APPOINTMENT_STATUS_BADGES } from '../appointments/appointment-status';
 import { formatTime } from '../../utils/dates';
@@ -96,6 +97,9 @@ export function DashboardPage() {
         <h1 className="text-lg font-bold text-slate-900">Dashboard</h1>
         <p className="text-sm text-slate-500">Visão geral da oficina</p>
       </div>
+
+      {/* Stale/missing backup warning (Bloco E/E2) — admin/manager only. */}
+      <BackupAlertBanner />
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
         <KpiCard

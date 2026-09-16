@@ -58,6 +58,7 @@ function usersRepoMock() {
     findById: vi.fn(),
     create: vi.fn((data: Record<string, unknown>) => makeUser(data as Partial<User>)),
     update: vi.fn((id: string, data: Record<string, unknown>) => makeUser({ id, ...data })),
+    updatePassword: vi.fn((_id: string, _passwordHash: string) => Promise.resolve(undefined)),
   };
 }
 
@@ -203,7 +204,13 @@ describe('UsersService', () => {
   function setup() {
     const hasher = new PasswordHasher();
     const repo = usersRepoMock();
-    const service = new UsersService(repo as unknown as UsersRepository, hasher);
+    const prisma = prismaMock();
+    const tokens = new TokenService(jwtMock() as never, prisma as never);
+    const service = new UsersService(
+      repo as unknown as UsersRepository,
+      hasher,
+      tokens,
+    );
     return { repo, service };
   }
 
@@ -242,5 +249,111 @@ describe('UsersService', () => {
       code: 'USER_NOT_FOUND',
       status: 404,
     });
+  });
+});
+
+// ─────────────────────────────────────────────────────────────
+// Password change/reset (Bloco D — docs/todo-mvp.md)
+// ─────────────────────────────────────────────────────────────
+
+describe('UsersService.changePassword (self-service)', () => {
+  function setup() {
+    const hasher = new PasswordHasher();
+    const repo = usersRepoMock();
+    const prisma = prismaMock();
+    const tokens = new TokenService(jwtMock() as never, prisma as never);
+    const service = new UsersService(repo as unknown as UsersRepository, hasher, tokens);
+    return { repo, service, hasher, tokens };
+  }
+
+  it('accepts the current password, rehashes and revokes sessions', async () => {
+    const { repo, service, hasher, tokens } = setup();
+    const revokeSpy = vi.spyOn(tokens, 'revokeAllForUser').mockResolvedValue(undefined);
+    repo.findById.mockResolvedValue(
+      makeUser({ passwordHash: await hasher.hash('old-secret-1') }),
+    );
+
+    await service.changePassword('usr_1', {
+      currentPassword: 'old-secret-1',
+      newPassword: 'new-secret-2',
+    });
+
+    expect(revokeSpy).toHaveBeenCalledWith('usr_1');
+    // Repository received a fresh argon2 hash (never the plain password).
+    const updateArgs = repo.updatePassword.mock.calls[0]?.[1] as string;
+    expect(updateArgs).not.toContain('new-secret-2');
+    await expect(hasher.verify(updateArgs, 'new-secret-2')).resolves.toBe(true);
+  });
+
+  it('rejects a wrong current password (403)', async () => {
+    const { repo, service } = setup();
+    repo.findById.mockResolvedValue(
+      makeUser({ passwordHash: await new PasswordHasher().hash('old-secret-1') }),
+    );
+    await expect(
+      service.changePassword('usr_1', {
+        currentPassword: 'wrong-pass-9',
+        newPassword: 'new-secret-2',
+      }),
+    ).rejects.toMatchObject({ code: 'INVALID_CREDENTIALS', status: 403 });
+  });
+
+  it('rejects reusing the same password', async () => {
+    const { repo, service } = setup();
+    repo.findById.mockResolvedValue(
+      makeUser({ passwordHash: await new PasswordHasher().hash('same-pass-1') }),
+    );
+    await expect(
+      service.changePassword('usr_1', {
+        currentPassword: 'same-pass-1',
+        newPassword: 'same-pass-1',
+      }),
+    ).rejects.toMatchObject({ code: 'PASSWORD_UNCHANGED' });
+  });
+});
+
+describe('UsersService.adminResetPassword', () => {
+  function setup() {
+    const hasher = new PasswordHasher();
+    const repo = usersRepoMock();
+    const prisma = prismaMock();
+    const tokens = new TokenService(jwtMock() as never, prisma as never);
+    const service = new UsersService(repo as unknown as UsersRepository, hasher, tokens);
+    return { repo, service, tokens };
+  }
+
+  it('resets a manager password and revokes sessions', async () => {
+    const { repo, service, tokens } = setup();
+    const revokeSpy = vi.spyOn(tokens, 'revokeAllForUser').mockResolvedValue(undefined);
+    repo.findById.mockResolvedValue(makeUser({ role: 'MANAGER' }));
+
+    await service.adminResetPassword('usr_2', {
+      newPassword: 'fresh-pass-1',
+      _actingAdminId: 'usr_1',
+    });
+
+    expect(revokeSpy).toHaveBeenCalledWith('usr_2');
+    expect(repo.updatePassword).toHaveBeenCalledWith('usr_2', expect.any(String));
+  });
+
+  it('refuses self-reset through the admin path (409)', async () => {
+    const { service } = setup();
+    await expect(
+      service.adminResetPassword('usr_1', {
+        newPassword: 'fresh-pass-1',
+        _actingAdminId: 'usr_1',
+      }),
+    ).rejects.toMatchObject({ code: 'SELF_PASSWORD_RESET', status: 409 });
+  });
+
+  it('refuses MECHANIC/ATTENDANT targets (403)', async () => {
+    const { repo, service } = setup();
+    repo.findById.mockResolvedValue(makeUser({ role: 'MECHANIC' }));
+    await expect(
+      service.adminResetPassword('usr_2', {
+        newPassword: 'fresh-pass-1',
+        _actingAdminId: 'usr_1',
+      }),
+    ).rejects.toMatchObject({ code: 'FORBIDDEN', status: 403 });
   });
 });

@@ -16,6 +16,8 @@ import { WorkOrdersPage } from '../modules/work-orders/work-orders-page';
 import { WorkOrderDetailPage } from '../modules/work-orders/work-order-detail-page';
 import { VehiclePickupsPage } from '../modules/vehicle-pickups/vehicle-pickups-page';
 import { BackupsPage } from '../modules/backups/backups-page';
+import { UsersPage } from '../modules/users/users-page';
+import { ChangePasswordPage } from '../modules/users/change-password-page';
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuth();
@@ -58,6 +60,8 @@ export function AppRouter() {
         />
         <Route path="reports" element={<ReportsPage />} />
         <Route path="backups" element={<BackupsPage />} />
+        <Route path="users" element={<UsersPage />} />
+        <Route path="change-password" element={<ChangePasswordPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

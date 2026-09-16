@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
@@ -7,10 +7,15 @@ import type { DashboardSummaryDto } from '@mechanic-system/types';
 
 const mocks = vi.hoisted(() => ({
   getDashboardSummary: vi.fn(),
+  getBackupStatus: vi.fn(),
 }));
 
 vi.mock('../../services/dashboard.service', () => ({
   getDashboardSummary: mocks.getDashboardSummary,
+}));
+
+vi.mock('../../services/backup-status.service', () => ({
+  getBackupStatus: mocks.getBackupStatus,
 }));
 
 const summary: DashboardSummaryDto = {
@@ -84,6 +89,18 @@ function renderPage(): void {
 }
 
 describe('DashboardPage', () => {
+  beforeEach(() => {
+    // Banner hidden by default (fresh/absent status) — no noise in these tests.
+    mocks.getBackupStatus.mockResolvedValue({
+      latest: null,
+      latestAt: null,
+      hoursSinceLast: null,
+      alertAfterHours: 24,
+      isStale: false,
+      autoEnabled: true,
+    });
+  });
+
   it('renders KPIs, revenue and supporting lists', async () => {
     mocks.getDashboardSummary.mockResolvedValue(summary);
 
@@ -116,5 +133,41 @@ describe('DashboardPage', () => {
     expect(
       await screen.findByText('Não foi possível carregar o painel.'),
     ).toBeTruthy();
+  });
+
+  it('shows the backup alert banner when the latest backup is stale', async () => {
+    mocks.getDashboardSummary.mockResolvedValue(summary);
+    mocks.getBackupStatus.mockResolvedValue({
+      latest: null,
+      latestAt: null,
+      hoursSinceLast: null,
+      alertAfterHours: 24,
+      isStale: true,
+      autoEnabled: true,
+    });
+
+    renderPage();
+
+    expect(await screen.findByRole('alert')).toBeTruthy();
+    expect(screen.getByText(/Backup dos dados atrasado/)).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Fazer backup agora' })).toBeTruthy();
+  });
+
+  it('hides the backup alert banner when the backup is fresh', async () => {
+    mocks.getDashboardSummary.mockResolvedValue(summary);
+    mocks.getBackupStatus.mockResolvedValue({
+      latest: null,
+      latestAt: new Date().toISOString(),
+      hoursSinceLast: 1,
+      alertAfterHours: 24,
+      isStale: false,
+      autoEnabled: true,
+    });
+
+    renderPage();
+
+    // Give the banner query a tick to settle.
+    await screen.findByRole('heading', { name: 'Dashboard' });
+    expect(screen.queryByText(/Backup dos dados atrasado/)).toBeNull();
   });
 });
