@@ -14,6 +14,6 @@ export function createPayment(
 }
 
 /** Refund (storno) — ADMIN only; the API rejects other roles with 403. */
-export function refundPayment(workOrderId: string, paymentId: string): Promise<void> {
-  return api.delete<void>(`/work-orders/${workOrderId}/payments/${paymentId}`);
+export function refundPayment(workOrderId: string, paymentId: string): Promise<unknown> {
+  return api.delete(`/work-orders/${workOrderId}/payments/${paymentId}`);
 }

@@ -98,7 +98,7 @@ export class PaymentsService {
         amountCents: input.amountCents,
         method: input.method,
         paidAt: new Date(),
-        notes: input.notes && input.notes.length > 0 ? input.notes : null,
+        notes: input.notes && input.notes.trim().length > 0 ? input.notes.trim() : null,
         receivedBy: userId,
       });
     });
@@ -111,7 +111,7 @@ export class PaymentsService {
   }
 
   async listByWorkOrder(workOrderId: string): Promise<PaymentsList> {
-    const { totals } = await this.assertPayable.bind(this)(workOrderId);
+    const { totals } = await this.assertPayable(workOrderId);
     const payments = await this.paymentsRepository.listByWorkOrder(workOrderId);
     const paidCents = payments.reduce((sum, payment) => sum + payment.amountCents, 0);
     return {
@@ -126,15 +126,31 @@ export class PaymentsService {
   }
 
   /**
-   * Reversal (estorno): removes the payment row. ADMIN/MANAGER only —
-   * enforced by the controller; the caller passes who acted for the audit.
+   * Reversal (estorno): removes the payment row and records the audit trail
+   * (A2 — docs/todo-mvp.md). ADMIN/MANAGER only — enforced by the controller;
+   * the caller passes who acted for the audit.
    */
-  async refund(paymentId: string): Promise<void> {
+  async refund(paymentId: string, actingUserId: string): Promise<void> {
     const payment = await this.paymentsRepository.findById(paymentId);
     if (!payment) {
       throw new NotFoundError(ErrorCodes.PAYMENT_NOT_FOUND, 'Pagamento não encontrado');
     }
-    await this.paymentsRepository.delete(paymentId);
+    await this.prisma.$transaction(async (tx) => {
+      await this.paymentsRepository.deleteInTransaction(tx, paymentId);
+      await tx.auditLog.create({
+        data: {
+          userId: actingUserId,
+          action: 'PAYMENT_REFUND',
+          entity: 'payment',
+          entityId: paymentId,
+          metadata: JSON.stringify({
+            workOrderId: payment.workOrderId,
+            amountCents: payment.amountCents,
+            method: payment.method,
+          }),
+        },
+      });
+    });
   }
 
   /** Summary only (badge on lists/dashboard) without loading every row. */

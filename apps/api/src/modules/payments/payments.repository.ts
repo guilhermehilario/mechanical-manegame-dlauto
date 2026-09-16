@@ -58,6 +58,11 @@ export class PaymentsRepository {
   delete(id: string): Promise<Payment> {
     return this.prisma.payment.delete({ where: { id } });
   }
+
+  /** Delete inside the caller's transaction (refund + audit trail atomicity). */
+  deleteInTransaction(tx: Prisma.TransactionClient, id: string): Promise<Payment> {
+    return tx.payment.delete({ where: { id } });
+  }
 }
 
 const PAYMENT_INCLUDE = {

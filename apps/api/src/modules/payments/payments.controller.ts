@@ -71,12 +71,16 @@ export class PaymentsController {
   @HttpCode(HttpStatus.NO_CONTENT)
   @RequireRoles('ADMIN', 'MANAGER')
   async refund(
+    @Req() request: AuthenticatedRequest,
     @Param('workOrderId', new ZodValidationPipe(workOrderIdSchema, 'param'))
     _workOrderId: string,
-    @Param('paymentId',new ZodValidationPipe(paymentIdSchema, 'param')
-    )
+    @Param('paymentId', new ZodValidationPipe(paymentIdSchema, 'param'))
     paymentId: string,
   ): Promise<void> {
-    await this.paymentsService.refund(paymentId);
+    const userId = request.user?.id;
+    if (!userId) {
+      return Promise.reject(new Error('Unauthorized'));
+    }
+    await this.paymentsService.refund(paymentId, userId);
   }
 }

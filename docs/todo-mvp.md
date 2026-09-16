@@ -37,29 +37,37 @@ empacotado ainda não foi revalidado após as mudanças de segurança (R2/R6).
 
 Sem isso a OS não vira recebimento — é o maior bloqueio de produto.
 
-- [ ] **A1. Modelo `Payment` no schema** (migration Prisma)
-  - `workOrderId` FK Restrict (1─N), `amountCents` (Int, §18), `method`
-    (enum: `CASH`, `PIX`, `DEBIT_CARD`, `CREDIT_CARD`, `TRANSFER`),
-    `paidAt`, `receivedBy` (SetNull), `notes?` + timestamps.
-- [ ] **A2. Regras de negócio no service**
-  - Soma dos pagamentos ≤ total da OS (bloquear pagamento acima do saldo
-    com `409 PAYMENT_EXCEEDS_BALANCE`).
-  - Permitir múltiplos pagamentos parciais (entrada + saldo).
-  - Recebimento permitido apenas com OS em `COMPLETED`/`AWAITING_PICKUP`/
-    `DELIVERED` (definir na state machine; casos cancelados → 409).
-  - Estorno/DELETE de pagamento (ADMIN/MANAGER) com trilha em `audit_logs`.
-- [ ] **A3. Endpoints** `POST /work-orders/:id/payments`,
-  `GET /work-orders/:id/payments`, `DELETE /payments/:id` (RBAC:
-  ATTENDANT cria; delete só ADMIN/MANAGER).
-- [ ] **A4. UI na OS**: painel de pagamentos na tela de detalhe — saldo
-  (`totalCents − paidCents`), botão "Receber", lista de pagamentos,
-  badge de status financeiro (`PAGO` / `PARCIAL` / `ABERTO`).
+- [x] **A1. Modelo `Payment` no schema** ✅ 2026-09-16: migration Prisma
+  aplicada; `workOrderId` FK Restrict (1─N), `amountCents` (Int, §18),
+  `method` (enum `PaymentMethod`: `CASH`, `PIX`, `DEBIT_CARD`,
+  `CREDIT_CARD`, `TRANSFER`), `paidAt`, `receivedBy` (SetNull),
+  `notes?` + timestamps.
+- [x] **A2. Regras de negócio no service** ✅ 2026-09-16: soma dos
+  pagamentos ≤ total da OS — check de saldo **dentro da mesma transação**
+  do insert (`409 PAYMENT_EXCEEDS_BALANCE`, imune a overpay concorrente);
+  múltiplos pagamentos parciais; recebimento só em OS pagável
+  (`isPayableWorkOrderStatus` no pacote shared: `COMPLETED`/
+  `AWAITING_PICKUP`/`DELIVERED` → `409 WORK_ORDER_NOT_PAYABLE`); estorno
+  ADMIN/MANAGER com trilha `PAYMENT_REFUND` em `audit_logs` (primeiro uso
+  real da tabela, atômico com o delete).
+- [x] **A3. Endpoints** ✅ 2026-09-16: `POST /work-orders/:id/payments`,
+  `GET /work-orders/:id/payments` (lista + summary),
+  `GET /work-orders/:id/payments/summary`, `DELETE
+  /work-orders/:id/payments/:paymentId` (RBAC: qualquer papel recebe;
+  delete só ADMIN/MANAGER).
+- [x] **A4. UI na OS** ✅ 2026-09-16: painel de pagamentos na tela de
+  detalhe — badge (`PAGO`/`PARCIAL`/`AGUARDANDO`), total/pago/saldo,
+  lista de pagamentos com estorno (ADMIN), formulário "Receber" com
+  métodos + botão "Receber saldo" que preenche o restante. DTO da OS
+  carrega `payment.paidCents/balanceCents/status` (null enquanto não
+  pagável), então listas e dashboard mostram o estado financeiro.
+- [x] **A6 (parcial)** ✅ 2026-09-16: 11 testes unitários do service
+  (regras de saldo, transação, DTO, estorno com auditoria). Falta E2E do
+  fluxo pagar parcial → saldo → PAGO (Bloco G).
 - [ ] **A5. Dashboard/relatórios**: KPI "recebido hoje" (baseado em
   `Payment`, não em OS concluída) + relatório de receita por forma de
   pagamento. **Decisão a documentar** se os relatórios atuais migram para
   pagamentos ou continuam por OS.
-- [ ] **A6. Testes** unitários (service) + E2E do fluxo pagar parcial →
-  pagar saldo → OS 100% paga.
 
 ## Bloco B — Impressão de documentos 🔴 Crítico
 
