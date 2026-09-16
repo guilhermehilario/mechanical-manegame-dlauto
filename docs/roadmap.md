@@ -24,7 +24,7 @@ Fase 9** (2026-09-11 — ver changelog do plano); restam:
 | R4 | ✅ **Aplicado (Fase 9):** sem credenciais padrão — seed/smoke exigem `SEED_ADMIN_*` do env; e2e gera senha aleatória por execução (`.e2e-admin-password` gitignored); first-run admin do empacotado sem default | 1 — imediato | ✔ Concluído |
 | R5 | ✅ **Aplicado (Fase 9):** `JwtAuthGuard` global (`APP_GUARD`, deny-by-default) + `@Public()` com allowlist explícita (`/health`, `/auth/login`, `/auth/refresh`); `RolesGuard` permanece por rota | 2 — curto prazo | ✔ Concluído |
 | R6 | ✅ **Aplicado (Fase 9):** Electron 33.2.1 → **43.7.0** (linha estável atual). *Pendente: revalidar o binário empacotado* | 2 — curto prazo | ✔ Aplicado (revalidação de binário pendente) |
-| R7 | Permissões (`mode 0700`) em `userData`/`storage` + avaliar cifragem (AES-GCM para imagens/assinaturas, SQLCipher para o banco) com trade-off de desempenho documentado | 3 — médio prazo | ❌ Pendente |
+| R7 | ✅ **Parcialmente aplicado (Fase 10):** permissões 0700/0600 em toda a área de dados (API boot + app empacotado); backup/restore locais funcionais; **cifragem rejeitada por ora** com justificativa (ADR-006) — reavaliar quando houver backup em nuvem (Fase 12) | 3 — médio prazo | ✔ Permissões concluídas · cifragem: decisão documentada |
 | R8 | Políticas de sessão (15 min/7 dias) e integridade verificável da assinatura (`signatureData` é imagem, não artefato criptográfico) | 4 — futuro | ❌ Pendente |
 
 > **Nota:** com R5 aplicado, restam da auditoria apenas R7 (permissões/
@@ -108,7 +108,7 @@ gates: lint + typecheck + testes + build + smoke/e2e):
 | Fase | Escopo | Por quê primeiro |
 |---|---|---|
 | **Fase 9** | ✅ **Concluída (2026-09-11):** R1 + R2 + R3 + R4 + R5 + R6 aplicados (ver changelog do plano de remediação). Restam como acompanhamento: revalidar o binário empacotado | Fecha 5 achados de segurança de alta prioridade; rota nova só nasce pública com @Public() explícito |
-| **Fase 10** | Backup/restauração (§3) + permissões 0700 (R7) | Protege o dado mais valioso do negócio (local-only hoje) |
+| **Fase 10** | ✅ **Concluída (2026-09-11):** backup/restauração locais (SQLite `VACUUM INTO` + storage, manifest com sha256, restore verificado) + permissões 0700/0600 (R7, ADR-006) | Protege o dado mais valioso do negócio (local-only hoje) |
 | **Fase 11** | Pagamentos na OS (§3) | Fecha o ciclo financeiro: orçamento → execução → recebimento |
 | **Fase 12** | Sync offline-first (§2): outbox nos services + worker + ADR de conflitos | O grande diferencial de produto; exige servidor central |
 | **Fase 13+** | Impressão, nota fiscal, estoque avançado, integrações, S3 (§3) | Expansão, conforme demanda do produto |

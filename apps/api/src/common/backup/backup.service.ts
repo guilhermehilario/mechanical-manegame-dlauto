@@ -1,6 +1,5 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { cp, mkdir, readdir, readFile, rename, rm, stat, writeFile, chmod } from 'node:fs/promises';
-import { existsSync, mkdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { Injectable } from '@nestjs/common';
 import type { Env } from '@mechanic-system/config';
@@ -9,6 +8,7 @@ import { ErrorCodes } from '@mechanic-system/types';
 import { DomainError } from '../errors/domain.error';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ensurePrivateDir } from '../hardening/permissions';
+import { databaseFilePath } from '../hardening/db-path';
 
 /**
  * BackupService (Fase 10, spec §3) — local backup/restore of the two places
@@ -160,16 +160,28 @@ export class BackupService {
         409,
       );
     }
-    const integrity = await this.prisma.$queryRawUnsafe<IntegrityRow[]>(
-      `PRAGMA integrity_check(${sqlStringLiteral(databasePath)})`,
+    // integrity_check takes a SCHEMA name, not a path — attach the snapshot
+    // first (Prisma raw queries are single-statement, so three calls).
+    await this.prisma.$queryRawUnsafe(
+      `ATTACH DATABASE ${sqlStringLiteral(databasePath)} AS backup_verify`,
     );
-    const verdict = integrity[0]?.['integrity_check'];
-    if (verdict !== 'ok') {
-      throw new DomainError(
-        ErrorCodes.BACKUP_CORRUPT,
-        `Integridade do snapshot inválida: ${String(verdict)}`,
-        409,
+    try {
+      const integrity = await this.prisma.$queryRawUnsafe<IntegrityRow[]>(
+        'PRAGMA backup_verify.integrity_check',
       );
+      const firstRow: IntegrityRow | undefined = integrity[0];
+      const verdict = firstRow?.integrity_check;
+      if (verdict !== 'ok') {
+        throw new DomainError(
+          ErrorCodes.BACKUP_CORRUPT,
+          `Integridade do snapshot inválida: ${String(verdict)}`,
+          409,
+        );
+      }
+    } finally {
+      await this.prisma
+        .$queryRawUnsafe('DETACH DATABASE backup_verify')
+        .catch(() => undefined);
     }
 
     // 2. Disconnect so no pooled connection holds the live files.
@@ -178,8 +190,11 @@ export class BackupService {
     try {
       // 3. Swap the database: snapshot → live path (rename within the same
       //    filesystem is atomic). WAL/SHM sidecars must die with the old db.
+      //    NOTE: fs.cp's `mode` is a umask-style mask (0–7), NOT permission
+      //    bits — 0o600 on the staging copy is applied explicitly below.
       const staging = `${this.databasePath}.restore-${Date.now()}`;
-      await cp(databasePath, staging, { mode: 0o600 });
+      await cp(databasePath, staging);
+      await chmod(staging, 0o600).catch(() => undefined);
       await rm(this.databasePath, { force: true });
       await rm(`${this.databasePath}-wal`, { force: true });
       await rm(`${this.databasePath}-shm`, { force: true });
@@ -261,39 +276,17 @@ function sqlStringLiteral(value: string): string {
 }
 
 /**
- * Resolves the live SQLite file path from the Prisma `file:` URL.
- * Relative URLs (dev/e2e) resolve against `database/prisma` (where the
- * schema lives) — located by walking up from cwd; absolute URLs (packaged
- * userData) are used as-is.
+ * Resolves the live SQLite file path from the Prisma `file:` URL —
+ * shared implementation in ../hardening/db-path (schema-relative for
+ * relative URLs, as-is for absolute ones).
  */
-export function databaseFilePath(databaseUrl: string, cwd: string): string {
-  let raw = databaseUrl.startsWith('file:') ? databaseUrl.slice('file:'.length) : databaseUrl;
-  raw = raw.split('?')[0] ?? raw;
-  if (raw.startsWith('/')) return raw;
-  return join(findSchemaDir(cwd), raw);
-}
-
-/** Walks up from `start` looking for database/prisma/schema.prisma. */
-function findSchemaDir(start: string): string {
-  let current = start;
-  for (let i = 0; i < 8; i += 1) {
-    const candidate = join(current, 'database', 'prisma');
-    if (existsSync(join(candidate, 'schema.prisma'))) return candidate;
-    const parent = resolve(current, '..');
-    if (parent === current) break;
-    current = parent;
-  }
-  // Fallback: created on demand (packaged flow uses absolute URLs anyway).
-  const fallback = join(start, 'database', 'prisma');
-  mkdirSync(fallback, { recursive: true });
-  return fallback;
-}
 
 async function copyStorage(from: string, to: string): Promise<{ files: number; bytes: number }> {
   const before = await treeStats(from);
-  await cp(from, to, { recursive: true }).catch(async (error: NodeJS.ErrnoException) => {
-    if (error.code !== 'ENOENT') throw error; // empty storage → just create the target
-    await mkdir(to, { recursive: true });
+  await cp(from, to, { recursive: true }).catch((error: unknown) => {
+    const errno = error as NodeJS.ErrnoException | undefined;
+    if (errno?.code !== 'ENOENT') throw error; // empty storage → just create the target
+    return mkdir(to, { recursive: true });
   });
   return before;
 }

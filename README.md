@@ -181,12 +181,19 @@ Layout do app empacotado (tudo real, fora do asar):
       serviços/produtos, status das OS) com períodos; empacotamento
       autocontido (electron-builder, API sidecar offline-first com migrate de
       primeira execução); E2E com Playwright
-- [x] **Fase 9** — Estabilização de segurança (auditoria R1–R4 + R6):
+- [x] **Fase 9** — Estabilização de segurança (auditoria R1–R4 + R5 + R6):
       dependências com CVEs atualizadas (18 vulns → 1 resíduo aceito),
       renderer empacotado funcional (preload síncrono + CORS injetada),
-      menor privilégio em rotas financeiras/usuários, **nenhuma credencial
+      menor privilégio em rotas financeiras/usuários, **guard global de
+      autenticação** (`@Public()` deny-by-default), **nenhuma credencial
       padrão** (seed/smoke exigem env; e2e gera senha aleatória por execução),
       Electron 33 → 43. Detalhes em `docs/security/remediation-plan.md`
+- [x] **Fase 10** — Backup/restauração local + permissões (R7): snapshot
+      consistente do SQLite via `VACUUM INTO` + cópia das imagens, manifest
+      com sha256, restore **verifica integridade antes** de substituir os
+      dados (admin-only, exige `confirm`); UI de backups; diretórios de dados
+      0700/arquivos 0600 no boot (API + app empacotado). Decisão de cifragem
+      em `docs/decisions/ADR-006-local-data-permissions-backup.md`
 
 ## Documentação
 

@@ -26,11 +26,12 @@ export async function ensurePrivateDir(path: string): Promise<string> {
 }
 
 /**
- * Applies 0600 to files and 0700 to subdirectories under `root`, one level
- * deep per call — used at boot for the storage tree (sha256 shard layout is
- * exactly two levels) and over backup folders.
+ * Applies 0700 to `root` itself, then 0600 to files and 0700 to
+ * subdirectories recursively — used at boot for the storage tree (sha256
+ * shard layout) and over backup folders.
  */
 export async function hardenTree(root: string): Promise<void> {
+  await chmod(root, 0o700).catch(() => undefined);
   let entries: Array<{ name: string; isDirectory: () => boolean; isFile: () => boolean }>;
   try {
     entries = await readdir(root, { withFileTypes: true });

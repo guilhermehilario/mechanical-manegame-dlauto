@@ -188,3 +188,18 @@ derivada sobre work orders por veículo (§14, sem duplicação de dados).
 - `(vehicleId, scheduledAt)` para checagem de conflito de agendamento ✓ (Fase 4)
 - FKs com `onDelete` explícito (Cascade em tokens, Restrict/Protect em
   registros históricos, SetNull em auditoria)
+
+## Backup e restauração (Fase 10)
+
+- **Backup** = pasta em `BACKUP_DIR` com `manifest.json` (sha256 do snapshot,
+  contagens, migração vigente), `database.db` (snapshot consistente via
+  `VACUUM INTO` — WAL-safe, fecha a nota do ADR-001) e `storage/` (cópia das
+  imagens).
+- **Restore** (admin-only, `confirm: true` obrigatório): valida sha256 +
+  `PRAGMA integrity_check` (via `ATTACH`) ANTES de tocar os dados vivos;
+  `$disconnect` → swap atômico (rename) → `$connect`. Restore sem backup
+  prévio não tem volta — por isso a confirmação explícita.
+- **Permissões (R7/SEC-07)**: toda a área de dados (banco + WAL/SHM,
+  `STORAGE_DIR`, `BACKUP_DIR`) é criada 0700 com arquivos 0600 — API no boot
+  (`HardeningModule`) e Electron empacotado no main. Cifragem em repouso
+  rejeitada por ora (trade-off em `docs/decisions/ADR-006-…`).

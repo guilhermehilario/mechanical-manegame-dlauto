@@ -1095,6 +1095,95 @@ async function main(): Promise<void> {
     await fetch(`${base}/users/${createdAttendant.id}`, { method: 'DELETE', headers: authHeaders });
   }
 
+  // ─── Fase 10: backup → mutate → restore → verify (spec §3, R7) ───
+  // 44. ATTENDANT cannot even list backups (admin-only surface).
+  const attendantBackupsRes = await fetch(`${base}/backups`, { headers: attendantHeaders });
+  if (attendantBackupsRes.status !== 403) {
+    throw new Error(`expected 403 for ATTENDANT on /backups, got ${attendantBackupsRes.status}`);
+  }
+  console.log('[smoke] backups admin-only (403 for ATTENDANT): OK');
+
+  // 45. Snapshot the DB, mutate it (new customer), restore, confirm the
+  // customer is gone again — proof that restore really replaced the data.
+  const createBackupRes = await fetch(`${base}/backups`, {
+    method: 'POST',
+    headers: authHeaders,
+  });
+  const backupBody = (await createBackupRes.json()) as {
+    success: boolean;
+    data?: { backup: { id: string; manifest: { databaseSha256: string; storageFiles: number } } };
+  };
+  if (!createBackupRes.ok || !backupBody.success || !backupBody.data) {
+    throw new Error(`smoke: backup creation failed (${createBackupRes.status})`);
+  }
+  const backupId = backupBody.data.backup.id;
+  if (!/^[0-9a-f]{64}$/.test(backupBody.data.backup.manifest.databaseSha256)) {
+    throw new Error('smoke: backup manifest missing sha256');
+  }
+  console.log(`[smoke] backup created (${backupId}): OK`);
+
+  // Mutate: unique customer AFTER the snapshot.
+  const restoreProofCpf = generateUniqueCpf();
+  const mutateRes = await fetch(`${base}/customers`, {
+    method: 'POST',
+    headers: authHeaders,
+    body: JSON.stringify({
+      name: 'Smoke Pós-Backup',
+      cpf: restoreProofCpf,
+      phone: '11999998888',
+    }),
+  });
+  if (!mutateRes.ok) {
+    throw new Error(`smoke: post-backup mutation failed (${mutateRes.status})`);
+  }
+
+  // Restore without confirm must be rejected (destructive guardrail).
+  const restoreNoConfirm = await fetch(`${base}/backups/${backupId}/restore`, {
+    method: 'POST',
+    headers: authHeaders,
+    body: JSON.stringify({}),
+  });
+  if (restoreNoConfirm.status !== 400) {
+    throw new Error(`expected 400 for restore without confirm, got ${restoreNoConfirm.status}`);
+  }
+
+  // Restore for real.
+  const restoreRes = await fetch(`${base}/backups/${backupId}/restore`, {
+    method: 'POST',
+    headers: authHeaders,
+    body: JSON.stringify({ confirm: true }),
+  });
+  const restoreBody = (await restoreRes.json()) as {
+    success: boolean;
+    data?: { databaseRestored: boolean };
+  };
+  if (!restoreRes.ok || !restoreBody.success || !restoreBody.data?.databaseRestored) {
+    throw new Error(`smoke: restore failed (${restoreRes.status})`);
+  }
+
+  // Verify: the post-backup customer no longer exists (data rolled back).
+  const verifyRes = await fetch(
+    `${base}/customers?search=${encodeURIComponent(restoreProofCpf)}`,
+    { headers: authHeaders },
+  );
+  const verifyBody = (await verifyRes.json()) as {
+    success: boolean;
+    data?: { items: Array<{ id: string }> };
+  };
+  if (!verifyRes.ok || !verifyBody.success || (verifyBody.data?.items.length ?? 1) !== 0) {
+    throw new Error('smoke: restored data still contains the post-backup customer');
+  }
+
+  // Cleanup the backup folder (idempotent runs) and finish.
+  const deleteBackupRes = await fetch(`${base}/backups/${backupId}`, {
+    method: 'DELETE',
+    headers: authHeaders,
+  });
+  if (!deleteBackupRes.ok && deleteBackupRes.status !== 404) {
+    throw new Error(`smoke: backup cleanup failed (${deleteBackupRes.status})`);
+  }
+  console.log('[smoke] backup → mutate → restore rolls data back: OK');
+
   await api.close();
   console.log('[smoke] ALL CHECKS PASSED');
 }

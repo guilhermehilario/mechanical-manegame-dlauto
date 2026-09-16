@@ -14,6 +14,9 @@ const NAV_ITEMS = [
   { to: '/reports', label: 'Relatórios' },
 ] as const;
 
+/** Admin-only surface (the API enforces the role regardless). */
+const ADMIN_NAV_ITEMS = [{ to: '/backups', label: 'Backups' }] as const;
+
 export function AppLayout() {
   const { user, logout } = useAuth();
 
@@ -41,6 +44,23 @@ export function AppLayout() {
               {item.label}
             </NavLink>
           ))}
+          {user?.role === 'ADMIN'
+            ? ADMIN_NAV_ITEMS.map((item) => (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  className={({ isActive }) =>
+                    `block rounded-md px-3 py-2 text-sm ${
+                      isActive
+                        ? 'bg-blue-50 font-semibold text-blue-700'
+                        : 'text-slate-600 hover:bg-slate-50'
+                    }`
+                  }
+                >
+                  {item.label}
+                </NavLink>
+              ))
+            : null}
         </nav>
         {user ? (
           <div className="border-t border-slate-200 p-4">
