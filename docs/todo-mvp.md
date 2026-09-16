@@ -61,13 +61,19 @@ Sem isso a OS não vira recebimento — é o maior bloqueio de produto.
   métodos + botão "Receber saldo" que preenche o restante. DTO da OS
   carrega `payment.paidCents/balanceCents/status` (null enquanto não
   pagável), então listas e dashboard mostram o estado financeiro.
-- [x] **A6 (parcial)** ✅ 2026-09-16: 11 testes unitários do service
-  (regras de saldo, transação, DTO, estorno com auditoria). Falta E2E do
-  fluxo pagar parcial → saldo → PAGO (Bloco G).
-- [ ] **A5. Dashboard/relatórios**: KPI "recebido hoje" (baseado em
-  `Payment`, não em OS concluída) + relatório de receita por forma de
-  pagamento. **Decisão a documentar** se os relatórios atuais migram para
-  pagamentos ou continuam por OS.
+- [x] **A5. Dashboard/relatórios** ✅ 2026-09-16: KPI "Recebido (caixa)"
+  no dashboard — hoje e no mês, base `Payment.paidAt` (regime de caixa),
+  ao lado da receita por OS entregue (competência). Novo relatório
+  `GET /reports/payment-methods` (ADMIN/MANAGER) com receita por forma de
+  pagamento no período + aba "Recebimentos" na página de relatórios
+  (acessível via `/reports?tab=payments`). **Decisão documentada:** os
+  relatórios da Fase 8 **não migram** — receita por OS entregue
+  (competência) e recebimentos por `Payment` (caixa) são visões
+  complementares; consultas em `AnalyticsRepository.paymentTotal` e
+  `paymentTotalsByMethod` (group by method).
+- [x] **A6 (parcial)** ✅ 2026-09-16: 13 testes unitários (11 do service
+  de payments + 2 do relatório de formas) e KPIs cobertos nos testes do
+  dashboard. Falta E2E do fluxo pagar parcial → saldo → PAGO (Bloco G).
 
 ## Bloco B — Impressão de documentos 🔴 Crítico
 

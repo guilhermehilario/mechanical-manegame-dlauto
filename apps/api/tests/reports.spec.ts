@@ -43,6 +43,7 @@ describe('ReportsService', () => {
   let analyticsRepo: {
     listDeliveredWorkOrders: ReturnType<typeof vi.fn>;
     workOrderCountByStatus: ReturnType<typeof vi.fn>;
+    paymentTotalsByMethod: ReturnType<typeof vi.fn>;
   };
   let service: ReportsService;
 
@@ -50,6 +51,7 @@ describe('ReportsService', () => {
     analyticsRepo = {
       listDeliveredWorkOrders: vi.fn(),
       workOrderCountByStatus: vi.fn(),
+      paymentTotalsByMethod: vi.fn(),
     };
     service = new ReportsService(analyticsRepo as never);
   });
@@ -129,6 +131,32 @@ describe('ReportsService', () => {
     expect(report.items.find((item) => item.status === 'CANCELLED')).toEqual({
       status: 'CANCELLED',
       count: 0,
+    });
+  });
+
+  describe('paymentMethods', () => {
+    it('aggregates cash revenue by payment method, sorted by total', async () => {
+      analyticsRepo.paymentTotalsByMethod.mockResolvedValue([
+        { method: 'PIX', count: 3, totalCents: 30000 },
+        { method: 'CASH', count: 1, totalCents: 5000 },
+      ]);
+
+      const report = await service.paymentMethods({});
+
+      expect(report.items).toEqual([
+        { method: 'PIX', count: 3, totalCents: 30000 },
+        { method: 'CASH', count: 1, totalCents: 5000 },
+      ]);
+      expect(report.totalCents).toBe(35000);
+    });
+
+    it('omits methods with no receipts and reports empty period', async () => {
+      analyticsRepo.paymentTotalsByMethod.mockResolvedValue([]);
+
+      const report = await service.paymentMethods({});
+
+      expect(report.items).toEqual([]);
+      expect(report.totalCents).toBe(0);
     });
   });
 });

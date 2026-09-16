@@ -70,6 +70,7 @@ describe('DashboardService', () => {
     countAwaitingPickup: ReturnType<typeof vi.fn>;
     workOrderCountByStatus: ReturnType<typeof vi.fn>;
     listDeliveredWorkOrders: ReturnType<typeof vi.fn>;
+    paymentTotal: ReturnType<typeof vi.fn>;
   };
   let appointmentsRepo: { countActiveBetween: ReturnType<typeof vi.fn> };
   let appointmentsService: { list: ReturnType<typeof vi.fn> };
@@ -84,6 +85,7 @@ describe('DashboardService', () => {
       countAwaitingPickup: vi.fn(),
       workOrderCountByStatus: vi.fn(),
       listDeliveredWorkOrders: vi.fn(),
+      paymentTotal: vi.fn(),
     };
     appointmentsRepo = { countActiveBetween: vi.fn() };
     appointmentsService = { list: vi.fn() };
@@ -107,11 +109,14 @@ describe('DashboardService', () => {
     appointmentsRepo.countActiveBetween.mockResolvedValue(5);
     productsRepo.count.mockResolvedValue(2);
     // Current month: one delivered OS (R$ 100,00 de serviços) → 10000 cents.
+    // Current month: one delivered OS (R$ 100,00 de serviços) → 10000 cents.
     analyticsRepo.listDeliveredWorkOrders.mockResolvedValueOnce([
       makeDelivered({ productItems: [] }),
     ]);
     // Previous month: nothing delivered.
     analyticsRepo.listDeliveredWorkOrders.mockResolvedValueOnce([]);
+    // Cash basis: R$ 40 received today (A5).
+    analyticsRepo.paymentTotal.mockResolvedValue(4000);
     analyticsRepo.workOrderCountByStatus.mockResolvedValue([
       { status: 'OPEN', _count: 4 },
       { status: 'AWAITING_PICKUP', _count: 3 },
@@ -143,6 +148,8 @@ describe('DashboardService', () => {
     });
     expect(summary.revenue.currentMonthCents).toBe(10000);
     expect(summary.revenue.previousMonthCents).toBe(0);
+    expect(summary.cash.todayCents).toBe(4000);
+    expect(summary.cash.monthCents).toBe(4000);
     expect(summary.workOrdersByStatus).toEqual([
       { status: 'OPEN', count: 4 },
       { status: 'AWAITING_PICKUP', count: 3 },
@@ -157,6 +164,7 @@ describe('DashboardService', () => {
     appointmentsRepo.countActiveBetween.mockResolvedValue(0);
     productsRepo.count.mockResolvedValue(0);
     analyticsRepo.listDeliveredWorkOrders.mockResolvedValue([]);
+    analyticsRepo.paymentTotal.mockResolvedValue(0);
     analyticsRepo.workOrderCountByStatus.mockResolvedValue([]);
     workOrdersService.list.mockResolvedValue({
       items: [],

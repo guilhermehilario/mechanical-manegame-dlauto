@@ -30,6 +30,10 @@ const summary: DashboardSummaryDto = {
     currentMonthCents: 125000,
     previousMonthCents: 90000,
   },
+  cash: {
+    todayCents: 15000,
+    monthCents: 100000,
+  },
   workOrdersByStatus: [
     { status: 'OPEN', count: 4 },
     { status: 'AWAITING_PICKUP', count: 3 },
