@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { VehicleDto } from '@mechanic-system/types';
 import { ApiClientError } from '../../services/api-client';
@@ -176,15 +177,12 @@ export function VehiclesPage() {
                     >
                       Editar
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        window.location.assign(`/vehicles/${vehicle.id}/history`);
-                      }}
+                    <Link
+                      to={`/vehicles/${vehicle.id}/history`}
                       className="mr-3 text-xs font-medium text-blue-600 hover:underline"
                     >
                       Histórico
-                    </button>
+                    </Link>
                     <button
                       type="button"
                       onClick={() => {
