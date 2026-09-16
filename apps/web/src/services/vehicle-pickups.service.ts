@@ -1,4 +1,4 @@
-import type { Paginated, VehiclePickupDto } from '@mechanic-system/types';
+import type { Paginated, VehiclePickupDto, VehiclePickupReceiptDto } from '@mechanic-system/types';
 import type { CreateVehiclePickupInput } from '@mechanic-system/validation';
 import { api } from './auth.service';
 
@@ -21,6 +21,11 @@ export function getVehiclePickupByWorkOrder(
   workOrderId: string,
 ): Promise<VehiclePickupDto> {
   return api.get<VehiclePickupDto>(`/vehicle-pickups/work-order/${workOrderId}`);
+}
+
+/** Full receipt for printing (Bloco B2) — includes the signature data URL. */
+export function getVehiclePickupReceipt(workOrderId: string): Promise<VehiclePickupReceiptDto> {
+  return api.get<VehiclePickupReceiptDto>(`/vehicle-pickups/work-order/${workOrderId}/receipt`);
 }
 
 export function registerVehiclePickup(

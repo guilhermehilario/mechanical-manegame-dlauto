@@ -1,9 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { ConflictError, NotFoundError } from '../../common/errors/domain.error';
 import { ErrorCodes } from '@mechanic-system/types';
+import { computeWorkOrderTotals } from '@mechanic-system/shared';
 import type { CreateVehiclePickupInput } from '@mechanic-system/validation';
-import type { VehiclePickupDto } from '@mechanic-system/types';
-import type { VehiclePickupWithRelations } from './vehicle-pickups.repository';
+import type { VehiclePickupDto, VehiclePickupReceiptDto } from '@mechanic-system/types';
+import type {
+  VehiclePickupReceiptRow,
+  VehiclePickupWithRelations,
+} from './vehicle-pickups.repository';
 import { VehiclePickupsRepository } from './vehicle-pickups.repository';
 import { WorkOrdersRepository } from '../work-orders/work-orders.repository';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -116,5 +120,26 @@ export class VehiclePickupsService {
       throw new NotFoundError(ErrorCodes.NOT_FOUND, 'Registro de retirada não encontrado');
     }
     return toDto(full);
+  }
+
+  /**
+   * Full receipt for the PRINTED document (Bloco B) — adds the signature
+   * data URL, vehicle brand/model and the work-order total.
+   */
+  async getReceipt(workOrderId: string): Promise<VehiclePickupReceiptDto> {
+    const pickup = await this.pickupsRepository.findReceiptByWorkOrderId(workOrderId);
+    if (!pickup) {
+      throw new NotFoundError(ErrorCodes.NOT_FOUND, 'Retirada não registrada para esta OS');
+    }
+    const totals = computeWorkOrderTotals(
+      pickup.workOrder.serviceItems,
+      pickup.workOrder.productItems,
+    );
+    return {
+      ...toDto(pickup),
+      signatureData: pickup.signatureData,
+      vehicleModel: `${pickup.workOrder.vehicle.brand} ${pickup.workOrder.vehicle.model}`,
+      workOrderTotalCents: totals.totalCents,
+    };
   }
 }

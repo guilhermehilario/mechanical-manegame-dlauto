@@ -377,6 +377,23 @@ model SyncOutbox {
 }
 
 // ─────────────────────────────────────────────────────────────
+// Shop settings (Bloco F2 mínimo — docs/todo-mvp.md): singleton row used by
+// the printed documents (work order + pickup receipt headers/footers).
+// Money-free, PII-free; upserted by the settings module.
+// ─────────────────────────────────────────────────────────────
+
+model ShopSettings {
+  id          String  @id @default(cuid())
+  name        String
+  phone       String?
+  address     String?
+  documentFooter String?
+  updatedAt   DateTime @updatedAt
+
+  @@map("shop_settings")
+}
+
+// ─────────────────────────────────────────────────────────────
 // Audit (spec §26) — critical events, no PII in payload
 // ─────────────────────────────────────────────────────────────
 

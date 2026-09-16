@@ -17,7 +17,7 @@ import {
 import type { CreateVehiclePickupInput } from '@mechanic-system/validation';
 import { paginationQuerySchema } from '@mechanic-system/validation';
 import type { PaginationQuery } from '@mechanic-system/validation';
-import type { Paginated, VehiclePickupDto } from '@mechanic-system/types';
+import type { Paginated, VehiclePickupDto, VehiclePickupReceiptDto } from '@mechanic-system/types';
 import { AuthenticatedRequest } from '../auth/jwt-auth.guard';
 import { RequireRoles, RolesGuard } from '../auth/roles.guard';
 import { VehiclePickupsService } from './vehicle-pickups.service';
@@ -44,6 +44,18 @@ export class VehiclePickupsController {
     @Param('workOrderId', new ZodValidationPipe(workOrderIdSchema, 'param')) workOrderId: string,
   ): Promise<VehiclePickupDto> {
     return this.pickupsService.getByWorkOrder(workOrderId);
+  }
+
+  /**
+   * Full receipt for the printed handover document (Bloco B) — adds the
+   * signature data URL + vehicle model + OS total. Authenticated roles only;
+   * the signature is PII, so there is no public route.
+   */
+  @Get('work-order/:workOrderId/receipt')
+  getReceipt(
+    @Param('workOrderId', new ZodValidationPipe(workOrderIdSchema, 'param')) workOrderId: string,
+  ): Promise<VehiclePickupReceiptDto> {
+    return this.pickupsService.getReceipt(workOrderId);
   }
 
   @Post('work-order/:workOrderId')

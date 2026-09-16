@@ -10,6 +10,8 @@ import {
 } from '@mechanic-system/shared';
 import { addProductItemSchema, addServiceItemSchema } from '@mechanic-system/validation';
 import { ApiClientError } from '../../services/api-client';
+import { printWorkOrder } from '../../utils/print';
+import { getCustomer } from '../../services/customers.service';
 import {
   addProductItem,
   addServiceItem,
@@ -150,6 +152,46 @@ export function WorkOrderDetailPage() {
     },
   });
 
+  const customerQuery = useQuery({
+    queryKey: ['customer', workOrderQuery.data?.customerId],
+    queryFn: () => getCustomer(workOrderQuery.data?.customerId ?? ''),
+    enabled: Boolean(workOrderQuery.data?.customerId),
+    staleTime: 60_000,
+  });
+
+  const [isPrinting, setIsPrinting] = useState(false);
+
+  async function handlePrint(): Promise<void> {
+    if (!workOrderQuery.data) return;
+    setIsPrinting(true);
+    try {
+      await printWorkOrder({
+        orderNumber: workOrderQuery.data.orderNumber,
+        status: workOrderQuery.data.status,
+        createdAt: workOrderQuery.data.createdAt,
+        customerName: workOrderQuery.data.customerName,
+        customerPhone: customerQuery.data?.phone ?? null,
+        vehiclePlate: workOrderQuery.data.vehiclePlate,
+        vehicleModel: workOrderQuery.data.vehicleModel,
+        notes: workOrderQuery.data.notes,
+        serviceItems: workOrderQuery.data.serviceItems.map((item) => ({
+          name: item.serviceName,
+          quantity: item.quantity,
+          unitPriceCents: item.unitPriceCents,
+        })),
+        productItems: workOrderQuery.data.productItems.map((item) => ({
+          name: item.productName,
+          quantity: item.quantity,
+          unitPriceCents: item.unitPriceCents,
+          discountCents: item.discountCents,
+        })),
+        totals: workOrderQuery.data.totals,
+      });
+    } finally {
+      setIsPrinting(false);
+    }
+  }
+
   if (workOrderQuery.isLoading) {
     return <p className="py-8 text-center text-sm text-slate-500">Carregando…</p>;
   }
@@ -246,8 +288,31 @@ export function WorkOrderDetailPage() {
               {next === 'CANCELLED' ? 'Cancelar OS' : `Marcar: ${WORK_ORDER_STATUS_LABELS[next]}`}
             </button>
           ))}
+          <button
+            type="button"
+            onClick={() => {
+              void handlePrint();
+            }}
+            disabled={isPrinting}
+            className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+          >
+            {isPrinting ? 'Preparando…' : '🖨 Imprimir OS'}
+          </button>
         </div>
-      ) : null}
+      ) : (
+        <div className="mb-4">
+          <button
+            type="button"
+            onClick={() => {
+              void handlePrint();
+            }}
+            disabled={isPrinting}
+            className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+          >
+            {isPrinting ? 'Preparando…' : '🖨 Imprimir OS'}
+          </button>
+        </div>
+      )}
 
       {/* Service items */}
       <div className="mb-4 overflow-hidden rounded-lg border border-slate-200 bg-white">

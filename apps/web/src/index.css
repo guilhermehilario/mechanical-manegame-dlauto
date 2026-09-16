@@ -1,3 +1,204 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* ─── Print support (Bloco B — docs/todo-mvp.md) ────────────────────────────
+ * Strategy: pure renderer printing via a dedicated print root (#print-root)
+ * + window.print(). No external dependency (offline-first), no Electron IPC —
+ * the packaged app's webContents prints the same DOM.
+ *
+ * printDocument() (utils/print.ts) mounts the template into #print-root,
+ * this @media print block hides the app and shows only the template, and
+ * window.print() does the rest. Restoring happens on `afterprint`.
+ */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #print-root,
+  #print-root * {
+    visibility: visible;
+  }
+  /* Print root takes over the page; app layout is hidden (not just invisible)
+   * so it cannot stretch the printed page. */
+  #root {
+    display: none;
+  }
+  #print-root {
+    position: absolute;
+    inset: 0;
+    display: block;
+    background: #fff;
+    color: #000;
+    font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Arial,
+      sans-serif;
+    font-size: 12px;
+    line-height: 1.45;
+    padding: 0;
+  }
+  @page {
+    size: A4;
+    margin: 14mm;
+  }
+}
+
+/* Document template styles — only rendered inside #print-root, which is
+ * removed from the DOM right after printing. */
+#print-root {
+  display: none; /* screen: the template is invisible */
+}
+@media print {
+  #print-root {
+    display: block;
+  }
+  .doc-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    border-bottom: 2px solid #000;
+    padding-bottom: 8px;
+    margin-bottom: 12px;
+  }
+  .shop-name {
+    font-size: 16px;
+    font-weight: 700;
+  }
+  .doc-shop div {
+    font-size: 11px;
+    color: #333;
+  }
+  .doc-title-main {
+    font-size: 14px;
+    font-weight: 700;
+    text-align: right;
+  }
+  .doc-subtitle {
+    font-size: 10px;
+    color: #444;
+    text-align: right;
+  }
+  h2 {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin: 14px 0 4px;
+    border-bottom: 1px solid #999;
+    padding-bottom: 2px;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  .meta th,
+  .meta td {
+    font-size: 11px;
+    padding: 2px 0;
+    vertical-align: top;
+  }
+  .meta th {
+    text-align: left;
+    width: 110px;
+    color: #444;
+    font-weight: 600;
+  }
+  .items th,
+  .items td {
+    border: 1px solid #ccc;
+    padding: 4px 6px;
+    font-size: 11px;
+    text-align: left;
+  }
+  .items th {
+    background: #f0f0f0;
+    font-weight: 700;
+  }
+  .items td.center,
+  .items th.center {
+    text-align: center;
+  }
+  .items td.right,
+  .items th.right {
+    text-align: right;
+  }
+  .items td.empty {
+    text-align: center;
+    color: #888;
+  }
+  .strong {
+    font-weight: 700;
+  }
+  .mono {
+    font-family: ui-monospace, 'Courier New', monospace;
+  }
+  .totals {
+    width: 220px;
+    margin-left: auto;
+    margin-top: 10px;
+  }
+  .totals td {
+    font-size: 11px;
+    padding: 2px 0;
+  }
+  .totals tr.grand td {
+    border-top: 1.5px solid #000;
+    font-size: 13px;
+    font-weight: 700;
+    padding-top: 4px;
+  }
+  .notes {
+    font-size: 11px;
+    white-space: pre-wrap;
+  }
+  .disclaimer {
+    font-size: 10px;
+    color: #333;
+    margin-top: 16px;
+  }
+  .signatures {
+    display: flex;
+    justify-content: space-around;
+    margin-top: 48px;
+  }
+  .sig-line {
+    text-align: center;
+    width: 220px;
+  }
+  .sig-line span {
+    display: block;
+    border-top: 1px solid #000;
+  }
+  .sig-line label {
+    font-size: 10px;
+    color: #333;
+  }
+  .signature {
+    width: 260px;
+    margin: 24px auto 0;
+    text-align: center;
+  }
+  .signature img {
+    max-width: 260px;
+    max-height: 90px;
+  }
+  .empty-signature {
+    border-bottom: 1px solid #000;
+    height: 60px;
+  }
+  .sig-label {
+    width: 260px;
+    margin: 4px auto 0;
+    text-align: center;
+    font-size: 11px;
+    border-top: 1px solid #000;
+    padding-top: 2px;
+  }
+  .doc-footer {
+    margin-top: 24px;
+    border-top: 1px solid #999;
+    padding-top: 6px;
+    font-size: 9px;
+    color: #555;
+    display: flex;
+    justify-content: space-between;
+  }
+}

@@ -6,7 +6,7 @@
   "author": "Mechanic System",
   "main": "dist/main/main.js",
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.build.json",
     "dev": "pnpm run build && electron .",
     "start": "electron .",
     "typecheck": "tsc --noEmit -p tsconfig.json",

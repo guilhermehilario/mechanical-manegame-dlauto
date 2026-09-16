@@ -18,3 +18,14 @@ export interface VehiclePickupDto {
   registeredByName: string | null;
   createdAt: string;
 }
+
+/**
+ * Full receipt for printing (Bloco B) — includes the signature PNG (data URL)
+ * and vehicle brand/model, which the list DTO omits on purpose (smaller
+ * payloads on every table render).
+ */
+export interface VehiclePickupReceiptDto extends VehiclePickupDto {
+  signatureData: string | null;
+  vehicleModel: string;
+  workOrderTotalCents: number;
+}

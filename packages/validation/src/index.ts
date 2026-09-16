@@ -12,3 +12,4 @@ export * from './work-order';
 export * from './work-order-image';
 export * from './vehicle-pickup';
 export * from './reports';
+export * from './shop-settings';

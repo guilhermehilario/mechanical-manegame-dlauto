@@ -7,10 +7,12 @@ import type { CreateVehiclePickupInput } from '@mechanic-system/validation';
 import { ApiClientError } from '../../services/api-client';
 import { listWorkOrders } from '../../services/work-orders.service';
 import {
+  getVehiclePickupReceipt,
   listVehiclePickups,
   registerVehiclePickup,
 } from '../../services/vehicle-pickups.service';
 import { formatDate, formatPhone } from '../../utils/format';
+import { printPickupReceipt } from '../../utils/print';
 import { SignaturePad } from './signature-pad';
 
 const inputClass =
@@ -33,6 +35,34 @@ export function VehiclePickupsPage() {
 
   const queue: WorkOrderDto[] = queueQuery.data?.items ?? [];
   const pickups: VehiclePickupDto[] = pickupsQuery.data?.items ?? [];
+
+  /** Fetches the full receipt and opens the print dialog (Bloco B2). */
+  async function printReceiptFor(workOrderId: string): Promise<void> {
+    setError(null);
+    try {
+      const receipt = await getVehiclePickupReceipt(workOrderId);
+      await printPickupReceipt({
+        orderNumber: receipt.orderNumber,
+        createdAt: receipt.createdAt,
+        customerName: receipt.customerName,
+        vehiclePlate: receipt.vehiclePlate,
+        vehicleModel: receipt.vehicleModel,
+        receiverName: receipt.receiverName,
+        receiverDoc: receipt.receiverDoc,
+        receiverPhone: receipt.receiverPhone,
+        mileageKm: receipt.mileageKm,
+        signatureData: receipt.signatureData,
+        notes: receipt.notes,
+        workOrderTotalCents: receipt.workOrderTotalCents,
+      });
+    } catch (err) {
+      setError(
+        err instanceof ApiClientError && err.status === 404
+          ? 'Retirada não registrada para esta OS.'
+          : 'Não foi possível preparar o recibo para impressão.',
+      );
+    }
+  }
 
   return (
     <section>
@@ -95,6 +125,16 @@ export function VehiclePickupsPage() {
                     >
                       Registrar retirada
                     </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        void printReceiptFor(workOrder.id);
+                      }}
+                      className="ml-2 rounded-md border border-slate-300 bg-white px-2 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                      title="Imprimir comprovante (retiradas anteriores)"
+                    >
+                      🖨
+                    </button>
                   </td>
                 </tr>
               ))
@@ -115,16 +155,17 @@ export function VehiclePickupsPage() {
               <th className="px-4 py-3">Documento</th>
               <th className="px-4 py-3">KM</th>
               <th className="px-4 py-3">Data</th>
+              <th className="px-4 py-3 text-right">Ações</th>
             </tr>
           </thead>
           <tbody>
             {pickupsQuery.isLoading ? (
               <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-slate-500">Carregando…</td>
+                <td colSpan={7} className="px-4 py-8 text-center text-slate-500">Carregando…</td>
               </tr>
             ) : pickups.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-slate-500">
+                <td colSpan={7} className="px-4 py-8 text-center text-slate-500">
                   Nenhuma retirada registrada ainda.
                 </td>
               </tr>
@@ -146,6 +187,17 @@ export function VehiclePickupsPage() {
                     {pickup.mileageKm === null ? '—' : `${pickup.mileageKm.toLocaleString('pt-BR')} km`}
                   </td>
                   <td className="px-4 py-3 text-slate-600">{formatDate(pickup.createdAt)}</td>
+                  <td className="px-4 py-3 text-right">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        void printReceiptFor(pickup.workOrderId);
+                      }}
+                      className="rounded-md border border-slate-300 bg-white px-2 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                    >
+                      🖨 Recibo
+                    </button>
+                  </td>
                 </tr>
               ))
             )}

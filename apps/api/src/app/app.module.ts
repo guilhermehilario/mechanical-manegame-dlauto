@@ -22,6 +22,7 @@ import { VehiclePickupsModule } from '../modules/vehicle-pickups/vehicle-pickups
 import { AnalyticsModule } from '../modules/analytics/analytics.module';
 import { DashboardModule } from '../modules/dashboard/dashboard.module';
 import { ReportsModule } from '../modules/reports/reports.module';
+import { SettingsModule } from '../modules/settings/settings.module';
 import { HealthController } from './health.controller';
 
 /**
@@ -56,6 +57,7 @@ import { HealthController } from './health.controller';
     AnalyticsModule,
     DashboardModule,
     ReportsModule,
+    SettingsModule,
   ],
   controllers: [HealthController],
   providers: [

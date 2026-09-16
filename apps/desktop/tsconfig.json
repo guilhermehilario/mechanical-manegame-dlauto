@@ -2,8 +2,8 @@
   "extends": "@mechanic-system/tsconfig/nestjs.json",
   "compilerOptions": {
     "outDir": "dist",
-    "rootDir": "src",
     "declaration": false
   },
-  "include": ["src"]
+  "include": ["src", "tests", "vitest.config.ts"],
+  "exclude": ["dist", "node_modules"]
 }

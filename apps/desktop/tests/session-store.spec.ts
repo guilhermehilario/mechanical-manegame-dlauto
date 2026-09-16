@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
-import { mkdtempSync, rmSync, existsSync, readFileSync, statSync } from 'node:fs';
+import { mkdtempSync, rmSync, existsSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -69,7 +69,6 @@ describe('desktop session-store (D1)', () => {
     const file = join(userDataDir.current, 'session.json');
     const mode = statSync(file).mode;
     rmSync(file);
-    const { writeFileSync } = require('node:fs') as typeof import('node:fs');
     writeFileSync(file, '{not json', { mode });
     expect(readSession()).toBeNull();
   });

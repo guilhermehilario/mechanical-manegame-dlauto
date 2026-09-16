@@ -17,6 +17,27 @@ export type VehiclePickupWithRelations = Prisma.VehiclePickupGetPayload<{
 }>;
 
 /**
+ * Pickup row with everything the PRINTED receipt needs (Bloco B): signature
+ * bytes + vehicle model + work-order total.
+ */
+export type VehiclePickupReceiptRow = Prisma.VehiclePickupGetPayload<{
+  include: {
+    workOrder: {
+      select: {
+        orderNumber: true;
+        customer: { select: { name: true } };
+        vehicle: { select: { plate: true; brand: true; model: true } };
+        serviceItems: { select: { unitPriceCents: true; quantity: true } };
+        productItems: {
+          select: { unitPriceCents: true; quantity: true; discountCents: true };
+        };
+      };
+    };
+    registeredByUser: { select: { name: true } };
+  };
+}>;
+
+/**
  * Data access for vehicle pickups (Fase 7). No business rules here.
  */
 @Injectable()
@@ -26,6 +47,14 @@ export class VehiclePickupsRepository {
   /** 1─1 lookup by the work order. */
   findByWorkOrderId(workOrderId: string): Promise<VehiclePickup | null> {
     return this.prisma.vehiclePickup.findUnique({ where: { workOrderId } });
+  }
+
+  /** Full row for the printed receipt (Bloco B). */
+  findReceiptByWorkOrderId(workOrderId: string): Promise<VehiclePickupReceiptRow | null> {
+    return this.prisma.vehiclePickup.findFirst({
+      where: { workOrderId },
+      include: RECEIPT_INCLUDE,
+    });
   }
 
   findById(id: string): Promise<VehiclePickupWithRelations | null> {
@@ -76,6 +105,21 @@ const PICKUP_INCLUDE = {
       orderNumber: true,
       customer: { select: { name: true } },
       vehicle: { select: { plate: true } },
+    },
+  },
+  registeredByUser: { select: { name: true } },
+};
+
+const RECEIPT_INCLUDE = {
+  workOrder: {
+    select: {
+      orderNumber: true,
+      customer: { select: { name: true } },
+      vehicle: { select: { plate: true, brand: true, model: true } },
+      serviceItems: { select: { unitPriceCents: true, quantity: true } },
+      productItems: {
+        select: { unitPriceCents: true, quantity: true, discountCents: true },
+      },
     },
   },
   registeredByUser: { select: { name: true } },
