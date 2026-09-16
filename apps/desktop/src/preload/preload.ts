@@ -9,8 +9,13 @@ import { contextBridge, ipcRenderer } from 'electron';
  * bridge result as a string, so the packaged app fetched `[object Promise]`.
  * The main process passes the final URL via webPreferences
  * `additionalArguments` (`--mechanic-api-base-url=…`), which lands in
- * `process.argv` here — no async round-trip, correct even before
+ * process.argv here — no async round-trip, correct even before
  * `did-finish-load`. `onApiReady` stays event-based for ordering concerns.
+ *
+ * Session persistence (Bloco D/D1): `saveSession`/`clearSession`/`readSession`
+ * proxy the userData-backed store on the main process. Only the refresh token
+ * + a user snapshot travel through this narrow surface — the access token is
+ * never persisted anywhere.
  */
 
 /** Reads the injected `--mechanic-api-base-url=` argument, if present. */
@@ -18,6 +23,18 @@ function apiBaseUrlFromArgv(): string | null {
   const prefix = '--mechanic-api-base-url=';
   const arg = process.argv.find((value) => value.startsWith(prefix));
   return arg ? decodeURIComponent(arg.slice(prefix.length)) : null;
+}
+
+/** Shape exchanged over the bridge (mirrors main/session-store.ts). */
+export interface DesktopStoredSession {
+  savedAt: string;
+  refreshToken: string;
+  user: {
+    id: string;
+    name: string;
+    email: string;
+    role: string;
+  };
 }
 
 const api = {
@@ -33,6 +50,15 @@ const api = {
     return () => {
       ipcRenderer.off('api:ready', listener);
     };
+  },
+  saveSession(session: DesktopStoredSession): Promise<void> {
+    return ipcRenderer.invoke('session:save', session) as Promise<void>;
+  },
+  clearSession(): Promise<void> {
+    return ipcRenderer.invoke('session:clear') as Promise<void>;
+  },
+  readSession(): Promise<DesktopStoredSession | null> {
+    return ipcRenderer.invoke('session:read') as Promise<DesktopStoredSession | null>;
   },
 };
 

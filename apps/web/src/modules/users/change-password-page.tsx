@@ -2,6 +2,7 @@ import { type FormEvent, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { changePasswordSchema } from '@mechanic-system/validation';
 import { changeMyPassword } from '../../services/users.service';
+import { forgetDesktopSession } from '../../services/auth.service';
 import { authStore } from '../../services/auth-store';
 
 const inputClass =
@@ -48,8 +49,10 @@ export function ChangePasswordPage() {
     setIsSubmitting(true);
     try {
       await changeMyPassword(currentPassword, newPassword);
-      // Server revoked all refresh tokens — drop the local session cleanly.
+      // Server revoked all refresh tokens — drop the local session cleanly
+      // (including the desktop mirror, which would fail silent refresh).
       authStore.clear();
+      forgetDesktopSession();
       void navigate('/login', { replace: true });
     } catch (error) {
       setFormError(

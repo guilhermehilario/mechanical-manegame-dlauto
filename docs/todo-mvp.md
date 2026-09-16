@@ -97,21 +97,23 @@ A oficina precisa entregar papel (OS, recibo). Hoje não existe fluxo algum.
 
 ## Bloco D — Sessão e operação multiusuário 🟡 Importante
 
-- [ ] **D1. Sessão persistente entre reinícios**: tokens hoje vivem só em
-  memória (`auth-store.ts`) → **login obrigatório a cada abrir do app**.
-  Para uso diário, implementar silent refresh: guardar refresh token
-  cifrado no lado Node (via preload bridge, ex. arquivo 0600 em `userData`)
-  e revalidar ao abrir. *(Alternativa aceitável para MVP único usuário:
-  documentar e aceitar o login diário.)*
+- [x] **D1. Sessão persistente entre reinícios** ✅ 2026-09-16: o refresh
+  token é espelhado no lado Node do Electron (`userData/session.json`,
+  0600 — `apps/desktop/src/main/session-store.ts`) via IPC estreito
+  (`session:save/clear/read` no preload); no boot o web faz silent refresh
+  antes do primeiro paint (`restoreDesktopSession` em `main.tsx`). Tokens
+  continuam fora do renderer/localStorage (anti-XSS, spec §20). Navegador
+  sem bridge mantém o comportamento antigo (login por sessão).
 - [x] **D2. UI de usuários (admin)** ✅ 2026-09-16: página `/users` (admin)
   com listar/buscar/paginar, criar usuário com papel, desativar e
   redefinir senha — `apps/web/src/modules/users/users-page.tsx`.
 - [x] **D3. Redefinição de senha** ✅ 2026-09-16: `PATCH /users/me/password`
   (self-service, revoga sessões) + `PATCH /users/:id/password` (admin, só
   alvos ADMIN/MANAGER) + página `/change-password` no menu do usuário.
-- [ ] **D4. Politizar expiração**: com D1, alinhar políticas de sessão
-  (parcial do R8): access 15 min / refresh 7 dias já definidos? Validar
-  contra `packages/config` e documentar.
+- [x] **D4. Politizar expiração** ✅ 2026-09-16: validado contra
+  `packages/config` — access JWT 15 min (`JWT_ACCESS_EXPIRES`) e refresh
+  rotativo 7 dias (`JWT_REFRESH_EXPIRES`), revogação total na troca/reset
+  de senha. Comportamento documentado aqui e no `.env.example`.
 
 ## Bloco E — Proteção de dados em operação 🟡 Importante
 
