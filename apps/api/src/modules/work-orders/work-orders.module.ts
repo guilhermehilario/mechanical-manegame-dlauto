@@ -25,6 +25,6 @@ import { SecurityModule } from '../auth/security.module';
     ProductsRepository,
     StockService,
   ],
-  exports: [WorkOrdersService],
+  exports: [WorkOrdersService, WorkOrdersRepository],
 })
 export class WorkOrdersModule {}

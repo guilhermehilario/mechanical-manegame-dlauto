@@ -40,6 +40,7 @@ model User {
   stockMovements StockMovement[]
   uploadedImages WorkOrderImage[]
   registeredPickups VehiclePickup[]
+  receivedPayments Payment[]
 
   @@map("users")
 }
@@ -259,6 +260,7 @@ model WorkOrder {
   productItems   WorkOrderProductItem[]
   images         WorkOrderImage[]
   pickup         VehiclePickup?
+  payments       Payment[]
 
   @@index([customerId])
   @@index([vehicleId])
@@ -338,6 +340,37 @@ model WorkOrderImage {
 // Vehicle pickup/delivery (Fase 7): 1─1 with the work order. Registered when
 // the vehicle leaves the shop (AWAITING_PICKUP → DELIVERED in ONE transaction).
 // ─────────────────────────────────────────────────────────────
+
+// ─────────────────────────────────────────────────────────────
+// Payments (Bloco A — docs/todo-mvp.md): a work order can receive multiple
+// partial payments (money in integer cents, §18). Received money is dated by
+// paidAt; reversal (delete) is ADMIN/MANAGER with an audit trail.
+// ─────────────────────────────────────────────────────────────
+
+enum PaymentMethod {
+  CASH
+  PIX
+  DEBIT_CARD
+  CREDIT_CARD
+  TRANSFER
+}
+
+model Payment {
+  id            String        @id @default(cuid())
+  workOrderId   String
+  workOrder     WorkOrder     @relation(fields: [workOrderId], references: [id], onDelete: Restrict)
+  amountCents   Int
+  method        PaymentMethod
+  paidAt        DateTime      @default(now())
+  notes         String?
+  receivedBy    String?
+  receivedByUser User?        @relation(fields: [receivedBy], references: [id], onDelete: SetNull)
+  createdAt     DateTime      @default(now())
+
+  @@index([workOrderId, paidAt])
+  @@index([paidAt])
+  @@map("payments")
+}
 
 model VehiclePickup {
   id            String   @id @default(cuid())

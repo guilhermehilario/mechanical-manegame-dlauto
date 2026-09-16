@@ -13,6 +13,7 @@ import type { VehiclesRepository } from '../src/modules/vehicles/vehicles.reposi
 import type { ServicesRepository } from '../src/modules/services/services.repository';
 import type { ProductsRepository } from '../src/modules/products/products.repository';
 import type { StockService } from '../src/modules/products/stock.service';
+import type { PaymentsRepository } from '../src/modules/payments/payments.repository';
 import type { PrismaService } from '../src/prisma/prisma.service';
 
 function makeVehicle(overrides: Partial<Vehicle> = {}): Vehicle {
@@ -140,6 +141,7 @@ describe('WorkOrdersService', () => {
   let servicesRepo: { findById: ReturnType<typeof vi.fn> };
   let productsRepo: { findById: ReturnType<typeof vi.fn> };
   let stockService: { applyInTransaction: ReturnType<typeof vi.fn> };
+  let paymentsRepo: { paidTotal: ReturnType<typeof vi.fn> };
   let service: WorkOrdersService;
 
   beforeEach(() => {
@@ -168,12 +170,16 @@ describe('WorkOrdersService', () => {
         Promise.resolve({ movement: {}, product: makeProduct() }),
       ),
     };
+    paymentsRepo = {
+      paidTotal: vi.fn(() => Promise.resolve(0)),
+    };
     service = new WorkOrdersService(
       repo as unknown as WorkOrdersRepository,
       vehiclesRepo as unknown as VehiclesRepository,
       servicesRepo as unknown as ServicesRepository,
       productsRepo as unknown as ProductsRepository,
       stockService as unknown as StockService,
+      paymentsRepo as unknown as PaymentsRepository,
       {
         $transaction: vi.fn((fn: (tx: unknown) => Promise<unknown>) => fn({})),
         workOrder: { delete: vi.fn() },

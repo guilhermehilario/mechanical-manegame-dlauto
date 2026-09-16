@@ -66,6 +66,7 @@ const summary: DashboardSummaryDto = {
       totals: { servicesCents: 10000, productsCents: 5000, discountsCents: 0, totalCents: 15000 },
       serviceItems: [],
       productItems: [],
+      payment: null,
       createdAt: '2026-09-10T10:00:00.000Z',
       updatedAt: '2026-09-10T10:00:00.000Z',
     },

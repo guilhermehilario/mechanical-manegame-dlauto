@@ -36,6 +36,7 @@ function makeWorkOrder(overrides: Partial<WorkOrderDto> = {}): WorkOrderDto {
     totals: { servicesCents: 0, productsCents: 0, discountsCents: 0, totalCents: 0 },
     serviceItems: [],
     productItems: [],
+    payment: null,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     ...overrides,

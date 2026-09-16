@@ -4,6 +4,7 @@ import { ErrorCodes } from '@mechanic-system/types';
 import {
   canTransition,
   computeWorkOrderTotals,
+  isPayableWorkOrderStatus,
   isTerminalWorkOrderStatus,
   isWorkOrderItemsEditable,
   itemLineTotalCents,
@@ -18,6 +19,7 @@ import type {
 import type {
   VehicleHistoryEntryDto,
   WorkOrderDto,
+  WorkOrderPaymentSummaryDto,
   WorkOrderProductItemDto,
   WorkOrderServiceItemDto,
 } from '@mechanic-system/types';
@@ -27,6 +29,7 @@ import { VehiclesRepository } from '../vehicles/vehicles.repository';
 import { ServicesRepository } from '../services/services.repository';
 import { ProductsRepository } from '../products/products.repository';
 import { StockService } from '../products/stock.service';
+import { PaymentsRepository } from '../payments/payments.repository';
 import { PrismaService } from '../../prisma/prisma.service';
 
 function toServiceItemDto(item: WorkOrderServiceItem): WorkOrderServiceItemDto {
@@ -56,7 +59,26 @@ function computeTotals(workOrder: WorkOrderWithRelations) {
   return computeWorkOrderTotals(workOrder.serviceItems, workOrder.productItems);
 }
 
-function toDto(workOrder: WorkOrderWithRelations): WorkOrderDto {
+function toPaymentSummary(
+  totalCents: number,
+  paidCents: number | null,
+): WorkOrderPaymentSummaryDto | null {
+  // null while the OS is not payable yet (no payments expected before then).
+  if (paidCents === null) return null;
+  const status: WorkOrderPaymentSummaryDto['status'] =
+    paidCents <= 0 ? 'UNPAID' : paidCents >= totalCents ? 'PAID' : 'PARTIAL';
+  return {
+    paidCents,
+    balanceCents: Math.max(0, totalCents - paidCents),
+    status,
+  };
+}
+
+function toDto(
+  workOrder: WorkOrderWithRelations,
+  paidCents: number | null = null,
+): WorkOrderDto {
+  const totals = computeTotals(workOrder);
   return {
     id: workOrder.id,
     orderNumber: workOrder.orderNumber,
@@ -69,9 +91,13 @@ function toDto(workOrder: WorkOrderWithRelations): WorkOrderDto {
     notes: workOrder.notes,
     approvedAt: workOrder.approvedAt?.toISOString() ?? null,
     completedAt: workOrder.completedAt?.toISOString() ?? null,
-    totals: computeTotals(workOrder),
+    totals,
     serviceItems: workOrder.serviceItems.map(toServiceItemDto),
     productItems: workOrder.productItems.map(toProductItemDto),
+    payment:
+      paidCents === null
+        ? null
+        : toPaymentSummary(totals.totalCents, paidCents),
     createdAt: workOrder.createdAt.toISOString(),
     updatedAt: workOrder.updatedAt.toISOString(),
   };
@@ -96,6 +122,7 @@ export class WorkOrdersService {
     private readonly servicesRepository: ServicesRepository,
     private readonly productsRepository: ProductsRepository,
     private readonly stockService: StockService,
+    private readonly paymentsRepository: PaymentsRepository,
     private readonly prisma: PrismaService,
   ) {}
 
@@ -162,8 +189,13 @@ export class WorkOrdersService {
       this.workOrdersRepository.list(page, limit, filters),
       this.workOrdersRepository.count(filters),
     ]);
+    const items = await Promise.all(
+      workOrders.map(async (workOrder) =>
+        toDto(workOrder, await this.paidCentsFor(workOrder)),
+      ),
+    );
     return {
-      items: workOrders.map(toDto),
+      items,
       page,
       limit,
       total,
@@ -172,7 +204,17 @@ export class WorkOrdersService {
   }
 
   async getById(id: string): Promise<WorkOrderDto> {
-    return toDto(await this.getWorkOrderOrThrow(id));
+    const workOrder = await this.getWorkOrderOrThrow(id);
+    return toDto(workOrder, await this.paidCentsFor(workOrder));
+  }
+
+  /**
+   * Paid sum for the DTO badge (Bloco A). Payments only exist on payable
+   * orders — anything else returns null and the UI shows no financial state.
+   */
+  private async paidCentsFor(workOrder: WorkOrderWithRelations): Promise<number | null> {
+    if (!isPayableWorkOrderStatus(workOrder.status)) return null;
+    return this.paymentsRepository.paidTotal(workOrder.id);
   }
 
   async update(id: string, input: UpdateWorkOrderInput): Promise<WorkOrderDto> {

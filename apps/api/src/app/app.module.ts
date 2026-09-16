@@ -23,6 +23,7 @@ import { AnalyticsModule } from '../modules/analytics/analytics.module';
 import { DashboardModule } from '../modules/dashboard/dashboard.module';
 import { ReportsModule } from '../modules/reports/reports.module';
 import { SettingsModule } from '../modules/settings/settings.module';
+import { PaymentsModule } from '../modules/payments/payments.module';
 import { HealthController } from './health.controller';
 
 /**
@@ -58,6 +59,7 @@ import { HealthController } from './health.controller';
     DashboardModule,
     ReportsModule,
     SettingsModule,
+    PaymentsModule,
   ],
   controllers: [HealthController],
   providers: [

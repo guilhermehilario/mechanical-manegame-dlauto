@@ -65,3 +65,19 @@ export const ACTIVE_WORK_ORDER_STATUSES: readonly WorkOrderStatus[] = (
 export function isActiveWorkOrderStatus(status: WorkOrderStatus): boolean {
   return ACTIVE_WORK_ORDER_STATUSES.includes(status);
 }
+
+/**
+ * Statuses in which the shop accepts payments for the order (Bloco A).
+ * Money is only taken once the work is done — never before COMPLETED —
+ * and DELIVERED keeps accepting payments so late balances can settle
+ * even after the car has left.
+ */
+export const PAYABLE_WORK_ORDER_STATUSES: readonly WorkOrderStatus[] = [
+  'COMPLETED',
+  'AWAITING_PICKUP',
+  'DELIVERED',
+];
+
+export function isPayableWorkOrderStatus(status: WorkOrderStatus): boolean {
+  return PAYABLE_WORK_ORDER_STATUSES.includes(status);
+}

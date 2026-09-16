@@ -1,3 +1,5 @@
+import type { WorkOrderPaymentSummaryDto } from './payment';
+
 /**
  * Work order DTOs (Fase 5). Snapshot items are returned as stored — the
  * API never recomputes history (spec §35). Money is integer cents (§18).
@@ -56,6 +58,8 @@ export interface WorkOrderDto {
   totals: WorkOrderTotalsDto;
   serviceItems: WorkOrderServiceItemDto[];
   productItems: WorkOrderProductItemDto[];
+  /** Financial summary (Bloco A) — null while the OS is not payable yet. */
+  payment: WorkOrderPaymentSummaryDto | null;
   createdAt: string;
   updatedAt: string;
 }
