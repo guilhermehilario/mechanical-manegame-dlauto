@@ -331,10 +331,47 @@ export class WorkOrdersService {
     return this.getById(id);
   }
 
-  /** Hard delete — admin-only cleanup. Snapshot rows cascade (spec §35). */
-  async delete(id: string): Promise<void> {
+  /**
+   * Hard delete — admin-only cleanup. Orders that already closed the cycle
+   * with a pickup receipt and/or payments are financial/legal records and
+   * are refused with a domain error (the DB also enforces ON DELETE RESTRICT
+   * on both relations — this turns the raw Prisma P2003 into a clean 409).
+   * Deletable orders (still OPEN/assessment) may hold reserved product stock
+   * (§36 OUT movements) — every reserved unit is returned via an IN movement
+   * in the same transaction as the delete, so no line goes missing.
+   */
+  async delete(id: string, userId: string): Promise<void> {
     await this.getWorkOrderOrThrow(id);
-    await this.prisma.workOrder.delete({ where: { id } });
+    const [pickupsCount, paymentsCount] = await Promise.all([
+      this.prisma.vehiclePickup.count({ where: { workOrderId: id } }),
+      this.prisma.payment.count({ where: { workOrderId: id } }),
+    ]);
+    if (pickupsCount > 0) {
+      throw new ConflictError(
+        ErrorCodes.WORK_ORDER_HAS_FINANCIAL_RECORDS,
+        'OS com comprovante de retirada registrado não pode ser excluída',
+      );
+    }
+    if (paymentsCount > 0) {
+      throw new ConflictError(
+        ErrorCodes.WORK_ORDER_HAS_FINANCIAL_RECORDS,
+        'OS com pagamentos registrados não pode ser excluída',
+      );
+    }
+    await this.prisma.$transaction(async (tx) => {
+      const productItems = await tx.workOrderProductItem.findMany({
+        where: { workOrderId: id },
+      });
+      for (const item of productItems) {
+        await this.stockService.applyInTransaction(tx, userId, {
+          productId: item.productId,
+          type: 'IN',
+          quantity: item.quantity,
+          reason: `Estorno de estoque por exclusão da OS ${id}`,
+        });
+      }
+      await tx.workOrder.delete({ where: { id } });
+    });
   }
 
   /**

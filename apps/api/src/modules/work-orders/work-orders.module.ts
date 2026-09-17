@@ -9,6 +9,7 @@ import { VehiclesRepository } from '../vehicles/vehicles.repository';
 import { ServicesRepository } from '../services/services.repository';
 import { ProductsRepository } from '../products/products.repository';
 import { StockService } from '../products/stock.service';
+import { PaymentsRepository } from '../payments/payments.repository';
 import { StorageModule } from '../../common/storage/storage.module';
 import { SecurityModule } from '../auth/security.module';
 
@@ -24,7 +25,8 @@ import { SecurityModule } from '../auth/security.module';
     ServicesRepository,
     ProductsRepository,
     StockService,
+    PaymentsRepository,
   ],
-  exports: [WorkOrdersService, WorkOrdersRepository],
+  exports: [WorkOrdersService, WorkOrdersRepository, PaymentsRepository],
 })
 export class WorkOrdersModule {}

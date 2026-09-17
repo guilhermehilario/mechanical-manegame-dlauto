@@ -1,6 +1,5 @@
 import { Module } from '@nestjs/common';
 import { PaymentsController } from './payments.controller';
-import { PaymentsRepository } from './payments.repository';
 import { PaymentsService } from './payments.service';
 import { SecurityModule } from '../auth/security.module';
 import { WorkOrdersModule } from '../work-orders/work-orders.module';
@@ -9,7 +8,7 @@ import { WorkOrdersModule } from '../work-orders/work-orders.module';
 @Module({
   imports: [SecurityModule, WorkOrdersModule],
   controllers: [PaymentsController],
-  providers: [PaymentsRepository, PaymentsService],
+  providers: [PaymentsService],
   exports: [PaymentsService],
 })
 export class PaymentsModule {}

@@ -73,7 +73,7 @@ export class PaymentsController {
   async refund(
     @Req() request: AuthenticatedRequest,
     @Param('workOrderId', new ZodValidationPipe(workOrderIdSchema, 'param'))
-    _workOrderId: string,
+    workOrderId: string,
     @Param('paymentId', new ZodValidationPipe(paymentIdSchema, 'param'))
     paymentId: string,
   ): Promise<void> {
@@ -81,6 +81,6 @@ export class PaymentsController {
     if (!userId) {
       return Promise.reject(new Error('Unauthorized'));
     }
-    await this.paymentsService.refund(paymentId, userId);
+    await this.paymentsService.refund(paymentId, workOrderId, userId);
   }
 }

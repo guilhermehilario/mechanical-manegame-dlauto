@@ -12,9 +12,9 @@ import type {
   WorkOrderPaymentSummaryDto,
 } from '@mechanic-system/types';
 import type { Payment } from '@prisma/client';
-import type { PaymentsRepository, PaymentWithRelations } from './payments.repository';
-import type { WorkOrdersRepository } from '../work-orders/work-orders.repository';
-import type { PrismaService } from '../../prisma/prisma.service';
+import { PaymentsRepository, type PaymentWithRelations } from './payments.repository';
+import { WorkOrdersRepository } from '../work-orders/work-orders.repository';
+import { PrismaService } from '../../prisma/prisma.service';
 
 /**
  * Payable statuses (Bloco A): money can only be received when the work is
@@ -128,11 +128,13 @@ export class PaymentsService {
   /**
    * Reversal (estorno): removes the payment row and records the audit trail
    * (A2 — docs/todo-mvp.md). ADMIN/MANAGER only — enforced by the controller;
-   * the caller passes who acted for the audit.
+   * the caller passes who acted for the audit. The route carries the work
+   * order id and the payment must belong to it — a mismatch is reported as a
+   * plain not-found so we never reveal a foreign payment's existence.
    */
-  async refund(paymentId: string, actingUserId: string): Promise<void> {
+  async refund(paymentId: string, workOrderId: string, actingUserId: string): Promise<void> {
     const payment = await this.paymentsRepository.findById(paymentId);
-    if (!payment) {
+    if (!payment || payment.workOrderId !== workOrderId) {
       throw new NotFoundError(ErrorCodes.PAYMENT_NOT_FOUND, 'Pagamento não encontrado');
     }
     await this.prisma.$transaction(async (tx) => {

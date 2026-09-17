@@ -187,7 +187,18 @@ describe('PaymentsService', () => {
     it('throws when the payment does not exist', async () => {
       paymentsRepo.findById.mockResolvedValue(null);
 
-      await expect(service.refund('pay_404', 'usr_1')).rejects.toBeInstanceOf(NotFoundError);
+      await expect(service.refund('pay_404', 'wo_1', 'usr_1')).rejects.toBeInstanceOf(
+        NotFoundError,
+      );
+    });
+
+    it('refuses to refund a payment from a different work order', async () => {
+      paymentsRepo.findById.mockResolvedValue(makePayment({ workOrderId: 'wo_other' }));
+
+      await expect(service.refund('pay_1', 'wo_1', 'usr_1')).rejects.toBeInstanceOf(
+        NotFoundError,
+      );
+      expect(paymentsRepo.deleteInTransaction).not.toHaveBeenCalled();
     });
 
     it('deletes the payment row and records the audit trail in one transaction', async () => {
@@ -198,7 +209,7 @@ describe('PaymentsService', () => {
         fn({ auditLog: { create: auditCreate } }),
       );
 
-      await expect(service.refund('pay_1', 'usr_1')).resolves.toBeUndefined();
+      await expect(service.refund('pay_1', 'wo_1', 'usr_1')).resolves.toBeUndefined();
       expect(paymentsRepo.deleteInTransaction).toHaveBeenCalledWith(
         expect.anything(),
         'pay_1',

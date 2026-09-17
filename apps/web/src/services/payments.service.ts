@@ -1,9 +1,20 @@
-import type { PaymentDto, CreatePaymentResultDto } from '@mechanic-system/types';
+import type {
+  PaymentDto,
+  CreatePaymentResultDto,
+  WorkOrderPaymentSummaryDto,
+} from '@mechanic-system/types';
 import type { CreatePaymentInput } from '@mechanic-system/validation';
 import { api } from './auth.service';
 
-export function listPayments(workOrderId: string): Promise<PaymentDto[]> {
-  return api.get<PaymentDto[]>(`/work-orders/${workOrderId}/payments`);
+/** Shape of the API list endpoint: items + derived totals/summary. */
+export interface PaymentListResult {
+  items: PaymentDto[];
+  totals: { servicesCents: number; productsCents: number; discountsCents: number; totalCents: number };
+  summary: WorkOrderPaymentSummaryDto;
+}
+
+export function listPayments(workOrderId: string): Promise<PaymentListResult> {
+  return api.get<PaymentListResult>(`/work-orders/${workOrderId}/payments`);
 }
 
 export function createPayment(

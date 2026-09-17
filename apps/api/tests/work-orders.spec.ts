@@ -142,6 +142,12 @@ describe('WorkOrdersService', () => {
   let productsRepo: { findById: ReturnType<typeof vi.fn> };
   let stockService: { applyInTransaction: ReturnType<typeof vi.fn> };
   let paymentsRepo: { paidTotal: ReturnType<typeof vi.fn> };
+  let prismaMock: {
+    $transaction: ReturnType<typeof vi.fn>;
+    vehiclePickup: { count: ReturnType<typeof vi.fn> };
+    payment: { count: ReturnType<typeof vi.fn> };
+    workOrder: { delete: ReturnType<typeof vi.fn> };
+  };
   let service: WorkOrdersService;
 
   beforeEach(() => {
@@ -173,6 +179,18 @@ describe('WorkOrdersService', () => {
     paymentsRepo = {
       paidTotal: vi.fn(() => Promise.resolve(0)),
     };
+    const workOrderDelete = vi.fn();
+    prismaMock = {
+      $transaction: vi.fn((fn: (tx: unknown) => Promise<unknown>) =>
+        fn({
+          workOrderProductItem: { findMany: vi.fn(() => Promise.resolve([])) },
+          workOrder: { delete: workOrderDelete },
+        }),
+      ),
+      workOrder: { delete: workOrderDelete },
+      vehiclePickup: { count: vi.fn(() => Promise.resolve(0)) },
+      payment: { count: vi.fn(() => Promise.resolve(0)) },
+    };
     service = new WorkOrdersService(
       repo as unknown as WorkOrdersRepository,
       vehiclesRepo as unknown as VehiclesRepository,
@@ -180,10 +198,7 @@ describe('WorkOrdersService', () => {
       productsRepo as unknown as ProductsRepository,
       stockService as unknown as StockService,
       paymentsRepo as unknown as PaymentsRepository,
-      {
-        $transaction: vi.fn((fn: (tx: unknown) => Promise<unknown>) => fn({})),
-        workOrder: { delete: vi.fn() },
-      } as unknown as PrismaService,
+      prismaMock as unknown as PrismaService,
     );
   });
 
@@ -269,6 +284,72 @@ describe('WorkOrdersService', () => {
     });
   });
 
+  it('hard-deletes a clean OS (no pickup/payment)', async () => {
+    repo.findById.mockResolvedValue(makeWorkOrder({ status: 'OPEN' }));
+
+    await service.delete('wo_1', 'usr_1');
+
+    expect(prismaMock.workOrder.delete).toHaveBeenCalledWith({ where: { id: 'wo_1' } });
+  });
+
+  it('returns reserved stock via IN movements before hard-deleting', async () => {
+    repo.findById.mockResolvedValue(makeWorkOrder({ status: 'OPEN' }));
+    const tx = {
+      workOrderProductItem: {
+        findMany: vi.fn(() =>
+          Promise.resolve([
+            { productId: 'prd_1', quantity: 2 },
+            { productId: 'prd_2', quantity: 1 },
+          ]),
+        ),
+      },
+      workOrder: { delete: prismaMock.workOrder.delete },
+    };
+    prismaMock.$transaction.mockImplementation((fn: (t: unknown) => Promise<unknown>) =>
+      fn(tx),
+    );
+
+    await service.delete('wo_1', 'usr_1');
+
+    expect(stockService.applyInTransaction).toHaveBeenCalledTimes(2);
+    expect(stockService.applyInTransaction).toHaveBeenNthCalledWith(
+      1,
+      tx,
+      'usr_1',
+      expect.objectContaining({ productId: 'prd_1', type: 'IN', quantity: 2 }),
+    );
+    expect(stockService.applyInTransaction).toHaveBeenNthCalledWith(
+      2,
+      tx,
+      'usr_1',
+      expect.objectContaining({ productId: 'prd_2', type: 'IN', quantity: 1 }),
+    );
+    expect(prismaMock.workOrder.delete).toHaveBeenCalledWith({ where: { id: 'wo_1' } });
+  });
+
+  it('refuses to delete an OS with a registered pickup (409 FINANCIAL_RECORDS)', async () => {
+    repo.findById.mockResolvedValue(makeWorkOrder({ status: 'DELIVERED' }));
+    prismaMock.vehiclePickup.count.mockResolvedValue(1);
+    prismaMock.payment.count.mockResolvedValue(0);
+
+    await expect(service.delete('wo_1', 'usr_1')).rejects.toMatchObject({
+      code: 'WORK_ORDER_HAS_FINANCIAL_RECORDS',
+      status: 409,
+    });
+    expect(prismaMock.workOrder.delete).not.toHaveBeenCalled();
+  });
+
+  it('refuses to delete an OS with payments (409 FINANCIAL_RECORDS)', async () => {
+    repo.findById.mockResolvedValue(makeWorkOrder({ status: 'DELIVERED' }));
+    prismaMock.vehiclePickup.count.mockResolvedValue(0);
+    prismaMock.payment.count.mockResolvedValue(2);
+
+    await expect(service.delete('wo_1', 'usr_1')).rejects.toMatchObject({
+      code: 'WORK_ORDER_HAS_FINANCIAL_RECORDS',
+      status: 409,
+    });
+  });
+
   it('adds a service item with catalog snapshot', async () => {
     repo.findById.mockResolvedValue(makeWorkOrder({ status: 'OPEN' }));
     servicesRepo.findById.mockResolvedValue(makeService());
@@ -276,7 +357,7 @@ describe('WorkOrdersService', () => {
     await service.addServiceItem('wo_1', { serviceId: 'svc_1', quantity: 2 });
 
     expect(repo.createServiceItemInTransaction).toHaveBeenCalledWith(
-      {},
+      expect.anything(),
       expect.objectContaining({
         serviceName: 'Troca de óleo', // snapshot
         unitPriceCents: 15000, // snapshot
@@ -299,12 +380,12 @@ describe('WorkOrdersService', () => {
     await service.addProductItem('wo_1', { productId: 'prd_1', quantity: 2, discountCents: 0 }, 'usr_1');
 
     expect(stockService.applyInTransaction).toHaveBeenCalledWith(
-      {},
+      expect.anything(),
       'usr_1',
       expect.objectContaining({ type: 'OUT', quantity: 2 }),
     );
     expect(repo.createProductItemInTransaction).toHaveBeenCalledWith(
-      {},
+      expect.anything(),
       expect.objectContaining({
         productName: 'Filtro de óleo', // snapshot
         unitPriceCents: 3500, // snapshot (sale price)
@@ -331,11 +412,11 @@ describe('WorkOrdersService', () => {
     await service.removeProductItem('wo_1', 'pri_1', 'usr_1');
 
     expect(stockService.applyInTransaction).toHaveBeenCalledWith(
-      {},
+      expect.anything(),
       'usr_1',
       expect.objectContaining({ type: 'IN', quantity: 2 }),
     );
-    expect(repo.deleteProductItemInTransaction).toHaveBeenCalledWith({}, 'pri_1');
+    expect(repo.deleteProductItemInTransaction).toHaveBeenCalledWith(expect.anything(), 'pri_1');
   });
 
   it('computes totals from snapshots with discounts', async () => {

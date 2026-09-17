@@ -149,8 +149,13 @@ export class WorkOrdersController {
   @HttpCode(HttpStatus.NO_CONTENT)
   @RequireRoles('ADMIN', 'MANAGER')
   async delete(
+    @Req() request: AuthenticatedRequest,
     @Param('id', new ZodValidationPipe(workOrderIdSchema, 'param')) id: string,
   ): Promise<void> {
-    await this.workOrdersService.delete(id);
+    const userId = request.user?.id;
+    if (!userId) {
+      return Promise.reject(new Error('Unauthorized'));
+    }
+    await this.workOrdersService.delete(id, userId);
   }
 }

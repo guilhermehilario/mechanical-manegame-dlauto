@@ -9,10 +9,13 @@ import {
   saveSessionToDesktop,
 } from './desktop-bridge';
 
-/** Single shared client bound to the current session token. */
+/** Single shared client bound to the current session token. On a 401 it
+ * refreshes once and retries (see ApiClient); if the refresh fails the
+ * store is wiped and the router lands back on the login screen. */
 export const api = new ApiClient({
   baseUrl: resolveApiBaseUrl(),
   getToken: () => authStore.getAccessToken(),
+  onUnauthorized: () => refreshSession(),
 });
 
 /**

@@ -55,4 +55,51 @@ describe('ApiClient', () => {
     const client = new ApiClient({ baseUrl: 'http://x' });
     await expect(client.delete('/users/usr_1')).resolves.toBeUndefined();
   });
+
+  it('refreshes once on 401 and retries with the new token', async () => {
+    let token: string | null = 'old-token';
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({ success: false, error: { code: 'UNAUTHORIZED', message: 'expired' } }),
+          { status: 401 },
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ success: true, data: { ok: 1 } }), { status: 200 }),
+      );
+    global.fetch = fetchMock;
+    const client = new ApiClient({
+      baseUrl: 'http://x',
+      getToken: () => token,
+      onUnauthorized: () => {
+        token = 'new-token'; // simulated rotation
+        return Promise.resolve(true);
+      },
+    });
+
+    await expect(client.get('/me')).resolves.toEqual({ ok: 1 });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    const retryHeaders = fetchMock.mock.calls[1]?.[1] as RequestInit;
+    expect((retryHeaders.headers as Record<string, string>).Authorization).toBe('Bearer new-token');
+  });
+
+  it('does not retry when the session refresh fails', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({ success: false, error: { code: 'UNAUTHORIZED', message: 'expired' } }),
+        { status: 401 },
+      ),
+    );
+    global.fetch = fetchMock;
+    const client = new ApiClient({
+      baseUrl: 'http://x',
+      getToken: () => 'old-token',
+      onUnauthorized: () => Promise.resolve(false),
+    });
+
+    await expect(client.get('/me')).rejects.toMatchObject({ code: 'UNAUTHORIZED', status: 401 });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
 });

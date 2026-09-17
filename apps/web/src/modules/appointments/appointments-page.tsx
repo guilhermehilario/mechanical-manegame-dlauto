@@ -32,7 +32,13 @@ export function AppointmentsPage() {
   const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState<'' | AppointmentStatus>('');
   const [formOpen, setFormOpen] = useState(false);
+  const [editingAppointment, setEditingAppointment] = useState<AppointmentDto | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+
+  function openForm(appointment: AppointmentDto | null): void {
+    setEditingAppointment(appointment);
+    setFormOpen(true);
+  }
 
   const invalidate = (): void => {
     void queryClient.invalidateQueries({ queryKey: ['appointments'] });
@@ -118,7 +124,7 @@ export function AppointmentsPage() {
         <button
           type="button"
           onClick={() => {
-            setFormOpen(true);
+            openForm(null);
           }}
           className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
         >
@@ -238,7 +244,7 @@ export function AppointmentsPage() {
                             <button
                               type="button"
                               onClick={() => {
-                                setFormOpen(true);
+                                openForm(appointment);
                               }}
                               className="mr-3 text-xs font-medium text-slate-600 hover:underline"
                             >
@@ -351,7 +357,7 @@ export function AppointmentsPage() {
 
       {formOpen ? (
         <AppointmentForm
-          appointment={null}
+          appointment={editingAppointment}
           onClose={() => {
             setFormOpen(false);
           }}

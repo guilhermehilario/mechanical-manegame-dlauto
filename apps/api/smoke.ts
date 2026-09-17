@@ -1035,8 +1035,22 @@ async function main(): Promise<void> {
   // Cleanup for the second WO used in the guard test.
   await fetch(`${base}/work-orders/${wo2Body.data.id}`, { method: 'DELETE', headers: authHeaders });
 
-  // 42. Cleanup (WO cascade-deletes items and any remaining image rows)
-  await fetch(`${base}/work-orders/${woBody.data.id}`, { method: 'DELETE', headers: authHeaders });
+  // 42. A delivered OS with a pickup receipt is a legal record: hard delete
+  // must be refused with a clean 409 (domain error), not a raw Prisma P2003.
+  const protectedDelete = await fetch(`${base}/work-orders/${woBody.data.id}`, {
+    method: 'DELETE',
+    headers: authHeaders,
+  });
+  const protectedDeleteBody = (await protectedDelete.json()) as { error?: { code: string } };
+  if (
+    protectedDelete.status !== 409 ||
+    protectedDeleteBody.error?.code !== 'WORK_ORDER_HAS_FINANCIAL_RECORDS'
+  ) {
+    throw new Error(
+      `expected 409 WORK_ORDER_HAS_FINANCIAL_RECORDS on delivered OS delete, got ${protectedDelete.status}`,
+    );
+  }
+  console.log('[smoke] public OS delete protected (409 WORK_ORDER_HAS_FINANCIAL_RECORDS): OK');
   await fetch(`${base}/vehicles/${woVehicleBody.data.id}`, { method: 'DELETE', headers: authHeaders });
   await fetch(`${base}/customers/${woCustomerBody.data.id}`, { method: 'DELETE', headers: authHeaders });
   await fetch(`${base}/services/${woServiceBody.data.id}`, { method: 'DELETE', headers: authHeaders });

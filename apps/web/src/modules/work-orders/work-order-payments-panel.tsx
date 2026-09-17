@@ -35,9 +35,17 @@ export function WorkOrderPaymentsPanel({ workOrder }: { workOrder: WorkOrderDto 
   const [notes, setNotes] = useState('');
   const [error, setError] = useState<string | null>(null);
 
+  const summary = workOrder.payment;
+  // Guard for cached DTOs fetched before the payments feature (no payment field).
+  const paidCents = summary?.paidCents ?? 0;
+  const balanceCents = summary?.balanceCents ?? workOrder.totals.totalCents;
+
   const paymentsQuery = useQuery({
     queryKey: ['payments', workOrder.id],
     queryFn: () => listPayments(workOrder.id),
+    // The endpoint rejects non-payable orders (409 WORK_ORDER_NOT_PAYABLE) —
+    // only fetch once the receivable summary exists.
+    enabled: summary !== null,
   });
 
   const invalidate = (): void => {
@@ -95,11 +103,6 @@ export function WorkOrderPaymentsPanel({ workOrder }: { workOrder: WorkOrderDto 
     createMutation.mutate(parsed.data);
   }
 
-  const summary = workOrder.payment;
-  // Guard for cached DTOs fetched before the payments feature (no payment field).
-  const paidCents = summary?.paidCents ?? 0;
-  const balanceCents = summary?.balanceCents ?? workOrder.totals.totalCents;
-
   return (
     <div className="mb-4 rounded-lg border border-slate-200 bg-white">
       <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-4 py-2">
@@ -146,10 +149,10 @@ export function WorkOrderPaymentsPanel({ workOrder }: { workOrder: WorkOrderDto 
         </p>
       )}
 
-      {paymentsQuery.data && paymentsQuery.data.length > 0 ? (
+      {paymentsQuery.data && paymentsQuery.data.items.length > 0 ? (
         <table className="w-full text-left text-sm">
           <tbody>
-            {paymentsQuery.data.map((payment) => (
+            {paymentsQuery.data.items.map((payment) => (
               <tr key={payment.id} className="border-t border-slate-100">
                 <td className="px-4 py-2 text-slate-600">
                   {PAYMENT_METHOD_LABELS[payment.method]}

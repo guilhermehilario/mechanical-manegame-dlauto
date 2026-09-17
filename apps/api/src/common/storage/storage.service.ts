@@ -92,8 +92,8 @@ export class StorageService {
     const storageKey = `${sha256.slice(0, 2)}/${sha256}`;
     const absolutePath = this.absolutePathFor(storageKey);
     try {
-      await mkdir(dirname(absolutePath), { recursive: true });
-      await writeFile(absolutePath, buffer, { flag: 'wx' }); // dedup: never rewrite
+      await mkdir(dirname(absolutePath), { recursive: true, mode: 0o700 });
+      await writeFile(absolutePath, buffer, { flag: 'wx', mode: 0o600 }); // dedup: never rewrite
     } catch (error) {
       // EEXIST = same content already stored — fine. Anything else is real.
       if ((error as NodeJS.ErrnoException).code !== 'EEXIST') {
