@@ -9,6 +9,11 @@
 > build ✅). As Fases 1–10 estão concluídas; o que falta para o MVP são
 > lacunas de **fluxo financeiro, impressão, distribuição, sessão e validação
 > ponta a ponta**.
+>
+> Revisão posterior (2026-09-17): auditoria prática de todos os fluxos
+> encontrou e corrigiu 2 bugs críticos de inicialização (DI), 1 bug de
+> exclusão financeira e 4 bugs de integridade/sessão encontrados na revisão
+> de código — ver seção "Revisão 2026-09-17" abaixo.
 
 ---
 
@@ -17,7 +22,9 @@
 - ✅ CRUD completo: clientes, veículos, serviços, produtos, fornecedores
 - ✅ Agendamentos com conflito verificado no backend + agenda com transições
 - ✅ Ordens de Serviço: máquina de estados, snapshots de preço, itens de
-  serviço/peça, reserva/estorno de estoque transacional, imagens com dedup
+  serviço/peça, reserva/estorno de estoque transacional (inclusive **estorno
+  registrado como movimento `IN` ao excluir a OS** — 2026-09-17),
+  imagens com dedup
 - ✅ Histórico derivado por veículo
 - ✅ Retirada/entrega de veículos com comprovante + assinatura em canvas
 - ✅ Dashboard (KPIs do dia) + relatórios com períodos
@@ -25,11 +32,87 @@
 - ✅ Backup/restauração local manual + permissões 0700/0600
 - ✅ Empacotamento autocontido Linux (API sidecar + renderer offline)
 - ✅ Qualidade: 117 testes verdes, typecheck/lint/build passando, E2E básico
+- ✅ Revisão 2026-09-17: **137 testes API + 29 testes web** verdes +
+  typecheck/lint/build + smoke (`ALL CHECKS PASSED`), além de **verificação
+  ao vivo** do estorno de estoque na exclusão de OS e do estorno
+  cross-order (404) contra a API real — seção própria abaixo.
 
 **Gaps para MVP:** a oficina consegue operar o "chão de fábrica" (agendar →
 executar → entregar), mas **não fecha o caixa** (sem pagamentos), **não
 imprime documentos**, exige **login a cada inicialização** e o binário
 empacotado ainda não foi revalidado após as mudanças de segurança (R2/R6).
+
+---
+
+## Revisão 2026-09-17 — auditoria de fluxos (bugs corrigidos e achados)
+
+Auditoria prática (API real + revisão de código + web) que fechou os gaps
+de **funcionamento** encontrados após a Fase 11. Todos com teste.
+
+### Correções aplicadas ✅
+
+- **Estorno de estoque na exclusão de OS** 🔴 (bug de dados): `DELETE
+  /work-orders/:id` devolvia peças reservadas mas **sem registrar movimento
+  `IN`** — divergência de trilha e de saldo no backup/restauração.
+  `WorkOrdersService.delete(id, userId)` agora roda em `$transaction`,
+  cria um movimento `IN` (`Estorno de estoque por exclusão da OS <id>`)
+  por item antes do delete. **Verificado ao vivo**: produto 5 → reserva 2
+  → OS excluída → estoque volta a 5 e movimentos mostram o estorno.
+- **Estorno cross-order** 🔴 (bug de segurança): `DELETE
+  /work-orders/:id/payments/:paymentId` validava o pagamento por id, mas
+  não **conferia se o `workOrderId` da rota batia com o do pagamento** —
+  dava para estornar pagamento de outra OS passando outro id na URL.
+  `PaymentsService.refund(paymentId, workOrderId, actingUserId)` agora
+  garante a correspondência (`404 PAYMENT_NOT_FOUND`). **Verificado ao
+  vivo**: estorno via rota de OS estranha → 404.
+- **401/refresh morto** 🔴 (bug de sessão): o access token expira em 15 min
+  (`JWT_ACCESS_EXPIRES`) mas o interceptor que deveria refrescar **não
+  existia** — a sessão caía no meio do uso. `apps/web/src/services/api-client.ts`
+  reescrito com `fetchWithAuth()` + `refreshAndRetry()` (single-flight,
+  guarda anti-recursão) e `auth.service.ts` liga `onUnauthorized` →
+  `refreshSession()`; se o refresh falha, limpa a store e volta ao login.
+  Tests: 401 → 1 refresh + retry com token novo; sem retry em refresh
+  mal-sucedido.
+- **Painel de pagamentos sem lista** 🟡 (bug de UI): o `payments.service.ts`
+  do web quebrou na refatoração do contrato (chamava `{ data }` onde a API
+  responde `{ data: { items, totals, summary } }`) e a lista de pagamentos
+  ficava **vazia para sempre**. DTO corrigido para `PaymentListResult` +
+  painel consome `query.data.items` com `enabled` condicionado ao summary.
+- **Edição de agendamento desconectada** 🟡 (bug de UI): o botão "Editar"
+  abria o formulário em **modo criação** (`openForm()` sem os dados);
+  `editingAppointment` + `openForm(appointment|null)` passam o agendamento
+  real → o form pré-popula e chama `updateAppointment` no salvar.
+- **Arquivos do storage com permissões demais** 🟡 (reforço R2): uploads e
+  diretórios criados com modo padrão do umask; agora `mkdir` 0700 e
+  `writeFile` 0600 (pastas já usavam 0700 no backup).
+- **Ações da página de usuários sem gate de papel** 🟡 (bug de UI): a página
+  listava para ADMIN/MANAGER (`GET /users` libera os dois), mas os botões
+  "Novo usuário", "Redefinir senha" e "Desativar" apareciam para qualquer
+  papel — e "Redefinir senha" também nos alvos MECHANIC/ATTENDANT, que o
+  backend rejeita (`400`). Agora a UI espelha o backend: ações visíveis só
+  para ADMIN e reset apenas em alvos ADMIN/MANAGER; MANAGER/MECHANIC veem a
+  lista somente-leitura. Coberto por `users-page.test.tsx` (3 testes).
+
+### Achados que NÃO são bug
+
+- `pnpm --filter @mechanic-system/api start` falha ao subir: os `workspace:`
+  dos `apps/desktop/staging` não compilam. **Limbo de env — caminho `start`
+  está documentado errado** (o smoke usa `ts-node src/platform.ts`, que é o
+  correto). Ajustar script no futuro.
+- Boot anterior preso em `swc` (DI não resolveu) era o boundary de
+  compilação cruzando os workspaces. Revertido para `ts-node` (funciona).
+- Endpoint de veículos é `POST /vehicles` (body com `customerId`), não
+  `POST /customers/:id/vehicles` — verificação ao vivo confirmou.
+- E2E não roda com o dev server do usuário na porta 3001 (conflito de
+  porta, `Error: ... is already used`).
+- Artefato acidental `apps/api/apps/desktop/staging` removido (56K, não
+  versionado).
+
+### Ainda pendente
+
+- **E2E completo** segue bloqueado (porta 3001 ocupada) e o **binário
+  empacotado** ainda não foi revalidado (C1) — não retroceder essas duas
+  tarefas do Bloco G / Bloco C.
 
 ---
 
@@ -49,7 +132,10 @@ Sem isso a OS não vira recebimento — é o maior bloqueio de produto.
   (`isPayableWorkOrderStatus` no pacote shared: `COMPLETED`/
   `AWAITING_PICKUP`/`DELIVERED` → `409 WORK_ORDER_NOT_PAYABLE`); estorno
   ADMIN/MANAGER com trilha `PAYMENT_REFUND` em `audit_logs` (primeiro uso
-  real da tabela, atômico com o delete).
+  real da tabela, atômico com o delete). **2026-09-17:** estorno agora
+  valida o `workOrderId` da rota contra o do pagamento
+  (`404 PAYMENT_NOT_FOUND` — antes dava para estornar pagamento de outra
+  OS) + teste de estorno cross-order na suíte.
 - [x] **A3. Endpoints** ✅ 2026-09-16: `POST /work-orders/:id/payments`,
   `GET /work-orders/:id/payments` (lista + summary),
   `GET /work-orders/:id/payments/summary`, `DELETE
@@ -61,6 +147,9 @@ Sem isso a OS não vira recebimento — é o maior bloqueio de produto.
   métodos + botão "Receber saldo" que preenche o restante. DTO da OS
   carrega `payment.paidCents/balanceCents/status` (null enquanto não
   pagável), então listas e dashboard mostram o estado financeiro.
+  **2026-09-17:** corrigido o contrato do `payments.service.ts` do web
+  (passou a consumir `data.items`/`totals`/`summary`) — a lista de
+  pagamentos re-exibe em vez de ficar vazia.
 - [x] **A5. Dashboard/relatórios** ✅ 2026-09-16: KPI "Recebido (caixa)"
   no dashboard — hoje e no mês, base `Payment.paidAt` (regime de caixa),
   ao lado da receita por OS entregue (competência). Novo relatório
@@ -133,6 +222,13 @@ A oficina precisa entregar papel (OS, recibo). Hoje não existe fluxo algum.
   `packages/config` — access JWT 15 min (`JWT_ACCESS_EXPIRES`) e refresh
   rotativo 7 dias (`JWT_REFRESH_EXPIRES`), revogação total na troca/reset
   de senha. Comportamento documentado aqui e no `.env.example`.
+- [x] **D5. Refresh automático no meio do uso** ✅ 2026-09-17: o interceptor
+  de 401 existia só no papel — `api-client.ts` reescrito com
+  `fetchWithAuth()` + `refreshAndRetry()` (single-flight, anti-recursão);
+  expirar o access de 15 min no meio do dia nunca mais derruba o usuário
+  (1 refresh + retry transparente). Se o refresh falhar (refresh expirado/
+  revogado), limpa a store e volta ao login. Tests: refresh 1× com retry e
+  sem retry em refresh falho.
 
 ## Bloco E — Proteção de dados em operação 🟡 Importante
 

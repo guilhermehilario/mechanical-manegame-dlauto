@@ -9,6 +9,7 @@ import {
   deactivateUser,
   listUsers,
 } from '../../services/users.service';
+import { useAuth } from '../auth/use-auth';
 import { formatDate } from '../../utils/format';
 
 const inputClass =
@@ -33,6 +34,7 @@ interface PasswordResetState {
  */
 export function UsersPage() {
   const queryClient = useQueryClient();
+  const { user: currentUser } = useAuth();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [submittedSearch, setSubmittedSearch] = useState('');
@@ -40,6 +42,10 @@ export function UsersPage() {
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [passwordReset, setPasswordReset] = useState<PasswordResetState | null>(null);
+
+  // Backend scopes: listing allows ADMIN/MANAGER; create, deactivate and
+  // password reset are ADMIN-only (and reset targets must be ADMIN/MANAGER).
+  const canManageUsers = currentUser?.role === 'ADMIN';
 
   const usersQuery = useQuery({
     queryKey: ['users', page, submittedSearch],
@@ -102,15 +108,17 @@ export function UsersPage() {
             Contas de acesso ao sistema. Desativar não apaga o histórico de ações.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => {
-            setIsFormOpen(true);
-          }}
-          className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
-        >
-          Novo usuário
-        </button>
+        {canManageUsers ? (
+          <button
+            type="button"
+            onClick={() => {
+              setIsFormOpen(true);
+            }}
+            className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+          >
+            Novo usuário
+          </button>
+        ) : null}
       </div>
 
       <form
@@ -191,16 +199,19 @@ export function UsersPage() {
                   </td>
                   <td className="px-4 py-3 text-slate-500">{formatDate(user.createdAt)}</td>
                   <td className="px-4 py-3 text-right">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setPasswordReset({ user, password: '' });
-                      }}
-                      className="mr-3 text-xs font-medium text-blue-600 hover:underline"
-                    >
-                      Redefinir senha
-                    </button>
-                    {user.active ? (
+                    {canManageUsers &&
+                    (user.role === 'ADMIN' || user.role === 'MANAGER') ? (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPasswordReset({ user, password: '' });
+                        }}
+                        className="mr-3 text-xs font-medium text-blue-600 hover:underline"
+                      >
+                        Redefinir senha
+                      </button>
+                    ) : null}
+                    {canManageUsers && user.active ? (
                       <button
                         type="button"
                         onClick={() => {
