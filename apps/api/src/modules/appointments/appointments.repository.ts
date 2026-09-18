@@ -3,6 +3,14 @@ import type { Prisma, Appointment } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ACTIVE_APPOINTMENT_STATUSES } from '@mechanic-system/shared';
 import type { AppointmentStatus } from '@mechanic-system/shared';
+import { buildOrderBy, type AppointmentSortField } from '@mechanic-system/validation';
+
+/** Maps the API's whitelisted sort fields to Prisma columns. */
+const SORT_FIELD_MAP: Record<AppointmentSortField, string> = {
+  scheduledAt: 'scheduledAt',
+  status: 'status',
+  createdAt: 'createdAt',
+};
 
 /** Appointment with the display relations loaded (customer/vehicle/service). */
 export type AppointmentWithRelations = Prisma.AppointmentGetPayload<{
@@ -90,10 +98,12 @@ export class AppointmentsRepository {
       from?: Date;
       to?: Date;
     },
+    sortBy?: AppointmentSortField,
+    sortDir?: 'asc' | 'desc',
   ): Promise<AppointmentWithRelations[]> {
     return this.prisma.appointment.findMany({
       where: this.listWhere(filters),
-      orderBy: { scheduledAt: 'asc' },
+      orderBy: buildOrderBy(sortBy, sortDir, SORT_FIELD_MAP, { scheduledAt: 'asc' }),
       include: {
         customer: { select: { name: true } },
         vehicle: { select: { plate: true } },

@@ -2,7 +2,10 @@ import { Injectable } from '@nestjs/common';
 import { ConflictError, NotFoundError } from '../../common/errors/domain.error';
 import { ErrorCodes } from '@mechanic-system/types';
 import { computeWorkOrderTotals } from '@mechanic-system/shared';
-import type { CreateVehiclePickupInput } from '@mechanic-system/validation';
+import type {
+  CreateVehiclePickupInput,
+  VehiclePickupSortField,
+} from '@mechanic-system/validation';
 import type { VehiclePickupDto, VehiclePickupReceiptDto } from '@mechanic-system/types';
 import type { VehiclePickupWithRelations } from './vehicle-pickups.repository';
 import { VehiclePickupsRepository } from './vehicle-pickups.repository';
@@ -93,9 +96,11 @@ export class VehiclePickupsService {
   async list(
     page: number,
     limit: number,
+    sortBy?: VehiclePickupSortField,
+    sortDir?: 'asc' | 'desc',
   ): Promise<{ items: VehiclePickupDto[]; page: number; limit: number; total: number; totalPages: number }> {
     const [pickups, total] = await Promise.all([
-      this.pickupsRepository.list(page, limit),
+      this.pickupsRepository.list(page, limit, sortBy, sortDir),
       this.pickupsRepository.count(),
     ]);
     return {

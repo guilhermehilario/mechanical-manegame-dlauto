@@ -39,13 +39,19 @@ export class AppointmentsController {
   list(
     @Query(new ZodValidationPipe(appointmentQuerySchema, 'query')) query: AppointmentQuery,
   ): Promise<Paginated<AppointmentDto>> {
-    return this.appointmentsService.list(query.page, query.limit, {
-      customerId: query.customerId,
-      vehicleId: query.vehicleId,
-      status: query.status,
-      ...(query.from ? { from: new Date(query.from) } : {}),
-      ...(query.to ? { to: new Date(query.to) } : {}),
-    });
+    return this.appointmentsService.list(
+      query.page,
+      query.limit,
+      {
+        customerId: query.customerId,
+        vehicleId: query.vehicleId,
+        status: query.status,
+        ...(query.from ? { from: new Date(query.from) } : {}),
+        ...(query.to ? { to: new Date(query.to) } : {}),
+      },
+      query.sortBy,
+      query.sortDir,
+    );
   }
 
   @Get(':id')

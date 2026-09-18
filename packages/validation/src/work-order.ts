@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { WorkOrderStatus } from '@mechanic-system/shared';
-import { idSchema, paginationQuerySchema } from './common';
+import { createSortQuerySchema, idSchema, type SortField } from './common';
 
 /**
  * Work order schemas (Fase 5). Items reference catalog entries; the API
@@ -71,13 +71,18 @@ export const workOrderStatusBodySchema = z.object({
 });
 export type WorkOrderStatusBody = z.infer<typeof workOrderStatusBodySchema>;
 
-export const workOrderQuerySchema = paginationQuerySchema.extend({
+/** Sortable columns for the work orders listing (whitelist — only real
+ * DB columns; `openedAt`/`totalCents` are derived, not stored). */
+export const WORK_ORDER_SORT_FIELDS = ['orderNumber', 'status', 'createdAt', 'updatedAt'] as const;
+
+export const workOrderQuerySchema = createSortQuerySchema(WORK_ORDER_SORT_FIELDS).extend({
   customerId: idSchema.optional(),
   vehicleId: idSchema.optional(),
   status: WorkOrderStatus.optional(),
 });
 
 export type WorkOrderQuery = z.infer<typeof workOrderQuerySchema>;
+export type WorkOrderSortField = SortField<typeof WORK_ORDER_SORT_FIELDS>;
 
 export const workOrderIdSchema = idSchema;
 export const workOrderItemIdSchema = idSchema;

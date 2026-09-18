@@ -19,14 +19,14 @@ import {
   changePasswordSchema,
   createUserSchema,
   idSchema,
-  paginationQuerySchema,
+  userQuerySchema,
 } from '@mechanic-system/validation';
 import type {
   AdminResetPasswordInput,
   ChangePasswordInput,
   CreateUserInput,
-  PaginationQuery,
   UpdateUserInput,
+  UserQuery,
 } from '@mechanic-system/validation';
 import type { AuthUser, Paginated } from '@mechanic-system/types';
 import { UsersService } from './users.service';
@@ -42,9 +42,9 @@ export class UsersController {
   @Get()
   @RequireRoles('ADMIN', 'MANAGER')
   list(
-    @Query(new ZodValidationPipe(paginationQuerySchema, 'query')) query: PaginationQuery,
+    @Query(new ZodValidationPipe(userQuerySchema, 'query')) query: UserQuery,
   ): Promise<Paginated<AuthUser>> {
-    return this.usersService.list(query.page, query.limit, query.search);
+    return this.usersService.list(query.page, query.limit, query.search, query.sortBy, query.sortDir);
   }
 
   @Get(':id')

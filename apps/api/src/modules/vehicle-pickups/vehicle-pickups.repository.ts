@@ -1,6 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import type { Prisma, VehiclePickup } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { buildOrderBy, type VehiclePickupSortField } from '@mechanic-system/validation';
+
+/** Maps the API's whitelisted sort fields to Prisma columns. */
+const SORT_FIELD_MAP: Record<VehiclePickupSortField, string> = {
+  receiverName: 'receiverName',
+  createdAt: 'createdAt',
+};
 
 /** Pickup row with display relations for listing. */
 export type VehiclePickupWithRelations = Prisma.VehiclePickupGetPayload<{
@@ -64,9 +71,14 @@ export class VehiclePickupsRepository {
     });
   }
 
-  list(page: number, limit: number): Promise<VehiclePickupWithRelations[]> {
+  list(
+    page: number,
+    limit: number,
+    sortBy?: VehiclePickupSortField,
+    sortDir?: 'asc' | 'desc',
+  ): Promise<VehiclePickupWithRelations[]> {
     return this.prisma.vehiclePickup.findMany({
-      orderBy: { createdAt: 'desc' },
+      orderBy: buildOrderBy(sortBy, sortDir, SORT_FIELD_MAP, { createdAt: 'desc' }),
       include: PICKUP_INCLUDE,
       skip: (page - 1) * limit,
       take: limit,

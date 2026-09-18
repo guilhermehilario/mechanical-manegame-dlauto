@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { idSchema } from './common';
+import { createSortQuerySchema, idSchema, type SortField } from './common';
 
 /**
  * Vehicle pickup schemas (Fase 7). A pickup is the handover receipt: it is
@@ -51,5 +51,13 @@ export const createVehiclePickupSchema = z
   .strict();
 
 export type CreateVehiclePickupInput = z.infer<typeof createVehiclePickupSchema>;
+
+/** Sortable columns for the pickups listing (whitelist). */
+export const VEHICLE_PICKUP_SORT_FIELDS = ['receiverName', 'createdAt'] as const;
+
+export const vehiclePickupQuerySchema = createSortQuerySchema(VEHICLE_PICKUP_SORT_FIELDS);
+
+export type VehiclePickupQuery = z.infer<typeof vehiclePickupQuerySchema>;
+export type VehiclePickupSortField = SortField<typeof VEHICLE_PICKUP_SORT_FIELDS>;
 
 export const workOrderPickupIdSchema = idSchema;

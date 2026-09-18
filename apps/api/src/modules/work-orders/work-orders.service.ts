@@ -15,6 +15,7 @@ import type {
   AddServiceItemInput,
   CreateWorkOrderInput,
   UpdateWorkOrderInput,
+  WorkOrderSortField,
 } from '@mechanic-system/validation';
 import type {
   VehicleHistoryEntryDto,
@@ -178,6 +179,8 @@ export class WorkOrdersService {
     page: number,
     limit: number,
     filters: { customerId?: string; vehicleId?: string; status?: WorkOrderStatus },
+    sortBy?: WorkOrderSortField,
+    sortDir?: 'asc' | 'desc',
   ): Promise<{
     items: WorkOrderDto[];
     page: number;
@@ -186,7 +189,7 @@ export class WorkOrdersService {
     totalPages: number;
   }> {
     const [workOrders, total] = await Promise.all([
-      this.workOrdersRepository.list(page, limit, filters),
+      this.workOrdersRepository.list(page, limit, filters, sortBy, sortDir),
       this.workOrdersRepository.count(filters),
     ]);
     const items = await Promise.all(

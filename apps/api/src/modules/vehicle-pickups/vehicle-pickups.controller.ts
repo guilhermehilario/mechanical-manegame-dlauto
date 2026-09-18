@@ -11,12 +11,11 @@ import {
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import {
   createVehiclePickupSchema,
+  vehiclePickupQuerySchema,
   workOrderPickupIdSchema,
   workOrderIdSchema,
 } from '@mechanic-system/validation';
-import type { CreateVehiclePickupInput } from '@mechanic-system/validation';
-import { paginationQuerySchema } from '@mechanic-system/validation';
-import type { PaginationQuery } from '@mechanic-system/validation';
+import type { CreateVehiclePickupInput, VehiclePickupQuery } from '@mechanic-system/validation';
 import type { Paginated, VehiclePickupDto, VehiclePickupReceiptDto } from '@mechanic-system/types';
 import { AuthenticatedRequest } from '../auth/jwt-auth.guard';
 import { RequireRoles, RolesGuard } from '../auth/roles.guard';
@@ -33,9 +32,9 @@ export class VehiclePickupsController {
 
   @Get()
   list(
-    @Query(new ZodValidationPipe(paginationQuerySchema, 'query')) query: PaginationQuery,
+    @Query(new ZodValidationPipe(vehiclePickupQuerySchema, 'query')) query: VehiclePickupQuery,
   ): Promise<Paginated<VehiclePickupDto>> {
-    return this.pickupsService.list(query.page, query.limit);
+    return this.pickupsService.list(query.page, query.limit, query.sortBy, query.sortDir);
   }
 
   /** Receipt for one work order (or 404 when not picked up yet). */

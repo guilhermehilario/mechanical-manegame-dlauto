@@ -9,6 +9,7 @@ import type {
   ChangePasswordInput,
   CreateUserInput,
   UpdateUserInput,
+  UserSortField,
   UserRole,
 } from '@mechanic-system/validation';
 
@@ -63,7 +64,13 @@ export class UsersService {
     return toPublicUser(user);
   }
 
-  async list(page: number, limit: number, search?: string): Promise<{
+  async list(
+    page: number,
+    limit: number,
+    search?: string,
+    sortBy?: UserSortField,
+    sortDir?: 'asc' | 'desc',
+  ): Promise<{
     items: PublicUser[];
     page: number;
     limit: number;
@@ -71,7 +78,7 @@ export class UsersService {
     totalPages: number;
   }> {
     const [users, total] = await Promise.all([
-      this.usersRepository.list(page, limit, search),
+      this.usersRepository.list(page, limit, search, sortBy, sortDir),
       this.usersRepository.count(search),
     ]);
     return {

@@ -2,6 +2,15 @@ import { Injectable } from '@nestjs/common';
 import type { Prisma, WorkOrder, WorkOrderServiceItem, WorkOrderProductItem } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import type { WorkOrderStatus } from '@mechanic-system/shared';
+import { buildOrderBy, type WorkOrderSortField } from '@mechanic-system/validation';
+
+/** Maps the API's whitelisted sort fields to Prisma columns. */
+const SORT_FIELD_MAP: Record<WorkOrderSortField, string> = {
+  orderNumber: 'orderNumber',
+  status: 'status',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt',
+};
 
 /** Work order with items + display relations loaded. */
 export type WorkOrderWithRelations = Prisma.WorkOrderGetPayload<{
@@ -55,10 +64,12 @@ export class WorkOrdersRepository {
     page: number,
     limit: number,
     filters: { customerId?: string; vehicleId?: string; status?: WorkOrderStatus },
+    sortBy?: WorkOrderSortField,
+    sortDir?: 'asc' | 'desc',
   ): Promise<WorkOrderWithRelations[]> {
     return this.prisma.workOrder.findMany({
       where: this.listWhere(filters),
-      orderBy: { orderNumber: 'desc' },
+      orderBy: buildOrderBy(sortBy, sortDir, SORT_FIELD_MAP, { orderNumber: 'desc' }),
       include: WORK_ORDER_INCLUDE,
       skip: (page - 1) * limit,
       take: limit,

@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { AppointmentStatus } from '@mechanic-system/shared';
-import { idSchema, paginationQuerySchema } from './common';
+import { createSortQuerySchema, idSchema, type SortField } from './common';
 
 /**
  * Appointment schemas (Fase 4).
@@ -40,7 +40,10 @@ export const updateAppointmentSchema = z
 
 export type UpdateAppointmentInput = z.infer<typeof updateAppointmentSchema>;
 
-export const appointmentQuerySchema = paginationQuerySchema.extend({
+/** Sortable columns for the appointments listing (whitelist). */
+export const APPOINTMENT_SORT_FIELDS = ['scheduledAt', 'status', 'createdAt'] as const;
+
+export const appointmentQuerySchema = createSortQuerySchema(APPOINTMENT_SORT_FIELDS).extend({
   customerId: idSchema.optional(),
   vehicleId: idSchema.optional(),
   status: AppointmentStatus.optional(),
@@ -50,6 +53,7 @@ export const appointmentQuerySchema = paginationQuerySchema.extend({
 });
 
 export type AppointmentQuery = z.infer<typeof appointmentQuerySchema>;
+export type AppointmentSortField = SortField<typeof APPOINTMENT_SORT_FIELDS>;
 
 export const appointmentIdSchema = idSchema;
 

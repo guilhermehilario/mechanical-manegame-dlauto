@@ -56,11 +56,17 @@ export class WorkOrdersController {
   list(
     @Query(new ZodValidationPipe(workOrderQuerySchema, 'query')) query: WorkOrderQuery,
   ): Promise<Paginated<WorkOrderDto>> {
-    return this.workOrdersService.list(query.page, query.limit, {
-      customerId: query.customerId,
-      vehicleId: query.vehicleId,
-      status: query.status,
-    });
+    return this.workOrdersService.list(
+      query.page,
+      query.limit,
+      {
+        customerId: query.customerId,
+        vehicleId: query.vehicleId,
+        status: query.status,
+      },
+      query.sortBy,
+      query.sortDir,
+    );
   }
 
   @Get(':id')

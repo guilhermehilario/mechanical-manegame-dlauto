@@ -1,6 +1,15 @@
 import { Injectable } from '@nestjs/common';
 import type { User } from '@prisma/client';
+import { buildOrderBy, type UserSortField } from '@mechanic-system/validation';
 import { PrismaService } from '../../prisma/prisma.service';
+
+/** Maps the API's whitelisted sort fields to Prisma columns. */
+const SORT_FIELD_MAP: Record<UserSortField, string> = {
+  name: 'name',
+  email: 'email',
+  role: 'role',
+  createdAt: 'createdAt',
+};
 
 /**
  * Data access for users (spec §22). No business rules here.
@@ -26,7 +35,13 @@ export class UsersRepository {
     return admin !== null;
   }
 
-  list(page: number, limit: number, search?: string): Promise<User[]> {
+  list(
+    page: number,
+    limit: number,
+    search?: string,
+    sortBy?: UserSortField,
+    sortDir?: 'asc' | 'desc',
+  ): Promise<User[]> {
     return this.prisma.user.findMany({
       where: search
         ? {
@@ -36,7 +51,7 @@ export class UsersRepository {
             ],
           }
         : undefined,
-      orderBy: { createdAt: 'desc' },
+      orderBy: buildOrderBy(sortBy, sortDir, SORT_FIELD_MAP, { createdAt: 'desc' }),
       skip: (page - 1) * limit,
       take: limit,
     });

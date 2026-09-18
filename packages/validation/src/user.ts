@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { USER_ROLES } from '@mechanic-system/types';
+import { createSortQuerySchema, type SortField } from './common';
 
 export const UserRole = z.enum(USER_ROLES);
 export type UserRole = z.infer<typeof UserRole>;
@@ -33,3 +34,11 @@ export const changePasswordSchema = z.object({
 });
 
 export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
+
+/** Sortable columns for the users listing (whitelist). */
+export const USER_SORT_FIELDS = ['name', 'email', 'role', 'createdAt'] as const;
+
+export const userQuerySchema = createSortQuerySchema(USER_SORT_FIELDS);
+
+export type UserQuery = z.infer<typeof userQuerySchema>;
+export type UserSortField = SortField<typeof USER_SORT_FIELDS>;

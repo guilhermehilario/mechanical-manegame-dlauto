@@ -3,7 +3,11 @@ import { ConflictError, DomainError, NotFoundError } from '../../common/errors/d
 import { ErrorCodes } from '@mechanic-system/types';
 import { canTransitionAppointment, isActiveAppointmentStatus } from '@mechanic-system/shared';
 import type { AppointmentStatus } from '@mechanic-system/shared';
-import type { CreateAppointmentInput, UpdateAppointmentInput } from '@mechanic-system/validation';
+import type {
+  AppointmentSortField,
+  CreateAppointmentInput,
+  UpdateAppointmentInput,
+} from '@mechanic-system/validation';
 import type { AppointmentDto } from '@mechanic-system/types';
 import { AppointmentsRepository, type AppointmentWithRelations } from './appointments.repository';
 import { VehiclesRepository } from '../vehicles/vehicles.repository';
@@ -130,6 +134,8 @@ export class AppointmentsService {
       from?: Date;
       to?: Date;
     },
+    sortBy?: AppointmentSortField,
+    sortDir?: 'asc' | 'desc',
   ): Promise<{
     items: AppointmentDto[];
     page: number;
@@ -138,7 +144,7 @@ export class AppointmentsService {
     totalPages: number;
   }> {
     const [appointments, total] = await Promise.all([
-      this.appointmentsRepository.list(page, limit, filters),
+      this.appointmentsRepository.list(page, limit, filters, sortBy, sortDir),
       this.appointmentsRepository.count(filters),
     ]);
     return {
