@@ -71,6 +71,7 @@ describe('DashboardService', () => {
     workOrderCountByStatus: ReturnType<typeof vi.fn>;
     listDeliveredWorkOrders: ReturnType<typeof vi.fn>;
     paymentTotal: ReturnType<typeof vi.fn>;
+    paymentTotalsByMethod: ReturnType<typeof vi.fn>;
   };
   let appointmentsRepo: { countActiveBetween: ReturnType<typeof vi.fn> };
   let appointmentsService: { list: ReturnType<typeof vi.fn> };
@@ -86,6 +87,7 @@ describe('DashboardService', () => {
       workOrderCountByStatus: vi.fn(),
       listDeliveredWorkOrders: vi.fn(),
       paymentTotal: vi.fn(),
+      paymentTotalsByMethod: vi.fn(),
     };
     appointmentsRepo = { countActiveBetween: vi.fn() };
     appointmentsService = { list: vi.fn() };
@@ -117,6 +119,11 @@ describe('DashboardService', () => {
     analyticsRepo.listDeliveredWorkOrders.mockResolvedValueOnce([]);
     // Cash basis: R$ 40 received today (A5).
     analyticsRepo.paymentTotal.mockResolvedValue(4000);
+    // Month: R$ 30 from PIX + R$ 10 from cash.
+    analyticsRepo.paymentTotalsByMethod.mockResolvedValue([
+      { method: 'PIX', count: 2, totalCents: 3000 },
+      { method: 'CASH', count: 1, totalCents: 1000 },
+    ]);
     analyticsRepo.workOrderCountByStatus.mockResolvedValue([
       { status: 'OPEN', _count: 4 },
       { status: 'AWAITING_PICKUP', _count: 3 },
@@ -150,6 +157,10 @@ describe('DashboardService', () => {
     expect(summary.revenue.previousMonthCents).toBe(0);
     expect(summary.cash.todayCents).toBe(4000);
     expect(summary.cash.monthCents).toBe(4000);
+    expect(summary.paymentMethods).toEqual([
+      { method: 'PIX', count: 2, totalCents: 3000 },
+      { method: 'CASH', count: 1, totalCents: 1000 },
+    ]);
     expect(summary.workOrdersByStatus).toEqual([
       { status: 'OPEN', count: 4 },
       { status: 'AWAITING_PICKUP', count: 3 },

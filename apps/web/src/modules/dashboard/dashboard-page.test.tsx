@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { DashboardPage } from './dashboard-page';
@@ -34,6 +34,10 @@ const summary: DashboardSummaryDto = {
     todayCents: 15000,
     monthCents: 100000,
   },
+  paymentMethods: [
+    { method: 'PIX', count: 2, totalCents: 3000 },
+    { method: 'CASH', count: 1, totalCents: 1000 },
+  ],
   workOrdersByStatus: [
     { status: 'OPEN', count: 4 },
     { status: 'AWAITING_PICKUP', count: 3 },
@@ -95,6 +99,7 @@ function renderPage(): void {
 
 describe('DashboardPage', () => {
   beforeEach(() => {
+    localStorage.clear();
     // Banner hidden by default (fresh/absent status) — no noise in these tests.
     mocks.getBackupStatus.mockResolvedValue({
       latest: null,
@@ -116,8 +121,8 @@ describe('DashboardPage', () => {
     expect(screen.getByText('42')).toBeTruthy();
     expect(screen.getByText('OS ativas')).toBeTruthy();
     expect(screen.getByText('7')).toBeTruthy();
-    expect(screen.getByText('R$ 1.250,00')).toBeTruthy();
-    expect(screen.getByText('R$ 900,00')).toBeTruthy();
+    expect(screen.getAllByText('R$ 1.250,00').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('R$ 900,00').length).toBeGreaterThan(0);
     expect(screen.getByText('João da Silva')).toBeTruthy();
     expect(screen.getByText('Filtro de óleo')).toBeTruthy();
   });
@@ -174,5 +179,47 @@ describe('DashboardPage', () => {
     // Give the banner query a tick to settle.
     await screen.findByRole('heading', { name: 'Dashboard' });
     expect(screen.queryByText(/Backup dos dados atrasado/)).toBeNull();
+  });
+
+  it('shows charts by default', async () => {
+    mocks.getDashboardSummary.mockResolvedValue(summary);
+
+    renderPage();
+
+    expect(await screen.findByRole('heading', { name: 'Dashboard' })).toBeTruthy();
+    expect(screen.getByText('Gráficos')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Ocultar gráficos' })).toBeTruthy();
+    expect(
+      screen.getByLabelText('Distribuição de status das ordens de serviço'),
+    ).toBeTruthy();
+    expect(screen.getByText('Receita e caixa')).toBeTruthy();
+    expect(screen.getByText('Competência atual')).toBeTruthy();
+    expect(screen.getByText('Recebido por forma de pagamento')).toBeTruthy();
+    expect(screen.getByText('Pix')).toBeTruthy();
+    expect(screen.getByText('Dinheiro')).toBeTruthy();
+  });
+
+  it('hides the charts when the user toggles them off and persists the choice', async () => {
+    mocks.getDashboardSummary.mockResolvedValue(summary);
+
+    renderPage();
+
+    await screen.findByRole('heading', { name: 'Dashboard' });
+    fireEvent.click(screen.getByRole('button', { name: 'Ocultar gráficos' }));
+
+    expect(screen.queryByTestId('dashboard-charts')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Mostrar gráficos' })).toBeTruthy();
+    expect(localStorage.getItem('mechanic.dashboard.hideCharts')).toBe('1');
+  });
+
+  it('keeps the charts hidden on reload once the preference is set', async () => {
+    localStorage.setItem('mechanic.dashboard.hideCharts', '1');
+    mocks.getDashboardSummary.mockResolvedValue(summary);
+
+    renderPage();
+
+    await screen.findByRole('heading', { name: 'Dashboard' });
+    expect(screen.queryByTestId('dashboard-charts')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Mostrar gráficos' })).toBeTruthy();
   });
 });

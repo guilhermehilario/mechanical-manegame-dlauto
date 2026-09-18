@@ -8,6 +8,7 @@ import { WORK_ORDER_STATUS_LABELS, WORK_ORDER_STATUS_BADGES } from '../work-orde
 import { APPOINTMENT_STATUS_BADGES } from '../appointments/appointment-status';
 import { formatTime } from '../../utils/dates';
 import { PageHeader } from '../../components/page-header';
+import { DashboardChartsSection } from './dashboard-charts';
 
 function KpiCard({
   label,
@@ -131,6 +132,9 @@ export function DashboardPage() {
           accent="bg-amber-500"
         />
       </div>
+
+      {/* Charts (2026-09-18) — collapsible via the user toggle. */}
+      <DashboardChartsSection summary={summary} />
 
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Accrual revenue (Fase 8) + cash received (A5) side by side. */}

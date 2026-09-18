@@ -1,4 +1,5 @@
 import type { AppointmentDto } from './appointment';
+import type { PaymentMethod } from './payment';
 import type { DashboardCashDto } from './reports';
 import type { WorkOrderDto, WorkOrderStatusDto } from './work-order';
 
@@ -11,6 +12,13 @@ import type { WorkOrderDto, WorkOrderStatusDto } from './work-order';
 export interface WorkOrderStatusCountDto {
   status: WorkOrderStatusDto;
   count: number;
+}
+
+/** Cash actually received per payment method in the month (2026-09-18). */
+export interface DashboardPaymentMethodDto {
+  method: PaymentMethod;
+  count: number;
+  totalCents: number;
 }
 
 export interface LowStockProductDto {
@@ -40,6 +48,8 @@ export interface DashboardSummaryDto {
   revenue: DashboardRevenueDto;
   /** Cash view — money actually received (A5). */
   cash: DashboardCashDto;
+  /** Cash actually received this month, grouped by payment method. */
+  paymentMethods: DashboardPaymentMethodDto[];
   workOrdersByStatus: WorkOrderStatusCountDto[];
   upcomingAppointments: AppointmentDto[];
   recentWorkOrders: WorkOrderDto[];
