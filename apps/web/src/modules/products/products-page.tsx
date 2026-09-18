@@ -15,9 +15,18 @@ import {
   IconSearch,
   IconTrash,
 } from '../../components/icons';
+import { SortableTh } from '../../components/sortable-th';
+import { useTableSort } from '../../hooks/use-table-sort';
 import { useAuth } from '../auth/use-auth';
 import { ProductForm } from './product-form';
 import { StockMovementForm } from './stock-movement-form';
+
+const DEFAULT_DIRS = {
+  name: 'asc',
+  priceCents: 'asc',
+  stock: 'asc',
+  createdAt: 'desc',
+} as const;
 
 export function ProductsPage() {
   const queryClient = useQueryClient();
@@ -31,16 +40,18 @@ export function ProductsPage() {
   const [movementProduct, setMovementProduct] = useState<ProductDto | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const { sort, sortProps } = useTableSort(DEFAULT_DIRS);
 
   const canManageCatalog = user?.role === 'ADMIN' || user?.role === 'MANAGER';
 
   const productsQuery = useQuery({
-    queryKey: ['products', page, submittedSearch, lowStockOnly],
+    queryKey: ['products', page, submittedSearch, lowStockOnly, sort],
     queryFn: () =>
       listProducts({
         page,
         search: submittedSearch || undefined,
         lowStock: lowStockOnly || undefined,
+        ...sort,
       }),
   });
 
@@ -159,12 +170,12 @@ export function ProductsPage() {
         <table className="w-full min-w-[720px] text-left text-sm">
           <thead className={tableHead}>
             <tr>
-              <th className="px-4 py-3">Código</th>
-              <th className="px-4 py-3">Nome</th>
-              <th className="px-4 py-3">Preço venda</th>
-              <th className="px-4 py-3">Estoque</th>
-              <th className="px-4 py-3">Status</th>
-              <th className="px-4 py-3 text-right">Ações</th>
+              <SortableTh name="Código">Código</SortableTh>
+              <SortableTh name="Nome" {...sortProps('name')}>Nome</SortableTh>
+              <SortableTh name="Preço venda" {...sortProps('priceCents')}>Preço venda</SortableTh>
+              <SortableTh name="Estoque" {...sortProps('stock')}>Estoque</SortableTh>
+              <SortableTh name="Status">Status</SortableTh>
+              <SortableTh name="Ações" className="text-right">Ações</SortableTh>
             </tr>
           </thead>
           <tbody>

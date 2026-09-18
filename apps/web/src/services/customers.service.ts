@@ -7,6 +7,8 @@ export interface ListCustomersParams {
   limit?: number;
   search?: string;
   includeInactive?: boolean;
+  sortBy?: 'name' | 'cpf' | 'phone' | 'email' | 'createdAt' | 'updatedAt';
+  sortDir?: 'asc' | 'desc';
 }
 
 function toQuery(params: ListCustomersParams): string {
@@ -15,6 +17,8 @@ function toQuery(params: ListCustomersParams): string {
   search.set('limit', String(params.limit ?? 20));
   if (params.search) search.set('search', params.search);
   if (params.includeInactive) search.set('includeInactive', 'true');
+  if (params.sortBy) search.set('sortBy', params.sortBy);
+  if (params.sortDir) search.set('sortDir', params.sortDir);
   return search.toString();
 }
 

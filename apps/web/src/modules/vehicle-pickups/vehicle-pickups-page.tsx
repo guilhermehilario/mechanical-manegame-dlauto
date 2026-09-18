@@ -16,6 +16,8 @@ import { useTimeFormat } from '../../hooks/use-time-format';
 import { formatDate } from '../../utils/datetime';
 import { printPickupReceipt } from '../../utils/print';
 import { PageHeader } from '../../components/page-header';
+import { SortableTh } from '../../components/sortable-th';
+import { useTableSort } from '../../hooks/use-table-sort';
 import { SignaturePad } from './signature-pad';
 import { btnPrimary, btnSecondary, inputClass, tableHead, tableWrap } from '../../components/ui';
 import { IconButton, IconActionGroup } from '../../components/icon-button';
@@ -26,6 +28,10 @@ export function VehiclePickupsPage() {
   const [page, setPage] = useState(1);
   const [registering, setRegistering] = useState<WorkOrderDto | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const { sort, sortProps } = useTableSort({
+    receiverName: 'asc',
+    createdAt: 'desc',
+  } as const);
 
   const queueQuery = useQuery({
     queryKey: ['work-orders', 'awaiting-pickup'],
@@ -33,8 +39,8 @@ export function VehiclePickupsPage() {
   });
 
   const pickupsQuery = useQuery({
-    queryKey: ['vehicle-pickups', page],
-    queryFn: () => listVehiclePickups({ page, limit: 20 }),
+    queryKey: ['vehicle-pickups', page, sort],
+    queryFn: () => listVehiclePickups({ page, limit: 20, ...sort }),
   });
 
   const queue: WorkOrderDto[] = queueQuery.data?.items ?? [];
@@ -157,13 +163,13 @@ export function VehiclePickupsPage() {
         <table className="w-full min-w-[760px] text-left text-sm">
           <thead className={tableHead}>
             <tr>
-              <th className="px-4 py-3">OS</th>
-              <th className="px-4 py-3">Veículo</th>
-              <th className="px-4 py-3">Quem retirou</th>
-              <th className="px-4 py-3">Documento</th>
-              <th className="px-4 py-3">KM</th>
-              <th className="px-4 py-3">Data</th>
-              <th className="px-4 py-3 text-right">Ações</th>
+              <SortableTh name="OS">OS</SortableTh>
+              <SortableTh name="Veículo">Veículo</SortableTh>
+              <SortableTh name="Quem retirou" {...sortProps('receiverName')}>Quem retirou</SortableTh>
+              <SortableTh name="Documento">Documento</SortableTh>
+              <SortableTh name="KM">KM</SortableTh>
+              <SortableTh name="Data" {...sortProps('createdAt')}>Data</SortableTh>
+              <SortableTh name="Ações" className="text-right">Ações</SortableTh>
             </tr>
           </thead>
           <tbody>

@@ -24,6 +24,8 @@ export interface ListServicesParams {
   limit?: number;
   search?: string;
   includeInactive?: boolean;
+  sortBy?: 'name' | 'priceCents' | 'createdAt' | 'updatedAt';
+  sortDir?: 'asc' | 'desc';
 }
 
 function toQuery(params: object): string {
@@ -69,6 +71,8 @@ export interface ListSuppliersParams {
   limit?: number;
   search?: string;
   includeInactive?: boolean;
+  sortBy?: 'name' | 'cnpj' | 'phone' | 'email' | 'createdAt' | 'updatedAt';
+  sortDir?: 'asc' | 'desc';
 }
 
 export function listSuppliers(
@@ -98,6 +102,8 @@ export interface ListProductsParams {
   supplierId?: string;
   lowStock?: boolean;
   includeInactive?: boolean;
+  sortBy?: 'name' | 'priceCents' | 'stock' | 'createdAt' | 'updatedAt';
+  sortDir?: 'asc' | 'desc';
 }
 
 export function listProducts(

@@ -13,7 +13,17 @@ import { PageHeader } from '../../components/page-header';
 import { btnPrimary, btnSecondary, inputClass, tableHead, tableWrap } from '../../components/ui';
 import { IconButton, IconActionGroup } from '../../components/icon-button';
 import { IconPencil, IconPlus, IconSearch, IconTrash } from '../../components/icons';
+import { SortableTh } from '../../components/sortable-th';
+import { useTableSort } from '../../hooks/use-table-sort';
 import { formatCpf, formatPhone } from '../../utils/format';
+
+/** Mapa coluna → direção natural do primeiro clique. */
+const DEFAULT_DIRS = {
+  name: 'asc',
+  cpf: 'asc',
+  phone: 'asc',
+  createdAt: 'desc',
+} as const;
 
 export function CustomersPage() {
   const queryClient = useQueryClient();
@@ -23,10 +33,12 @@ export function CustomersPage() {
   const [formCustomer, setFormCustomer] = useState<CustomerDto | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+  const { sort, sortProps } = useTableSort(DEFAULT_DIRS);
 
   const customersQuery = useQuery({
-    queryKey: ['customers', page, submittedSearch],
-    queryFn: () => listCustomers({ page, search: submittedSearch || undefined }),
+    queryKey: ['customers', page, submittedSearch, sort],
+    queryFn: () =>
+      listCustomers({ page, search: submittedSearch || undefined, ...sort }),
   });
 
   const deleteMutation = useMutation({
@@ -110,11 +122,11 @@ export function CustomersPage() {
         <table className="w-full min-w-[640px] text-left text-sm">
           <thead className={tableHead}>
             <tr>
-              <th className="px-4 py-3">Nome</th>
-              <th className="px-4 py-3">CPF</th>
-              <th className="px-4 py-3">Telefone</th>
-              <th className="px-4 py-3">Status</th>
-              <th className="px-4 py-3 text-right">Ações</th>
+              <SortableTh name="Nome" {...sortProps('name')}>Nome</SortableTh>
+              <SortableTh name="CPF" {...sortProps('cpf')}>CPF</SortableTh>
+              <SortableTh name="Telefone" {...sortProps('phone')}>Telefone</SortableTh>
+              <SortableTh name="Status">Status</SortableTh>
+              <SortableTh name="Ações" className="text-right">Ações</SortableTh>
             </tr>
           </thead>
           <tbody>

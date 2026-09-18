@@ -9,8 +9,16 @@ import { PageHeader } from '../../components/page-header';
 import { btnPrimary, btnSecondary, inputClass, tableHead, tableWrap } from '../../components/ui';
 import { IconButton, IconActionGroup } from '../../components/icon-button';
 import { IconPencil, IconPlus, IconSearch, IconTrash } from '../../components/icons';
+import { SortableTh } from '../../components/sortable-th';
+import { useTableSort } from '../../hooks/use-table-sort';
 import { useAuth } from '../auth/use-auth';
 import { ServiceForm } from './service-form';
+
+const DEFAULT_DIRS = {
+  name: 'asc',
+  priceCents: 'asc',
+  createdAt: 'desc',
+} as const;
 
 export function ServicesPage() {
   const queryClient = useQueryClient();
@@ -22,12 +30,14 @@ export function ServicesPage() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const { sort, sortProps } = useTableSort(DEFAULT_DIRS);
 
   const canManageCatalog = user?.role === 'ADMIN' || user?.role === 'MANAGER';
 
   const servicesQuery = useQuery({
-    queryKey: ['services', page, submittedSearch],
-    queryFn: () => listServices({ page, search: submittedSearch || undefined }),
+    queryKey: ['services', page, submittedSearch, sort],
+    queryFn: () =>
+      listServices({ page, search: submittedSearch || undefined, ...sort }),
   });
 
   const deleteMutation = useMutation({
@@ -129,11 +139,11 @@ export function ServicesPage() {
         <table className="w-full min-w-[640px] text-left text-sm">
           <thead className={tableHead}>
             <tr>
-              <th className="px-4 py-3">Nome</th>
-              <th className="px-4 py-3">Preço</th>
-              <th className="px-4 py-3">Duração</th>
-              <th className="px-4 py-3">Status</th>
-              <th className="px-4 py-3 text-right">Ações</th>
+              <SortableTh name="Nome" {...sortProps('name')}>Nome</SortableTh>
+              <SortableTh name="Preço" {...sortProps('priceCents')}>Preço</SortableTh>
+              <SortableTh name="Duração">Duração</SortableTh>
+              <SortableTh name="Status">Status</SortableTh>
+              <SortableTh name="Ações" className="text-right">Ações</SortableTh>
             </tr>
           </thead>
           <tbody>

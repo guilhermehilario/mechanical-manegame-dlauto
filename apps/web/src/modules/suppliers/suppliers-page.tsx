@@ -8,7 +8,16 @@ import { PageHeader } from '../../components/page-header';
 import { btnPrimary, btnSecondary, inputClass, tableHead, tableWrap } from '../../components/ui';
 import { IconButton, IconActionGroup } from '../../components/icon-button';
 import { IconPencil, IconPlus, IconSearch, IconTrash } from '../../components/icons';
+import { SortableTh } from '../../components/sortable-th';
+import { useTableSort } from '../../hooks/use-table-sort';
 import { formatCnpj, formatPhone } from '../../utils/format';
+
+const DEFAULT_DIRS = {
+  name: 'asc',
+  cnpj: 'asc',
+  phone: 'asc',
+  createdAt: 'desc',
+} as const;
 
 export function SuppliersPage() {
   const queryClient = useQueryClient();
@@ -18,10 +27,12 @@ export function SuppliersPage() {
   const [formSupplier, setFormSupplier] = useState<SupplierDto | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+  const { sort, sortProps } = useTableSort(DEFAULT_DIRS);
 
   const suppliersQuery = useQuery({
-    queryKey: ['suppliers', page, submittedSearch],
-    queryFn: () => listSuppliers({ page, search: submittedSearch || undefined }),
+    queryKey: ['suppliers', page, submittedSearch, sort],
+    queryFn: () =>
+      listSuppliers({ page, search: submittedSearch || undefined, ...sort }),
   });
 
   const deleteMutation = useMutation({
@@ -102,11 +113,11 @@ export function SuppliersPage() {
         <table className="w-full min-w-[640px] text-left text-sm">
           <thead className={tableHead}>
             <tr>
-              <th className="px-4 py-3">Nome</th>
-              <th className="px-4 py-3">CNPJ</th>
-              <th className="px-4 py-3">Telefone</th>
-              <th className="px-4 py-3">Status</th>
-              <th className="px-4 py-3 text-right">Ações</th>
+              <SortableTh name="Nome" {...sortProps('name')}>Nome</SortableTh>
+              <SortableTh name="CNPJ" {...sortProps('cnpj')}>CNPJ</SortableTh>
+              <SortableTh name="Telefone" {...sortProps('phone')}>Telefone</SortableTh>
+              <SortableTh name="Status">Status</SortableTh>
+              <SortableTh name="Ações" className="text-right">Ações</SortableTh>
             </tr>
           </thead>
           <tbody>

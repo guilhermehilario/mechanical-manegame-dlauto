@@ -5,6 +5,8 @@ import { api } from './auth.service';
 export interface ListPickupsParams {
   page?: number;
   limit?: number;
+  sortBy?: 'receiverName' | 'createdAt';
+  sortDir?: 'asc' | 'desc';
 }
 
 export function listVehiclePickups(
@@ -13,6 +15,8 @@ export function listVehiclePickups(
   const search = new URLSearchParams();
   if (params.page) search.set('page', String(params.page));
   if (params.limit) search.set('limit', String(params.limit));
+  if (params.sortBy) search.set('sortBy', params.sortBy);
+  if (params.sortDir) search.set('sortDir', params.sortDir);
   const qs = search.toString();
   return api.get<Paginated<VehiclePickupDto>>(`/vehicle-pickups${qs ? `?${qs}` : ''}`);
 }

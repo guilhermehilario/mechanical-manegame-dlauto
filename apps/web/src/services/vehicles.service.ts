@@ -8,6 +8,8 @@ export interface ListVehiclesParams {
   search?: string;
   customerId?: string;
   includeInactive?: boolean;
+  sortBy?: 'plate' | 'brand' | 'model' | 'year' | 'createdAt' | 'updatedAt';
+  sortDir?: 'asc' | 'desc';
 }
 
 function toQuery(params: ListVehiclesParams): string {
@@ -17,6 +19,8 @@ function toQuery(params: ListVehiclesParams): string {
   if (params.search) search.set('search', params.search);
   if (params.customerId) search.set('customerId', params.customerId);
   if (params.includeInactive) search.set('includeInactive', 'true');
+  if (params.sortBy) search.set('sortBy', params.sortBy);
+  if (params.sortDir) search.set('sortDir', params.sortDir);
   return search.toString();
 }
 

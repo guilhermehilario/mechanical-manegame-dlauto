@@ -14,6 +14,8 @@ export interface ListAppointmentsParams {
   status?: AppointmentStatus;
   from?: string;
   to?: string;
+  sortBy?: 'scheduledAt' | 'status' | 'createdAt';
+  sortDir?: 'asc' | 'desc';
 }
 
 function toQuery(params: object): string {

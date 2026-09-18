@@ -15,7 +15,16 @@ import { btnPrimary, btnSecondary, inputClass, tableHead, tableWrap } from '../.
 import { IconButton, IconActionGroup } from '../../components/icon-button';
 import { IconKey, IconPlus, IconSearch, IconTrash } from '../../components/icons';
 import { useTimeFormat } from '../../hooks/use-time-format';
+import { useTableSort } from '../../hooks/use-table-sort';
+import { SortableTh } from '../../components/sortable-th';
 import { formatDate } from '../../utils/datetime';
+
+const DEFAULT_DIRS = {
+  name: 'asc',
+  email: 'asc',
+  role: 'asc',
+  createdAt: 'desc',
+} as const;
 
 const ROLE_LABELS: Record<UserDto['role'], string> = {
   ADMIN: 'Administrador',
@@ -45,14 +54,16 @@ export function UsersPage() {
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [passwordReset, setPasswordReset] = useState<PasswordResetState | null>(null);
+  const { sort, sortProps } = useTableSort(DEFAULT_DIRS);
 
   // Backend scopes: listing allows ADMIN/MANAGER; create, deactivate and
   // password reset are ADMIN-only (and reset targets must be ADMIN/MANAGER).
   const canManageUsers = currentUser?.role === 'ADMIN';
 
   const usersQuery = useQuery({
-    queryKey: ['users', page, submittedSearch],
-    queryFn: () => listUsers({ page, search: submittedSearch || undefined }),
+    queryKey: ['users', page, submittedSearch, sort],
+    queryFn: () =>
+      listUsers({ page, search: submittedSearch || undefined, ...sort }),
   });
 
   const invalidate = (): void => {
@@ -163,12 +174,12 @@ export function UsersPage() {
         <table className="w-full min-w-[720px] text-left text-sm">
           <thead className={tableHead}>
             <tr>
-              <th className="px-4 py-3">Nome</th>
-              <th className="px-4 py-3">E-mail</th>
-              <th className="px-4 py-3">Papel</th>
-              <th className="px-4 py-3">Status</th>
-              <th className="px-4 py-3">Criado em</th>
-              <th className="px-4 py-3 text-right">Ações</th>
+              <SortableTh name="Nome" {...sortProps('name')}>Nome</SortableTh>
+              <SortableTh name="E-mail" {...sortProps('email')}>E-mail</SortableTh>
+              <SortableTh name="Papel" {...sortProps('role')}>Papel</SortableTh>
+              <SortableTh name="Status">Status</SortableTh>
+              <SortableTh name="Criado em" {...sortProps('createdAt')}>Criado em</SortableTh>
+              <SortableTh name="Ações" className="text-right">Ações</SortableTh>
             </tr>
           </thead>
           <tbody>

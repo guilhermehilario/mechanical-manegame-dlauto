@@ -7,12 +7,20 @@ import { api } from './auth.service';
  * roles; the UI also hides the nav entry for other roles (AppLayout).
  */
 export function listUsers(
-  params: { page?: number; limit?: number; search?: string } = {},
+  params: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    sortBy?: 'name' | 'email' | 'role' | 'createdAt';
+    sortDir?: 'asc' | 'desc';
+  } = {},
 ): Promise<Paginated<UserDto>> {
   const query = new URLSearchParams();
   query.set('page', String(params.page ?? 1));
   query.set('limit', String(params.limit ?? 20));
   if (params.search) query.set('search', params.search);
+  if (params.sortBy) query.set('sortBy', params.sortBy);
+  if (params.sortDir) query.set('sortDir', params.sortDir);
   return api.get<Paginated<UserDto>>(`/users?${query.toString()}`);
 }
 

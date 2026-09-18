@@ -15,6 +15,16 @@ import {
   IconSearch,
   IconTrash,
 } from '../../components/icons';
+import { SortableTh } from '../../components/sortable-th';
+import { useTableSort } from '../../hooks/use-table-sort';
+
+const DEFAULT_DIRS = {
+  plate: 'asc',
+  brand: 'asc',
+  model: 'asc',
+  year: 'desc',
+  createdAt: 'desc',
+} as const;
 
 function formatMileage(mileage: number | null): string {
   if (mileage === null) return '—';
@@ -30,6 +40,7 @@ export function VehiclesPage() {
   const [formVehicle, setFormVehicle] = useState<VehicleDto | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+  const { sort, sortProps } = useTableSort(DEFAULT_DIRS);
 
   const customersQuery = useQuery({
     queryKey: ['customers', 'for-filter'],
@@ -37,12 +48,13 @@ export function VehiclesPage() {
   });
 
   const vehiclesQuery = useQuery({
-    queryKey: ['vehicles', page, submittedSearch, customerFilter],
+    queryKey: ['vehicles', page, submittedSearch, customerFilter, sort],
     queryFn: () =>
       listVehicles({
         page,
         search: submittedSearch || undefined,
         customerId: customerFilter || undefined,
+        ...sort,
       }),
   });
 
@@ -144,12 +156,12 @@ export function VehiclesPage() {
         <table className="w-full min-w-[720px] text-left text-sm">
           <thead className={tableHead}>
             <tr>
-              <th className="px-4 py-3">Placa</th>
-              <th className="px-4 py-3">Veículo</th>
-              <th className="px-4 py-3">Cliente</th>
-              <th className="px-4 py-3">Ano</th>
-              <th className="px-4 py-3">KM</th>
-              <th className="px-4 py-3 text-right">Ações</th>
+              <SortableTh name="Placa" {...sortProps('plate')}>Placa</SortableTh>
+              <SortableTh name="Marca" {...sortProps('brand')}>Veículo</SortableTh>
+              <SortableTh name="Cliente">Cliente</SortableTh>
+              <SortableTh name="Ano" {...sortProps('year')}>Ano</SortableTh>
+              <SortableTh name="KM">KM</SortableTh>
+              <SortableTh name="Ações" className="text-right">Ações</SortableTh>
             </tr>
           </thead>
           <tbody>

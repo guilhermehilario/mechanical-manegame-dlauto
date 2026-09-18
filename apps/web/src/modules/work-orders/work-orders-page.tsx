@@ -13,7 +13,15 @@ import { PageHeader } from '../../components/page-header';
 import { btnPrimary, btnSecondary, inputClass, tableHead, tableWrap } from '../../components/ui';
 import { IconButton, IconActionGroup } from '../../components/icon-button';
 import { IconPlus, IconTrash } from '../../components/icons';
+import { SortableTh } from '../../components/sortable-th';
+import { useTableSort } from '../../hooks/use-table-sort';
 import { WorkOrderForm } from './work-order-form';
+
+const DEFAULT_DIRS = {
+  orderNumber: 'desc',
+  status: 'asc',
+  createdAt: 'desc',
+} as const;
 
 export const WORK_ORDER_STATUS_LABELS: Record<WorkOrderStatus, string> = {
   OPEN: 'Aberta',
@@ -47,10 +55,12 @@ export function WorkOrdersPage() {
   const [statusFilter, setStatusFilter] = useState<'' | WorkOrderStatus>('');
   const [formOpen, setFormOpen] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+  const { sort, sortProps } = useTableSort(DEFAULT_DIRS);
 
   const workOrdersQuery = useQuery({
-    queryKey: ['work-orders', page, statusFilter],
-    queryFn: () => listWorkOrders({ page, status: statusFilter || undefined }),
+    queryKey: ['work-orders', page, statusFilter, sort],
+    queryFn: () =>
+      listWorkOrders({ page, status: statusFilter || undefined, ...sort }),
   });
 
   const deleteMutation = useMutation({
@@ -121,12 +131,12 @@ export function WorkOrdersPage() {
         <table className="w-full min-w-[760px] text-left text-sm">
           <thead className={tableHead}>
             <tr>
-              <th className="px-4 py-3">Nº</th>
-              <th className="px-4 py-3">Cliente</th>
-              <th className="px-4 py-3">Veículo</th>
-              <th className="px-4 py-3">Total</th>
-              <th className="px-4 py-3">Status</th>
-              <th className="px-4 py-3 text-right">Ações</th>
+              <SortableTh name="Número" {...sortProps('orderNumber')}>Nº</SortableTh>
+              <SortableTh name="Cliente">Cliente</SortableTh>
+              <SortableTh name="Veículo">Veículo</SortableTh>
+              <SortableTh name="Total">Total</SortableTh>
+              <SortableTh name="Status" {...sortProps('status')}>Status</SortableTh>
+              <SortableTh name="Ações" className="text-right">Ações</SortableTh>
             </tr>
           </thead>
           <tbody>

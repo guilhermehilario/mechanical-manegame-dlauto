@@ -36,7 +36,15 @@ import {
   IconTrash,
 } from '../../components/icons';
 import { useTimeFormat } from '../../hooks/use-time-format';
+import { useTableSort } from '../../hooks/use-table-sort';
+import { SortableTh } from '../../components/sortable-th';
 import { formatDateTime } from '../../utils/datetime';
+
+const DEFAULT_DIRS = {
+  scheduledAt: 'asc',
+  status: 'asc',
+  createdAt: 'desc',
+} as const;
 
 export function AppointmentsPage() {
   const queryClient = useQueryClient();
@@ -48,6 +56,7 @@ export function AppointmentsPage() {
   const [formOpen, setFormOpen] = useState(false);
   const [editingAppointment, setEditingAppointment] = useState<AppointmentDto | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  const { sort, sortProps } = useTableSort(DEFAULT_DIRS);
 
   function openForm(appointment: AppointmentDto | null): void {
     setEditingAppointment(appointment);
@@ -59,9 +68,9 @@ export function AppointmentsPage() {
   };
 
   const appointmentsQuery = useQuery({
-    queryKey: ['appointments', 'list', page, statusFilter],
+    queryKey: ['appointments', 'list', page, statusFilter, sort],
     queryFn: () =>
-      listAppointments({ page, status: statusFilter || undefined }),
+      listAppointments({ page, status: statusFilter || undefined, ...sort }),
     enabled: view === 'list',
   });
 
@@ -199,12 +208,12 @@ export function AppointmentsPage() {
             <table className="w-full min-w-[760px] text-left text-sm">
               <thead className={tableHead}>
                 <tr>
-                  <th className="px-4 py-3">Data/hora</th>
-                  <th className="px-4 py-3">Cliente</th>
-                  <th className="px-4 py-3">Veículo</th>
-                  <th className="px-4 py-3">Serviço</th>
-                  <th className="px-4 py-3">Status</th>
-                  <th className="px-4 py-3 text-right">Ações</th>
+                  <SortableTh name="Data/hora" {...sortProps('scheduledAt')}>Data/hora</SortableTh>
+                  <SortableTh name="Cliente">Cliente</SortableTh>
+                  <SortableTh name="Veículo">Veículo</SortableTh>
+                  <SortableTh name="Serviço">Serviço</SortableTh>
+                  <SortableTh name="Status" {...sortProps('status')}>Status</SortableTh>
+                  <SortableTh name="Ações" className="text-right">Ações</SortableTh>
                 </tr>
               </thead>
               <tbody>

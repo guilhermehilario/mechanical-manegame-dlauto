@@ -14,6 +14,8 @@ export interface ListWorkOrdersParams {
   customerId?: string;
   vehicleId?: string;
   status?: WorkOrderStatus;
+  sortBy?: 'orderNumber' | 'status' | 'createdAt' | 'updatedAt';
+  sortDir?: 'asc' | 'desc';
 }
 
 function toQuery(params: object): string {
