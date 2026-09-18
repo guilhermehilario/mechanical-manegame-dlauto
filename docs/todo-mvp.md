@@ -22,9 +22,9 @@
 > Revisão 2026-09-18: fechados **F1, C3, F3 e F4** (primeiro acesso,
 > doc do operador, seed de catálogo opcional e estados vazios
 > consistentes) e corrigida a flakiness do smoke (`smoke.ts` replica em
-> placa duplicada). Faltam **só homologação no hardware/CI**: C1/C2 (binário
-> na máquina alvo), E3 (restauração real), G2 (decisão R8) e G3/G4 (audit
-> + CI remota).
+> placa duplicada). **G2 (decisão R8)** encerrado — ADR-007. Faltam **só
+> homologação no hardware/CI**: C1/C2 (binário na máquina alvo), E3
+> (restauração real) e G3/G4 (audit + CI remota).
 
 ---
 
@@ -61,9 +61,9 @@ impressão de OS/recibo (B1–B3), sessão persistente + refresh automático
 execução (F1)**, a **doc de implantação do operador (C3)**, o **seed
 opcional de catálogo com estados vazios consistentes (F3/F4)** estão
 **fechados e verificados**. O que resta é **homologar o binário na máquina
-alvo** (C1–C2), **restauração real de backup** (E3) e **CI remota +
-auditoria** (G2–G4) — a rede de E2E (G1/B5) está fechada e o E2E roda em
-portas isoladas, sem bloquear os dev servers. Ver "Ainda pendente".
+alvo** (C1–C2), **restauração real de backup** (E3) e **CI remota** (G3/G4) —
+a rede de E2E (G1/B5) está fechada e o E2E roda em portas isoladas, sem
+bloquear os dev servers. Ver "Ainda pendente".
 
 ---
 
@@ -161,13 +161,13 @@ Todo o código de produto está fechado (A/B/D/E/F verificados). O que falta
 | 🔴 | C1 | ⛔ bloqueado | Revalidar o binário empacotado na máquina alvo (login, OS completa, upload, assinatura, backup, impressão, migração de 1ª execução) |
 | 🔴 | C2 | ⛔ bloqueado | Instalador Windows (ou AppImage) — **decidir o SO alvo antes** |
 | 🟡 | E3 | ⛔ bloqueado | Teste de restauração de backup no binário real |
-| 🟠 | G2 | ✅ executável | Decisão R8: registrar definitivamente a política de assinatura (imagem = evidência, não valor legal) |
+| 🟠 | G2 | ✅ feito | Decisão R8 registrada (ADR-007): assinatura = evidência, não valor legal; sessão 15 min/7 dias mantida (D4) |
 | 🟠 | G3 | ⏳ precisa de CI | Gate de `pnpm audit` — pode rodar localmente agora, entra no pipeline em G4 |
 | 🟠 | G4 | ⏳ precisa de repo | CI remota (GitHub Actions) — lint + typecheck + testes + build + e2e + smoke |
 
 **C1/C2/E3** dependem da **máquina alvo** e da definição do SO da oficina.
-**G2** é o único pendente executável agora (decisão/política). **G3/G4**
-precisam da presença do repositório em plataforma de CI remota.
+**G3/G4** precisam da presença do repositório em plataforma de CI remota.
+**G2** (decisão R8) foi encerrado em 2026-09-18 — ver ADR-007.
 
 **E2E agora roda em qualquer máquina:** `E2E_API_PORT=<livre>
 E2E_WEB_PORT=<livre> pnpm --filter @mechanic-system/e2e test:e2e` sobe o
@@ -386,9 +386,11 @@ A oficina precisa entregar papel (OS, recibo). Hoje não existe fluxo algum.
   **2026-09-18:** `seed-catalog.spec.ts` valida o seed opcional (F3) — 1ª
   chamada cria 10/10/3 e a 2ª é idempotente (0/0/0). Total: **10 E2E**
   (era 4).
-- [ ] **G2. R8 parcial**: assinatura como imagem já é aceito como
-  evidência (não valor legal) — registrar decisão definitiva; expiração
-  de sessão coberta em D4.
+- [x] **G2. R8 parcial → decisão registrada** ✅ 2026-09-18: assinatura =
+  **evidência** (imagem capturada no recibo), sem hash/assinatura digital —
+  `docs/decisions/ADR-007-signature-evidence-policy.md` (razões, gatilhos de
+  reavaliação e expiração de sessão mantida em 15 min/7 dias — D4). R8
+  encerrado no `remediation-plan.md`; roadmap atualizado.
 - [ ] **G3. Gate de `pnpm audit` no CI** quando houver pipeline remota.
 - [ ] **G4. CI remota (GitHub Actions)**: lint + typecheck + testes + build
   + e2e + smoke (hoje é "CI local" via husky/turbo).

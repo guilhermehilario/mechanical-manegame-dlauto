@@ -378,6 +378,11 @@ local.
 **Correção recomendada**: revisar políticas de expiração (15 min / 7 dias) e
 decidir se a assinatura digital exige integridade verificável.
 
+**Status (2026-09-18)**: decisão registrada em
+[`ADR-007`](../decisions/ADR-007-signature-evidence-policy.md) — a assinatura
+do recibo é evidência (imagem capturada), sem hash/assinatura digital; a
+expiração de sessão (15 min/7 dias) é mantida (D4).
+
 **Prioridade**: 4 (futuro / decisão de produto).
 
 ---

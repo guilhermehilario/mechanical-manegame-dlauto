@@ -6,7 +6,7 @@
 >
 > Fontes: `docs/security/remediation-plan.md` (auditoria de segurança),
 > `docs/architecture.md` (evolução planejada), análise do código atual.
-> Última atualização: 2026-09-11.
+> Última atualização: 2026-09-18.
 
 ---
 
@@ -25,11 +25,11 @@ Fase 9** (2026-09-11 — ver changelog do plano); restam:
 | R5 | ✅ **Aplicado (Fase 9):** `JwtAuthGuard` global (`APP_GUARD`, deny-by-default) + `@Public()` com allowlist explícita (`/health`, `/auth/login`, `/auth/refresh`); `RolesGuard` permanece por rota | 2 — curto prazo | ✔ Concluído |
 | R6 | ✅ **Aplicado (Fase 9):** Electron 33.2.1 → **43.7.0** (linha estável atual). *Pendente: revalidar o binário empacotado* | 2 — curto prazo | ✔ Aplicado (revalidação de binário pendente) |
 | R7 | ✅ **Parcialmente aplicado (Fase 10):** permissões 0700/0600 em toda a área de dados (API boot + app empacotado); backup/restore locais funcionais; **cifragem rejeitada por ora** com justificativa (ADR-006) — reavaliar quando houver backup em nuvem (Fase 12) | 3 — médio prazo | ✔ Permissões concluídas · cifragem: decisão documentada |
-| R8 | Políticas de sessão (15 min/7 dias) e integridade verificável da assinatura (`signatureData` é imagem, não artefato criptográfico) | 4 — futuro | ❌ Pendente |
+| R8 | ✅ **Aplicado (decisão 2026-09-18):** assinatura do recibo é evidência (imagem capturada, sem valor criptográfico nem certificado) — decisão registrada em `ADR-007`; expiração de sessão mantida em 15 min/7 dias (D4) | 4 — futuro | ✔ Concluído (decisão documentada) |
 
-> **Nota:** com R5 aplicado, restam da auditoria apenas R7 (permissões/
-> cifragem) e R8 (políticas de sessão/assinatura), além da revalidação do
-> binário empacotado (R2+R6), que exige rodar `pnpm --filter
+> **Nota:** com R5 e R8 fechados, da auditoria restam apenas R7 (Permissões
+> concluídas; cifragem rejeitada com justificativa no ADR-006) e a
+> revalidação do binário empacotado (R2+R6), que exige rodar `pnpm --filter
 > @mechanic-system/desktop package` e testar login/render na máquina alvo.
 
 ---

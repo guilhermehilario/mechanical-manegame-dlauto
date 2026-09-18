@@ -164,9 +164,13 @@ Resultado)**. Ordem sugerida: **1 (crítico/imediato) → 2 (curto prazo) →
 
 ### R8. Políticas de sessão e integridade da assinatura (SEC-08)
 
-- Revisar expiração (15 min/7 dias); decidir exigência legal de integridade
-  da assinatura capturada (hash/assinatura digital sobre `signatureData`);
-  se aplicável, sinalizar no UI o papel exigido para relatórios.
+- ✅ **Decidido (2026-09-18)**: expiração mantida (15 min access / 7 dias
+  refresh rotativo, D4) e a assinatura = **evidência** (imagem capturada no
+  recibo), sem hash/assinatura digital — registro em `ADR-007`. Razão: dar
+  valor legal pleno exigiria certificado ICP-Brasil (além do escopo de uma
+  oficina single-user) e um hash não agregaria identidade; revisitar nos
+  mesmos gatilhos do ADR-006 (nuvem, máquina compartilhada, exigência
+  contratual/judicial).
 
 ---
 
@@ -179,7 +183,9 @@ Resultado)**. Ordem sugerida: **1 (crítico/imediato) → 2 (curto prazo) →
 | 2026-09-11 | R2 (REL-01+SEC-03) | renderer empacotado quebrado (`[object Promise]` + CORS `null`) | preload síncrono via `additionalArguments`/`process.argv`; bridge tipada `() => string`; `api-process.ts` injeta `CORS_ORIGIN` da janela | typecheck desktop/web | bridge sincronizada; revalidação do binário pendente (R6) |
 | 2026-09-11 | R3 (SEC-02) | `GET /users/:id`, `/dashboard/*`, `/reports/*` sem papel exigido | `@RequireRoles('ADMIN','MANAGER')` nos 3 controllers | smoke E2E: ATTENDANT → 403, ADMIN → 200 em rota financeira | menor privilégio aplicado |
 | 2026-09-11 | R4 (SEC-04) | `admin@oficina.local`/`admin1234` versionados | seed EXIGE `SEED_ADMIN_*` do env (falha rápida); smoke usa as credenciais seedadas; e2e gera senha aleatória por execução (`.e2e-admin-password` gitignored); first-run admin do empacotado sem default | `pnpm db:seed` sem env falha; smoke/e2e verdes com env | nenhuma credencial padrão no repositório |
-| 2026-09-11 | R6 (SEC-06) | Electron 33.2.1 (fora de suporte) | `electron@^43.7.0` (linha estável atual) | typecheck + build desktop | atualizado; revalidação do binário empacotado pendente |
 | 2026-09-11 | R5 (SEC-05) | autenticação por convenção (`@UseGuards(JwtAuthGuard)` declarado por controller); rota nova esquecida nascia pública | `JwtAuthGuard` registrado como `APP_GUARD` (deny-by-default) + decorator `@Public()` com allowlist explícita (`/health`, `/auth/login`, `/auth/refresh`); guards redundantes removidos dos controllers (RolesGuard permanece por rota) | 6 unit tests do guard + smoke (health/login públicos, /users e /customers anônimos → 401) | rota nova só é pública com `@Public()` explícito |
+| 2026-09-11 | R6 (SEC-06) | Electron 33.2.1 (fora de suporte) | `electron@^43.7.0` (linha estável atual) | typecheck + build desktop | atualizado; revalidação do binário empacotado pendente |
+| 2026-09-18 | R8 (SEC-08) | assinatura sem integridade verificável (informativo) | decisão documentada em ADR-007: recibo = evidência (imagem), sem hash/assinatura digital; expiração de sessão mantida (15 min/7 dias, D4) | revisão de docs (ADR-007 + roadmap) | R8 encerrado; gatilhos de reavaliação registrados |
+| 2026-09-18 | F2.1 | — | tela de Configurações em abas + backup automático configurável em runtime (GET/PUT /backups/config) | API 154 + web 52 + smoke + E2E 10/10 | Revisão 2026-09-18 (2) — ver todo-mvp |
 | 2026-09-11 | R7 (SEC-07) — parcial | dados locais (SQLite, imagens, assinaturas) com permissões padrão; sem backup/restauração no código | diretórios 0700/arquivos 0600 no boot (API + Electron empacotado); backup/restore local: `VACUUM INTO` + cópia do storage + manifest (sha256); restore verifica integridade antes do swap, admin-only com `confirm: true`; decisão de cifragem rejeitada por ora (ADR-006) | 10 unit tests (permissões, paths, ciclo de backup/restore) + smoke (backup → mutação → restore → dado revertido; 403 ATTENDANT) | superfície de dados PII restrita ao dono; backup/restore funcionais. Cifragem em repouso segue como item futuro (reavaliar em sync/nuvem) |
 |  |  |  |  |  |  |
