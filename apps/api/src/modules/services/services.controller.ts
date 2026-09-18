@@ -38,7 +38,14 @@ export class ServicesController {
   list(
     @Query(new ZodValidationPipe(serviceQuerySchema, 'query')) query: ServiceQuery,
   ): Promise<Paginated<ServiceDto>> {
-    return this.servicesService.list(query.page, query.limit, query.search, query.includeInactive);
+    return this.servicesService.list(
+      query.page,
+      query.limit,
+      query.search,
+      query.includeInactive,
+      query.sortBy,
+      query.sortDir,
+    );
   }
 
   @Get(':id')

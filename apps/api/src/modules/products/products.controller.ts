@@ -55,6 +55,8 @@ export class ProductsController {
       query.supplierId,
       query.lowStock,
       query.includeInactive,
+      query.sortBy,
+      query.sortDir,
     );
   }
 

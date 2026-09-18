@@ -1,6 +1,15 @@
 import { Injectable } from '@nestjs/common';
 import type { Prisma, Service } from '@prisma/client';
+import { buildOrderBy, type ServiceSortField } from '@mechanic-system/validation';
 import { PrismaService } from '../../prisma/prisma.service';
+
+/** Maps the API's whitelisted sort fields to Prisma columns. */
+const SORT_FIELD_MAP: Record<ServiceSortField, string> = {
+  name: 'name',
+  priceCents: 'priceCents',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt',
+};
 
 /**
  * Data access for the service catalog (spec section 22). No business rules.
@@ -32,10 +41,17 @@ export class ServicesRepository {
     return base;
   }
 
-  list(page: number, limit: number, search?: string, includeInactive = false): Promise<Service[]> {
+  list(
+    page: number,
+    limit: number,
+    search?: string,
+    includeInactive = false,
+    sortBy?: ServiceSortField,
+    sortDir?: 'asc' | 'desc',
+  ): Promise<Service[]> {
     return this.prisma.service.findMany({
       where: this.listWhere(search, includeInactive),
-      orderBy: { name: 'asc' },
+      orderBy: buildOrderBy(sortBy, sortDir, SORT_FIELD_MAP, { name: 'asc' }),
       skip: (page - 1) * limit,
       take: limit,
     });

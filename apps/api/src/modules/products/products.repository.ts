@@ -1,6 +1,16 @@
 import { Injectable } from '@nestjs/common';
 import type { Prisma, Product } from '@prisma/client';
+import { buildOrderBy, type ProductSortField } from '@mechanic-system/validation';
 import { PrismaService } from '../../prisma/prisma.service';
+
+/** Maps the API's whitelisted sort fields to Prisma/raw-SQL columns. */
+const SORT_FIELD_MAP: Record<ProductSortField, string> = {
+  name: 'name',
+  priceCents: 'salePriceCents',
+  stock: 'stockQuantity',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt',
+};
 
 /**
  * Data access for products (spec section 22). No business rules here.
@@ -56,13 +66,15 @@ export class ProductsRepository {
     supplierId?: string,
     lowStock = false,
     includeInactive = false,
+    sortBy?: ProductSortField,
+    sortDir?: 'asc' | 'desc',
   ): Promise<Product[]> {
     if (lowStock) {
-      return this.listLowStockRaw(page, limit, search, includeInactive);
+      return this.listLowStockRaw(page, limit, search, includeInactive, sortBy, sortDir);
     }
     return this.prisma.product.findMany({
       where: this.listWhere(search, supplierId, includeInactive),
-      orderBy: { name: 'asc' },
+      orderBy: buildOrderBy(sortBy, sortDir, SORT_FIELD_MAP, { name: 'asc' }),
       skip: (page - 1) * limit,
       take: limit,
     });
@@ -88,10 +100,14 @@ export class ProductsRepository {
     limit: number,
     search: string | undefined,
     includeInactive: boolean,
+    sortBy?: ProductSortField,
+    sortDir?: 'asc' | 'desc',
   ): Promise<Product[]> {
     const { whereSql, params } = this.lowStockFilter(search, includeInactive);
+    const orderCol = sortBy ? SORT_FIELD_MAP[sortBy] : 'name';
+    const dir = sortDir ?? 'asc';
     return this.prisma.$queryRawUnsafe<Product[]>(
-      `SELECT * FROM "products" ${whereSql} ORDER BY "name" ASC LIMIT ? OFFSET ?`,
+      `SELECT * FROM "products" ${whereSql} ORDER BY "${orderCol}" ${dir.toUpperCase()} LIMIT ? OFFSET ?`,
       ...params,
       limit,
       (page - 1) * limit,

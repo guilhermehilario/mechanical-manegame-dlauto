@@ -1,6 +1,17 @@
 import { Injectable } from '@nestjs/common';
 import type { Prisma, Supplier } from '@prisma/client';
+import { buildOrderBy, type SupplierSortField } from '@mechanic-system/validation';
 import { PrismaService } from '../../prisma/prisma.service';
+
+/** Maps the API's whitelisted sort fields to Prisma columns. */
+const SORT_FIELD_MAP: Record<SupplierSortField, string> = {
+  name: 'name',
+  cnpj: 'cnpj',
+  phone: 'phone',
+  email: 'email',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt',
+};
 
 /**
  * Data access for suppliers (spec section 22). No business rules here.
@@ -37,10 +48,17 @@ export class SuppliersRepository {
     return base;
   }
 
-  list(page: number, limit: number, search?: string, includeInactive = false): Promise<Supplier[]> {
+  list(
+    page: number,
+    limit: number,
+    search?: string,
+    includeInactive = false,
+    sortBy?: SupplierSortField,
+    sortDir?: 'asc' | 'desc',
+  ): Promise<Supplier[]> {
     return this.prisma.supplier.findMany({
       where: this.listWhere(search, includeInactive),
-      orderBy: { name: 'asc' },
+      orderBy: buildOrderBy(sortBy, sortDir, SORT_FIELD_MAP, { name: 'asc' }),
       skip: (page - 1) * limit,
       take: limit,
     });

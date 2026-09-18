@@ -1,7 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { NotFoundError } from '../../common/errors/domain.error';
 import { ErrorCodes } from '@mechanic-system/types';
-import type { CreateServiceInput, UpdateServiceInput } from '@mechanic-system/validation';
+import type {
+  CreateServiceInput,
+  ServiceSortField,
+  UpdateServiceInput,
+} from '@mechanic-system/validation';
 import type { ServiceDto } from '@mechanic-system/types';
 import type { Service } from '@prisma/client';
 import { ServicesRepository } from './services.repository';
@@ -43,6 +47,8 @@ export class ServicesService {
     limit: number,
     search?: string,
     includeInactive = false,
+    sortBy?: ServiceSortField,
+    sortDir?: 'asc' | 'desc',
   ): Promise<{
     items: ServiceDto[];
     page: number;
@@ -51,7 +57,7 @@ export class ServicesService {
     totalPages: number;
   }> {
     const [services, total] = await Promise.all([
-      this.servicesRepository.list(page, limit, search, includeInactive),
+      this.servicesRepository.list(page, limit, search, includeInactive, sortBy, sortDir),
       this.servicesRepository.count(search, includeInactive),
     ]);
     return {

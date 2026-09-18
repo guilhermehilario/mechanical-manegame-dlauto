@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { idSchema, paginationQuerySchema } from './common';
+import { createSortQuerySchema, idSchema, type SortField } from './common';
 
 /**
  * Service catalog schemas (Fase 3).
@@ -39,10 +39,14 @@ export const updateServiceSchema = createServiceSchema
 
 export type UpdateServiceInput = z.infer<typeof updateServiceSchema>;
 
-export const serviceQuerySchema = paginationQuerySchema.extend({
+/** Sortable columns for the services listing (whitelist). */
+export const SERVICE_SORT_FIELDS = ['name', 'priceCents', 'createdAt', 'updatedAt'] as const;
+
+export const serviceQuerySchema = createSortQuerySchema(SERVICE_SORT_FIELDS).extend({
   includeInactive: z.coerce.boolean().optional(),
 });
 
 export type ServiceQuery = z.infer<typeof serviceQuerySchema>;
+export type ServiceSortField = SortField<typeof SERVICE_SORT_FIELDS>;
 
 export const serviceIdSchema = idSchema;

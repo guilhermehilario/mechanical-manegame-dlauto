@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { idSchema, paginationQuerySchema } from './common';
+import { createSortQuerySchema, idSchema, paginationQuerySchema, type SortField } from './common';
 
 /**
  * Product + stock movement schemas (Fase 3).
@@ -81,13 +81,17 @@ export const createStockMovementSchema = z
 
 export type CreateStockMovementInput = z.infer<typeof createStockMovementSchema>;
 
-export const productQuerySchema = paginationQuerySchema.extend({
+/** Sortable columns for the products listing (whitelist). */
+export const PRODUCT_SORT_FIELDS = ['name', 'priceCents', 'stock', 'createdAt', 'updatedAt'] as const;
+
+export const productQuerySchema = createSortQuerySchema(PRODUCT_SORT_FIELDS).extend({
   supplierId: idSchema.optional(),
   lowStock: z.coerce.boolean().optional(),
   includeInactive: z.coerce.boolean().optional(),
 });
 
 export type ProductQuery = z.infer<typeof productQuerySchema>;
+export type ProductSortField = SortField<typeof PRODUCT_SORT_FIELDS>;
 
 export const stockMovementQuerySchema = paginationQuerySchema.extend({
   productId: idSchema.optional(),

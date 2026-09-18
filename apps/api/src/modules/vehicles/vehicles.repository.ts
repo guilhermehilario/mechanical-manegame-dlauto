@@ -1,6 +1,17 @@
 import { Injectable } from '@nestjs/common';
 import type { Prisma, Vehicle } from '@prisma/client';
+import { buildOrderBy, type VehicleSortField } from '@mechanic-system/validation';
 import { PrismaService } from '../../prisma/prisma.service';
+
+/** Maps the API's whitelisted sort fields to Prisma columns. */
+const SORT_FIELD_MAP: Record<VehicleSortField, string> = {
+  plate: 'plate',
+  brand: 'brand',
+  model: 'model',
+  year: 'year',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt',
+};
 
 /**
  * Data access for vehicles (spec §22). No business rules here.
@@ -51,10 +62,12 @@ export class VehiclesRepository {
     customerId?: string,
     search?: string,
     includeInactive = false,
+    sortBy?: VehicleSortField,
+    sortDir?: 'asc' | 'desc',
   ): Promise<Vehicle[]> {
     return this.prisma.vehicle.findMany({
       where: this.listWhere(customerId, search, includeInactive),
-      orderBy: { plate: 'asc' },
+      orderBy: buildOrderBy(sortBy, sortDir, SORT_FIELD_MAP, { plate: 'asc' }),
       skip: (page - 1) * limit,
       take: limit,
     });

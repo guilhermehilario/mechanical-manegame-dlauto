@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { idSchema, paginationQuerySchema } from './common';
+import { createSortQuerySchema, idSchema, type SortField } from './common';
 
 /** Brazilian plates: old format (AAA9999) and Mercosul (AAA9A99). */
 const PLATE_REGEX = /^[A-Z]{3}[0-9][0-9A-Z][0-9]{2}$/;
@@ -43,12 +43,16 @@ export const updateVehicleSchema = createVehicleSchema
 
 export type UpdateVehicleInput = z.infer<typeof updateVehicleSchema>;
 
-export const vehicleQuerySchema = paginationQuerySchema.extend({
+/** Sortable columns for the vehicles listing (whitelist). */
+export const VEHICLE_SORT_FIELDS = ['plate', 'brand', 'model', 'year', 'createdAt', 'updatedAt'] as const;
+
+export const vehicleQuerySchema = createSortQuerySchema(VEHICLE_SORT_FIELDS).extend({
   /** Filter by owner. */
   customerId: idSchema.optional(),
   includeInactive: z.coerce.boolean().optional(),
 });
 
 export type VehicleQuery = z.infer<typeof vehicleQuerySchema>;
+export type VehicleSortField = SortField<typeof VEHICLE_SORT_FIELDS>;
 
 export const vehicleIdSchema = idSchema;

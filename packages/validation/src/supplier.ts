@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { idSchema, paginationQuerySchema } from './common';
+import { createSortQuerySchema, idSchema, type SortField } from './common';
 
 /**
  * Supplier schemas (Fase 3).
@@ -67,10 +67,14 @@ export const updateSupplierSchema = createSupplierSchema
 
 export type UpdateSupplierInput = z.infer<typeof updateSupplierSchema>;
 
-export const supplierQuerySchema = paginationQuerySchema.extend({
+/** Sortable columns for the suppliers listing (whitelist). */
+export const SUPPLIER_SORT_FIELDS = ['name', 'cnpj', 'phone', 'email', 'createdAt', 'updatedAt'] as const;
+
+export const supplierQuerySchema = createSortQuerySchema(SUPPLIER_SORT_FIELDS).extend({
   includeInactive: z.coerce.boolean().optional(),
 });
 
 export type SupplierQuery = z.infer<typeof supplierQuerySchema>;
+export type SupplierSortField = SortField<typeof SUPPLIER_SORT_FIELDS>;
 
 export const supplierIdSchema = idSchema;

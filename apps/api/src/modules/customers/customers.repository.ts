@@ -1,6 +1,17 @@
 import { Injectable } from '@nestjs/common';
 import type { Customer, Prisma } from '@prisma/client';
+import { buildOrderBy } from '@mechanic-system/validation';
 import { PrismaService } from '../../prisma/prisma.service';
+
+/** Maps the API's whitelisted sort fields to Prisma columns. */
+const SORT_FIELD_MAP = {
+  name: 'name',
+  cpf: 'cpf',
+  phone: 'phone',
+  email: 'email',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt',
+} as const;
 
 /**
  * Data access for customers (spec §22). No business rules here.
@@ -38,10 +49,17 @@ export class CustomersRepository {
     return base;
   }
 
-  list(page: number, limit: number, search?: string, includeInactive = false): Promise<Customer[]> {
+  list(
+    page: number,
+    limit: number,
+    search?: string,
+    includeInactive = false,
+    sortBy?: (keyof typeof SORT_FIELD_MAP) | undefined,
+    sortDir?: 'asc' | 'desc' | undefined,
+  ): Promise<Customer[]> {
     return this.prisma.customer.findMany({
       where: this.listWhere(search, includeInactive),
-      orderBy: { name: 'asc' },
+      orderBy: buildOrderBy(sortBy, sortDir, SORT_FIELD_MAP, { name: 'asc' }),
       skip: (page - 1) * limit,
       take: limit,
     });

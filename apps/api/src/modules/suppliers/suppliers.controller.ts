@@ -37,7 +37,14 @@ export class SuppliersController {
   list(
     @Query(new ZodValidationPipe(supplierQuerySchema, 'query')) query: SupplierQuery,
   ): Promise<Paginated<SupplierDto>> {
-    return this.suppliersService.list(query.page, query.limit, query.search, query.includeInactive);
+    return this.suppliersService.list(
+      query.page,
+      query.limit,
+      query.search,
+      query.includeInactive,
+      query.sortBy,
+      query.sortDir,
+    );
   }
 
   @Get(':id')

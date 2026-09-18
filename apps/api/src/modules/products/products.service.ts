@@ -1,7 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { ConflictError, NotFoundError } from '../../common/errors/domain.error';
 import { ErrorCodes } from '@mechanic-system/types';
-import type { CreateProductInput, UpdateProductInput } from '@mechanic-system/validation';
+import type {
+  CreateProductInput,
+  ProductSortField,
+  UpdateProductInput,
+} from '@mechanic-system/validation';
 import type { ProductDto } from '@mechanic-system/types';
 import type { Product, Supplier } from '@prisma/client';
 import { ProductsRepository } from './products.repository';
@@ -77,6 +81,8 @@ export class ProductsService {
     supplierId?: string,
     lowStock = false,
     includeInactive = false,
+    sortBy?: ProductSortField,
+    sortDir?: 'asc' | 'desc',
   ): Promise<{
     items: ProductDto[];
     page: number;
@@ -85,7 +91,16 @@ export class ProductsService {
     totalPages: number;
   }> {
     const [products, total] = await Promise.all([
-      this.productsRepository.list(page, limit, search, supplierId, lowStock, includeInactive),
+      this.productsRepository.list(
+        page,
+        limit,
+        search,
+        supplierId,
+        lowStock,
+        includeInactive,
+        sortBy,
+        sortDir,
+      ),
       this.productsRepository.count(search, supplierId, lowStock, includeInactive),
     ]);
     return {

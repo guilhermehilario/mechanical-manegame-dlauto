@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { idSchema, paginationQuerySchema } from './common';
+import { createSortQuerySchema, idSchema, type SortField } from './common';
 
 /**
  * CPF validation (spec: customers — unique CPF).
@@ -69,11 +69,15 @@ export const updateCustomerSchema = createCustomerSchema
 
 export type UpdateCustomerInput = z.infer<typeof updateCustomerSchema>;
 
-export const customerQuerySchema = paginationQuerySchema.extend({
+/** Sortable columns for the customers listing (whitelist). */
+export const CUSTOMER_SORT_FIELDS = ['name', 'cpf', 'phone', 'email', 'createdAt', 'updatedAt'] as const;
+
+export const customerQuerySchema = createSortQuerySchema(CUSTOMER_SORT_FIELDS).extend({
   /** `all` includes inactive/deleted records (e.g. to preserve history views). */
   includeInactive: z.coerce.boolean().optional(),
 });
 
 export type CustomerQuery = z.infer<typeof customerQuerySchema>;
+export type CustomerSortField = SortField<typeof CUSTOMER_SORT_FIELDS>;
 
 export const customerIdSchema = idSchema;

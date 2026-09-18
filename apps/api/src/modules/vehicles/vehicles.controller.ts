@@ -44,6 +44,8 @@ export class VehiclesController {
       query.customerId,
       query.search,
       query.includeInactive,
+      query.sortBy,
+      query.sortDir,
     );
   }
 

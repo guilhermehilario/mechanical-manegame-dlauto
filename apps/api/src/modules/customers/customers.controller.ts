@@ -43,6 +43,8 @@ export class CustomersController {
       query.limit,
       query.search,
       query.includeInactive,
+      query.sortBy,
+      query.sortDir,
     );
   }
 
