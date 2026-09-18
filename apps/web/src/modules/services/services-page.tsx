@@ -6,8 +6,9 @@ import { ApiClientError } from '../../services/api-client';
 import { deleteService, listServices, seedCatalogExample } from '../../services/catalog.service';
 import { EmptyTableRow } from '../../components/empty-state';
 import { PageHeader } from '../../components/page-header';
-import { btnPrimary, btnSecondary, inputClass, linkBtn, linkBtnDanger, tableHead, tableWrap } from '../../components/ui';
-import { IconPlus, IconSearch } from '../../components/icons';
+import { btnPrimary, btnSecondary, inputClass, tableHead, tableWrap } from '../../components/ui';
+import { IconButton, IconActionGroup } from '../../components/icon-button';
+import { IconPencil, IconPlus, IconSearch, IconTrash } from '../../components/icons';
 import { useAuth } from '../auth/use-auth';
 import { ServiceForm } from './service-form';
 
@@ -187,26 +188,26 @@ export function ServicesPage() {
                       {service.active ? 'Ativo' : 'Inativo'}
                     </span>
                   </td>
-                  <td className="whitespace-nowrap px-4 py-3 text-right">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setFormService(service);
-                        setIsFormOpen(true);
-                      }}
-                      className={`${linkBtn} mr-3`}
-                    >
-                      Editar
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        handleDelete(service);
-                      }}
-                      className={linkBtnDanger}
-                    >
-                      Excluir
-                    </button>
+                  <td className="px-4 py-3 text-right">
+                    <IconActionGroup>
+                      <IconButton
+                        icon={IconPencil}
+                        tone="blue"
+                        label={`Editar ${service.name}`}
+                        onClick={() => {
+                          setFormService(service);
+                          setIsFormOpen(true);
+                        }}
+                      />
+                      <IconButton
+                        icon={IconTrash}
+                        tone="red"
+                        label={`Excluir ${service.name}`}
+                        onClick={() => {
+                          handleDelete(service);
+                        }}
+                      />
+                    </IconActionGroup>
                   </td>
                 </tr>
               ))

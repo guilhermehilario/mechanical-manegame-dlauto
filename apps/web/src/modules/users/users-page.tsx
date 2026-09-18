@@ -11,9 +11,11 @@ import {
 } from '../../services/users.service';
 import { useAuth } from '../auth/use-auth';
 import { PageHeader } from '../../components/page-header';
-import { btnPrimary, btnSecondary, inputClass, linkBtn, linkBtnDanger, tableHead, tableWrap } from '../../components/ui';
-import { IconPlus, IconSearch } from '../../components/icons';
-import { formatDate } from '../../utils/format';
+import { btnPrimary, btnSecondary, inputClass, tableHead, tableWrap } from '../../components/ui';
+import { IconButton, IconActionGroup } from '../../components/icon-button';
+import { IconKey, IconPlus, IconSearch, IconTrash } from '../../components/icons';
+import { useTimeFormat } from '../../hooks/use-time-format';
+import { formatDate } from '../../utils/datetime';
 
 const ROLE_LABELS: Record<UserDto['role'], string> = {
   ADMIN: 'Administrador',
@@ -34,6 +36,7 @@ interface PasswordResetState {
  */
 export function UsersPage() {
   const queryClient = useQueryClient();
+  const timeFormat = useTimeFormat();
   const { user: currentUser } = useAuth();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
@@ -196,31 +199,31 @@ export function UsersPage() {
                       {user.active ? 'Ativo' : 'Inativo'}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-slate-500">{formatDate(user.createdAt)}</td>
-                  <td className="whitespace-nowrap px-4 py-3 text-right">
-                    {canManageUsers &&
-                    (user.role === 'ADMIN' || user.role === 'MANAGER') ? (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setPasswordReset({ user, password: '' });
-                        }}
-                        className={`${linkBtn} mr-3`}
-                      >
-                        Redefinir senha
-                      </button>
-                    ) : null}
-                    {canManageUsers && user.active ? (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          handleDeactivate(user);
-                        }}
-                        className={linkBtnDanger}
-                      >
-                        Desativar
-                      </button>
-                    ) : null}
+                  <td className="whitespace-nowrap px-4 py-3 text-slate-500">{formatDate(user.createdAt, timeFormat)}</td>
+                  <td className="px-4 py-3 text-right">
+                    <IconActionGroup>
+                      {canManageUsers &&
+                      (user.role === 'ADMIN' || user.role === 'MANAGER') ? (
+                        <IconButton
+                          icon={IconKey}
+                          tone="blue"
+                          label={`Redefinir senha de ${user.name}`}
+                          onClick={() => {
+                            setPasswordReset({ user, password: '' });
+                          }}
+                        />
+                      ) : null}
+                      {canManageUsers && user.active ? (
+                        <IconButton
+                          icon={IconTrash}
+                          tone="red"
+                          label={`Desativar ${user.name}`}
+                          onClick={() => {
+                            handleDeactivate(user);
+                          }}
+                        />
+                      ) : null}
+                    </IconActionGroup>
                   </td>
                 </tr>
               ))

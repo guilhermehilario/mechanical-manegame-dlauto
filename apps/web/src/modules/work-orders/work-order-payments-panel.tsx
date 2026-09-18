@@ -6,6 +6,8 @@ import { createPaymentSchema } from '@mechanic-system/validation';
 import { formatBRL } from '@mechanic-system/shared';
 import { ApiClientError } from '../../services/api-client';
 import { useAuth } from '../auth/use-auth';
+import { useTimeFormat } from '../../hooks/use-time-format';
+import { formatDate } from '../../utils/datetime';
 import {
   createPayment,
   listPayments,
@@ -28,6 +30,7 @@ const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
  */
 export function WorkOrderPaymentsPanel({ workOrder }: { workOrder: WorkOrderDto }) {
   const queryClient = useQueryClient();
+  const timeFormat = useTimeFormat();
   const { user } = useAuth();
 
   const [method, setMethod] = useState<PaymentMethod>('PIX');
@@ -157,7 +160,7 @@ export function WorkOrderPaymentsPanel({ workOrder }: { workOrder: WorkOrderDto 
                 <td className="px-4 py-2 text-slate-600">
                   {PAYMENT_METHOD_LABELS[payment.method]}
                 </td>
-                <td className="px-4 py-2 text-slate-500">{formatDate(payment.paidAt)}</td>
+                <td className="whitespace-nowrap px-4 py-2 text-slate-500">{formatDate(payment.paidAt, timeFormat)}</td>
                 <td className="px-4 py-2 text-slate-500">{payment.notes ?? ''}</td>
                 <td className="px-4 py-2 font-medium text-slate-800">
                   {formatBRL(payment.amountCents)}
@@ -257,6 +260,4 @@ export function WorkOrderPaymentsPanel({ workOrder }: { workOrder: WorkOrderDto 
   );
 }
 
-function formatDate(iso: string): string {
-  return new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short' }).format(new Date(iso));
-}
+

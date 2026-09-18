@@ -12,6 +12,8 @@ function toDto(settings: ShopSettings): ShopSettingsDto {
     phone: settings.phone,
     address: settings.address,
     documentFooter: settings.documentFooter,
+    // Legacy rows predate the column (NULL): normalize to the default.
+    timeFormat: settings.timeFormat === 'H12' ? 'H12' : 'H24',
     updatedAt: settings.updatedAt.toISOString(),
   };
 }
@@ -48,6 +50,7 @@ export class SettingsService {
       phone: input.phone ?? null,
       address: input.address ?? null,
       documentFooter: input.documentFooter ?? null,
+      timeFormat: input.timeFormat,
     };
     if (current) {
       return toDto(await this.prisma.shopSettings.update({ where: { id: current.id }, data }));

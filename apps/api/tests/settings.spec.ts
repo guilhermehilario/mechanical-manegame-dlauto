@@ -11,6 +11,7 @@ function makeRow(overrides: Partial<ShopSettings> = {}): ShopSettings {
     phone: null,
     address: null,
     documentFooter: null,
+    timeFormat: 'H24',
     backupAutoEnabled: null,
     backupIntervalHours: null,
     backupKeep: null,
@@ -84,11 +85,18 @@ describe('SettingsService (Bloco F2 mínimo)', () => {
       phone: '1133334444',
       address: null,
       documentFooter: null,
+      timeFormat: 'H24',
     });
 
     expect(prisma.shopSettings.update).toHaveBeenCalledWith({
       where: { id: 'set_1' },
-      data: { name: 'Oficina Nova', phone: '1133334444', address: null, documentFooter: null },
+      data: {
+        name: 'Oficina Nova',
+        phone: '1133334444',
+        address: null,
+        documentFooter: null,
+        timeFormat: 'H24',
+      },
     });
     expect(result.phone).toBe('1133334444');
   });
@@ -103,6 +111,7 @@ describe('SettingsService (Bloco F2 mínimo)', () => {
       phone: null,
       address: null,
       documentFooter: null,
+      timeFormat: 'H24',
     });
 
     expect(prisma.shopSettings.create).toHaveBeenCalledTimes(1);

@@ -421,6 +421,8 @@ model ShopSettings {
   phone       String?
   address     String?
   documentFooter String?
+  // Display preferences — date/time format used across the UI (H24 default).
+  timeFormat  String? @default("H24")
   // Runtime backup configuration (Bloco E/E2) — NULL means "use env default".
   backupAutoEnabled     Boolean?
   backupIntervalHours   Int?

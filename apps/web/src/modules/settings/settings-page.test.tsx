@@ -41,6 +41,7 @@ vi.mock('../auth/use-auth', () => ({
 }));
 
 const settings: ShopSettingsDto = {
+  timeFormat: 'H24',
   name: 'Auto Center DL',
   phone: '1133334444',
   address: 'Rua das Flores, 100',
@@ -108,6 +109,7 @@ describe('SettingsPage identity tab (Bloco F2 mínimo)', () => {
         phone: '1133334444',
         address: 'Rua das Flores, 100',
         documentFooter: 'Obrigado!',
+        timeFormat: 'H24',
       });
     });
     expect(await screen.findByText('Configurações salvas.')).toBeTruthy();

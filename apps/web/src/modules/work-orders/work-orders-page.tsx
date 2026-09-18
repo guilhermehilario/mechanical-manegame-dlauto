@@ -10,8 +10,9 @@ import {
 } from '../../services/work-orders.service';
 import { ApiClientError } from '../../services/api-client';
 import { PageHeader } from '../../components/page-header';
-import { btnPrimary, btnSecondary, inputClass, linkBtnDanger, tableHead, tableWrap } from '../../components/ui';
-import { IconPlus } from '../../components/icons';
+import { btnPrimary, btnSecondary, inputClass, tableHead, tableWrap } from '../../components/ui';
+import { IconButton, IconActionGroup } from '../../components/icon-button';
+import { IconPlus, IconTrash } from '../../components/icons';
 import { WorkOrderForm } from './work-order-form';
 
 export const WORK_ORDER_STATUS_LABELS: Record<WorkOrderStatus, string> = {
@@ -169,16 +170,17 @@ export function WorkOrdersPage() {
                       {WORK_ORDER_STATUS_LABELS[workOrder.status]}
                     </span>
                   </td>
-                  <td className="whitespace-nowrap px-4 py-3 text-right">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        handleDelete(workOrder);
-                      }}
-                      className={linkBtnDanger}
-                    >
-                      Excluir
-                    </button>
+                  <td className="px-4 py-3 text-right">
+                    <IconActionGroup>
+                      <IconButton
+                        icon={IconTrash}
+                        tone="red"
+                        label={`Excluir OS #${workOrder.orderNumber}`}
+                        onClick={() => {
+                          handleDelete(workOrder);
+                        }}
+                      />
+                    </IconActionGroup>
                   </td>
                 </tr>
               ))

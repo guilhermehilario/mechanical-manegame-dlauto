@@ -6,8 +6,15 @@ import { ApiClientError } from '../../services/api-client';
 import { deleteProduct, listProducts, seedCatalogExample } from '../../services/catalog.service';
 import { EmptyTableRow } from '../../components/empty-state';
 import { PageHeader } from '../../components/page-header';
-import { btnPrimary, btnSecondary, inputClass, linkBtn, linkBtnDanger, linkBtnNeutral, tableHead, tableWrap } from '../../components/ui';
-import { IconPlus, IconSearch } from '../../components/icons';
+import { btnPrimary, btnSecondary, inputClass, tableHead, tableWrap } from '../../components/ui';
+import { IconButton, IconActionGroup } from '../../components/icon-button';
+import {
+  IconBoxes,
+  IconPencil,
+  IconPlus,
+  IconSearch,
+  IconTrash,
+} from '../../components/icons';
 import { useAuth } from '../auth/use-auth';
 import { ProductForm } from './product-form';
 import { StockMovementForm } from './stock-movement-form';
@@ -230,35 +237,34 @@ export function ProductsPage() {
                         {product.active ? 'Ativo' : 'Inativo'}
                       </span>
                     </td>
-                    <td className="whitespace-nowrap px-4 py-3 text-right">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setMovementProduct(product);
-                        }}
-                        className={`${linkBtnNeutral} mr-3`}
-                      >
-                        Estoque
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setFormProduct(product);
-                          setIsFormOpen(true);
-                        }}
-                        className={`${linkBtn} mr-3`}
-                      >
-                        Editar
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          handleDelete(product);
-                        }}
-                        className={linkBtnDanger}
-                      >
-                        Excluir
-                      </button>
+                    <td className="px-4 py-3 text-right">
+                      <IconActionGroup>
+                        <IconButton
+                          icon={IconBoxes}
+                          tone="amber"
+                          label={`Movimentar estoque de ${product.name}`}
+                          onClick={() => {
+                            setMovementProduct(product);
+                          }}
+                        />
+                        <IconButton
+                          icon={IconPencil}
+                          tone="blue"
+                          label={`Editar ${product.name}`}
+                          onClick={() => {
+                            setFormProduct(product);
+                            setIsFormOpen(true);
+                          }}
+                        />
+                        <IconButton
+                          icon={IconTrash}
+                          tone="red"
+                          label={`Excluir ${product.name}`}
+                          onClick={() => {
+                            handleDelete(product);
+                          }}
+                        />
+                      </IconActionGroup>
                     </td>
                   </tr>
                 );

@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { VehicleDto } from '@mechanic-system/types';
 import { ApiClientError } from '../../services/api-client';
@@ -7,8 +6,15 @@ import { deleteVehicle, listVehicles } from '../../services/vehicles.service';
 import { listCustomers } from '../../services/customers.service';
 import { VehicleForm } from './vehicle-form';
 import { PageHeader } from '../../components/page-header';
-import { btnPrimary, btnSecondary, inputClass, linkBtn, linkBtnDanger, tableHead, tableWrap } from '../../components/ui';
-import { IconPlus, IconSearch } from '../../components/icons';
+import { btnPrimary, btnSecondary, inputClass, tableHead, tableWrap } from '../../components/ui';
+import { IconButton, IconActionGroup, IconLink } from '../../components/icon-button';
+import {
+  IconHistory,
+  IconPencil,
+  IconPlus,
+  IconSearch,
+  IconTrash,
+} from '../../components/icons';
 
 function formatMileage(mileage: number | null): string {
   if (mileage === null) return '—';
@@ -172,32 +178,31 @@ export function VehiclesPage() {
                   </td>
                   <td className="px-4 py-3 text-slate-600">{vehicle.year ?? '—'}</td>
                   <td className="px-4 py-3 text-slate-600">{formatMileage(vehicle.mileage)}</td>
-                  <td className="whitespace-nowrap px-4 py-3 text-right">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setFormVehicle(vehicle);
-                        setIsFormOpen(true);
-                      }}
-                      className={`${linkBtn} mr-3`}
-                    >
-                      Editar
-                    </button>
-                    <Link
-                      to={`/vehicles/${vehicle.id}/history`}
-                      className={`${linkBtn} mr-3`}
-                    >
-                      Histórico
-                    </Link>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        handleDelete(vehicle);
-                      }}
-                      className={linkBtnDanger}
-                    >
-                      Excluir
-                    </button>
+                  <td className="px-4 py-3 text-right">
+                    <IconActionGroup>
+                      <IconButton
+                        icon={IconPencil}
+                        tone="blue"
+                        label={`Editar ${vehicle.plate}`}
+                        onClick={() => {
+                          setFormVehicle(vehicle);
+                          setIsFormOpen(true);
+                        }}
+                      />
+                      <IconLink
+                        icon={IconHistory}
+                        to={`/vehicles/${vehicle.id}/history`}
+                        label={`Histórico de ${vehicle.plate}`}
+                      />
+                      <IconButton
+                        icon={IconTrash}
+                        tone="red"
+                        label={`Excluir ${vehicle.plate}`}
+                        onClick={() => {
+                          handleDelete(vehicle);
+                        }}
+                      />
+                    </IconActionGroup>
                   </td>
                 </tr>
               ))

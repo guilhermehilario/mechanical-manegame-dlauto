@@ -2,7 +2,9 @@ import { type FormEvent, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { shopSettingsSchema } from '@mechanic-system/validation';
+import type { TimeFormat } from '@mechanic-system/types';
 import { ApiClientError } from '../../services/api-client';
+import { formatTimeExample } from '../../utils/datetime';
 import { getShopSettings, updateShopSettings } from '../../services/settings.service';
 import { useAuth } from '../auth/use-auth';
 import { BackupSettingsSection } from './backup-settings-section';
@@ -66,6 +68,7 @@ function IdentitySection() {
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
   const [documentFooter, setDocumentFooter] = useState('');
+  const [timeFormat, setTimeFormat] = useState<TimeFormat>('H24');
   const [formError, setFormError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
 
@@ -76,6 +79,7 @@ function IdentitySection() {
       setPhone(settings.phone ?? '');
       setAddress(settings.address ?? '');
       setDocumentFooter(settings.documentFooter ?? '');
+      setTimeFormat(settings.timeFormat);
     }
   }, [settingsQuery.data]);
 
@@ -103,6 +107,7 @@ function IdentitySection() {
       phone: phone === '' ? null : phone,
       address: address === '' ? null : address,
       documentFooter: documentFooter === '' ? null : documentFooter,
+      timeFormat,
     });
     if (!parsed.success) {
       setFormError(parsed.error.issues[0]?.message ?? 'Dados inválidos.');
@@ -180,6 +185,12 @@ function IdentitySection() {
         />
       </div>
 
+      <TimeFormatSection
+        value={timeFormat}
+        onChange={setTimeFormat}
+        disabled={!canEdit || saveMutation.isPending}
+      />
+
       {formError ? (
         <div role="alert" className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
           {formError}
@@ -207,6 +218,59 @@ function IdentitySection() {
         </p>
       )}
     </form>
+  );
+}
+
+/** Formato de data e hora usado em todo o app (H24 padrão; H12 = AM/PM). */
+function TimeFormatSection({
+  value,
+  onChange,
+  disabled,
+}: {
+  value: TimeFormat;
+  onChange: (format: TimeFormat) => void;
+  disabled: boolean;
+}) {
+  const options: Array<{ id: TimeFormat; label: string }> = [
+    { id: 'H24', label: '24 horas' },
+    { id: 'H12', label: '12 horas (AM/PM)' },
+  ];
+  return (
+    <fieldset className="border-t border-slate-100 pt-4">
+      <legend className="mb-1 text-sm font-medium text-slate-700">Formato de data e hora</legend>
+      <p className="mb-2 text-xs text-slate-500">
+        Como as datas aparecem no app. Data sempre no formato brasileiro
+        (dd/mm/aaaa); muda apenas a hora.
+      </p>
+      <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Formato de data e hora">
+        {options.map((option) => (
+          <label
+            key={option.id}
+            className={`flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors ${
+              value === option.id
+                ? 'border-blue-500 bg-blue-50 font-medium text-blue-700'
+                : 'border-slate-300 bg-white text-slate-600 hover:bg-slate-50'
+            } ${disabled ? 'cursor-not-allowed opacity-60' : ''}`}
+          >
+            <input
+              type="radio"
+              name="time-format"
+              value={option.id}
+              checked={value === option.id}
+              onChange={() => {
+                onChange(option.id);
+              }}
+              disabled={disabled}
+              className="accent-blue-600"
+            />
+            {option.label}
+            <span className="text-xs text-slate-400">
+              ({formatTimeExample(option.id)})
+            </span>
+          </label>
+        ))}
+      </div>
+    </fieldset>
   );
 }
 

@@ -127,12 +127,10 @@ function NavSection({ groups }: { groups: NavGroup[] }) {
 function SidebarFooter({
   name,
   email,
-  onNavigate,
   onLogout,
 }: {
   name: string;
   email: string;
-  onNavigate?: () => void;
   onLogout: () => void;
 }) {
   return (
@@ -150,28 +148,15 @@ function SidebarFooter({
           <span className="block truncate text-xs text-slate-500">{email}</span>
         </span>
       </div>
-      <div className="flex items-center gap-1">
-        <NavLink
-          to="/change-password"
-          onClick={onNavigate}
-          className={({ isActive }) =>
-            `flex flex-1 items-center justify-center gap-1.5 rounded-lg px-2 py-1.5 text-xs font-medium transition-colors ${
-              isActive ? 'bg-slate-100 text-slate-900' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-800'
-            }`
-          }
-        >
-          <IconKey className="h-3.5 w-3.5" />
-          Trocar senha
-        </NavLink>
-        <button
-          type="button"
-          onClick={onLogout}
-          className="flex flex-1 items-center justify-center gap-1.5 rounded-lg px-2 py-1.5 text-xs font-medium text-red-600 transition-colors hover:bg-red-50"
-        >
-          <IconLogout className="h-3.5 w-3.5" />
-          Sair
-        </button>
-      </div>
+      {/* "Trocar senha" mora apenas em Configurações → Minha conta. */}
+      <button
+        type="button"
+        onClick={onLogout}
+        className="flex w-full items-center justify-center gap-1.5 rounded-lg px-2 py-1.5 text-xs font-medium text-red-600 transition-colors hover:bg-red-50"
+      >
+        <IconLogout className="h-3.5 w-3.5" />
+        Sair
+      </button>
     </div>
   );
 }
@@ -283,7 +268,6 @@ export function AppLayout() {
                 <SidebarFooter
                   name={user.name}
                   email={user.email}
-                  onNavigate={closeMenu}
                   onLogout={() => {
                     void logout();
                   }}

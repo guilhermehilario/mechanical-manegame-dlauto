@@ -5,8 +5,9 @@ import { ApiClientError } from '../../services/api-client';
 import { deleteSupplier, listSuppliers } from '../../services/catalog.service';
 import { SupplierForm } from './supplier-form';
 import { PageHeader } from '../../components/page-header';
-import { btnPrimary, btnSecondary, inputClass, linkBtn, linkBtnDanger, tableHead, tableWrap } from '../../components/ui';
-import { IconPlus, IconSearch } from '../../components/icons';
+import { btnPrimary, btnSecondary, inputClass, tableHead, tableWrap } from '../../components/ui';
+import { IconButton, IconActionGroup } from '../../components/icon-button';
+import { IconPencil, IconPlus, IconSearch, IconTrash } from '../../components/icons';
 import { formatCnpj, formatPhone } from '../../utils/format';
 
 export function SuppliersPage() {
@@ -138,26 +139,26 @@ export function SuppliersPage() {
                       {supplier.active ? 'Ativo' : 'Inativo'}
                     </span>
                   </td>
-                  <td className="whitespace-nowrap px-4 py-3 text-right">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setFormSupplier(supplier);
-                        setIsFormOpen(true);
-                      }}
-                      className={`${linkBtn} mr-3`}
-                    >
-                      Editar
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        handleDelete(supplier);
-                      }}
-                      className={linkBtnDanger}
-                    >
-                      Excluir
-                    </button>
+                  <td className="px-4 py-3 text-right">
+                    <IconActionGroup>
+                      <IconButton
+                        icon={IconPencil}
+                        tone="blue"
+                        label={`Editar ${supplier.name}`}
+                        onClick={() => {
+                          setFormSupplier(supplier);
+                          setIsFormOpen(true);
+                        }}
+                      />
+                      <IconButton
+                        icon={IconTrash}
+                        tone="red"
+                        label={`Excluir ${supplier.name}`}
+                        onClick={() => {
+                          handleDelete(supplier);
+                        }}
+                      />
+                    </IconActionGroup>
                   </td>
                 </tr>
               ))

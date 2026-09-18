@@ -7,15 +7,17 @@ import {
 import {
   formatDayLabel,
   formatDayLong,
-  formatTime,
   isToday,
   startOfDay,
   weekDays,
 } from '../../utils/dates';
+import { formatTime } from '../../utils/datetime';
 import {
   APPOINTMENT_STATUS_BADGES,
   APPOINTMENT_STATUS_LABELS,
 } from './appointment-status';
+import type { TimeFormat } from '@mechanic-system/types';
+import { useTimeFormat } from '../../hooks/use-time-format';
 
 type AgendaMode = 'day' | 'week';
 
@@ -43,6 +45,7 @@ export function AppointmentsAgenda({
   onTransition,
   onDelete,
 }: AppointmentsAgendaProps) {
+  const timeFormat = useTimeFormat();
   const days: Date[] =
     mode === 'day' ? [startOfDay(cursor)] : weekDays(cursor).map(startOfDay);
 
@@ -90,6 +93,7 @@ export function AppointmentsAgenda({
             ) : null}
             <AppointmentCards
               appointments={byDay.get(dayKey(day)) ?? []}
+              timeFormat={timeFormat}
               onTransition={onTransition}
               onDelete={onDelete}
             />
@@ -102,10 +106,12 @@ export function AppointmentsAgenda({
 
 function AppointmentCards({
   appointments,
+  timeFormat,
   onTransition,
   onDelete,
 }: {
   appointments: AppointmentDto[];
+  timeFormat: TimeFormat;
   onTransition: (id: string, status: AppointmentStatus) => void;
   onDelete: (appointment: AppointmentDto) => void;
 }) {
@@ -125,7 +131,7 @@ function AppointmentCards({
         >
           <div className="flex items-center justify-between gap-1">
             <span className="font-semibold text-slate-800">
-              {formatTime(new Date(appointment.scheduledAt))}
+              {formatTime(new Date(appointment.scheduledAt), timeFormat)}
             </span>
             <span
               className={`rounded-full px-1.5 py-0.5 text-[10px] font-medium ${

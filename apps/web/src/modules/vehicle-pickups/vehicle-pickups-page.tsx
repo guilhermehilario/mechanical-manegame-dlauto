@@ -11,13 +11,18 @@ import {
   listVehiclePickups,
   registerVehiclePickup,
 } from '../../services/vehicle-pickups.service';
-import { formatDate, formatPhone } from '../../utils/format';
+import { formatPhone } from '../../utils/format';
+import { useTimeFormat } from '../../hooks/use-time-format';
+import { formatDate } from '../../utils/datetime';
 import { printPickupReceipt } from '../../utils/print';
 import { PageHeader } from '../../components/page-header';
 import { SignaturePad } from './signature-pad';
 import { btnPrimary, btnSecondary, inputClass, tableHead, tableWrap } from '../../components/ui';
+import { IconButton, IconActionGroup } from '../../components/icon-button';
+import { IconPrinter } from '../../components/icons';
 
 export function VehiclePickupsPage() {
+  const timeFormat = useTimeFormat();
   const [page, setPage] = useState(1);
   const [registering, setRegistering] = useState<WorkOrderDto | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -119,25 +124,25 @@ export function VehiclePickupsPage() {
                     {formatBRL(workOrder.totals.totalCents)}
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setRegistering(workOrder);
-                      }}
-                      className="rounded-md bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700"
-                    >
-                      Registrar retirada
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        void printReceiptFor(workOrder.id);
-                      }}
-                      className="ml-2 rounded-md border border-slate-300 bg-white px-2 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-                      title="Imprimir comprovante (retiradas anteriores)"
-                    >
-                      🖨
-                    </button>
+                    <IconActionGroup>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setRegistering(workOrder);
+                        }}
+                        className="mr-1 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-blue-700"
+                      >
+                        Registrar retirada
+                      </button>
+                      <IconButton
+                        icon={IconPrinter}
+                        tone="neutral"
+                        label={`Imprimir comprovante da OS #${workOrder.orderNumber}`}
+                        onClick={() => {
+                          void printReceiptFor(workOrder.id);
+                        }}
+                      />
+                    </IconActionGroup>
                   </td>
                 </tr>
               ))
@@ -189,17 +194,18 @@ export function VehiclePickupsPage() {
                   <td className="px-4 py-3 text-slate-600">
                     {pickup.mileageKm === null ? '—' : `${pickup.mileageKm.toLocaleString('pt-BR')} km`}
                   </td>
-                  <td className="px-4 py-3 text-slate-600">{formatDate(pickup.createdAt)}</td>
+                  <td className="whitespace-nowrap px-4 py-3 text-slate-600">{formatDate(pickup.createdAt, timeFormat)}</td>
                   <td className="px-4 py-3 text-right">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        void printReceiptFor(pickup.workOrderId);
-                      }}
-                      className="rounded-md border border-slate-300 bg-white px-2 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-                    >
-                      🖨 Recibo
-                    </button>
+                    <IconActionGroup>
+                      <IconButton
+                        icon={IconPrinter}
+                        tone="neutral"
+                        label={`Recibo de retirada da OS #${pickup.orderNumber}`}
+                        onClick={() => {
+                          void printReceiptFor(pickup.workOrderId);
+                        }}
+                      />
+                    </IconActionGroup>
                   </td>
                 </tr>
               ))

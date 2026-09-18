@@ -84,8 +84,9 @@ describe('UsersPage role gating', () => {
     expect(await screen.findByText('Ana Admin')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Novo usuário' })).toBeTruthy();
     // One "Redefinir senha" per ADMIN/MANAGER row — not for the MECHANIC.
-    expect(screen.getAllByRole('button', { name: 'Redefinir senha' }).length).toBe(2);
-    expect(screen.getAllByRole('button', { name: 'Desativar' }).length).toBe(3);
+    // (Icons carry the action name in aria-label, prefixed with the target.)
+    expect(screen.getAllByRole('button', { name: /Redefinir senha de / }).length).toBe(2);
+    expect(screen.getAllByRole('button', { name: /Desativar / }).length).toBe(3);
   });
 
   it('MANAGER sees the list read-only (no management actions)', async () => {

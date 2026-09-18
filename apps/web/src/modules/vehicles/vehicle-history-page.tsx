@@ -4,7 +4,8 @@ import type { VehicleHistoryEntryDto } from '@mechanic-system/types';
 import { formatBRL } from '@mechanic-system/shared';
 import { getVehicle } from '../../services/vehicles.service';
 import { getVehicleHistory } from '../../services/images.service';
-import { formatDate } from '../../utils/format';
+import { useTimeFormat } from '../../hooks/use-time-format';
+import { formatDate } from '../../utils/datetime';
 
 /**
  * Vehicle maintenance history (Fase 6, spec §14) — a DERIVED view over work
@@ -12,6 +13,7 @@ import { formatDate } from '../../utils/format';
  * history storage exists, so this view can never disagree with the orders.
  */
 export function VehicleHistoryPage() {
+  const timeFormat = useTimeFormat();
   const { vehicleId = '' } = useParams<{ vehicleId: string }>();
 
   const vehicleQuery = useQuery({
@@ -80,8 +82,8 @@ export function VehicleHistoryPage() {
                     OS #{entry.orderNumber}
                   </Link>
                   <p className="text-xs text-slate-500">
-                    Aberta em {formatDate(entry.openedAt)}
-                    {entry.completedAt ? ` · Concluída em ${formatDate(entry.completedAt)}` : ''}
+                    Aberta em {formatDate(entry.openedAt, timeFormat)}
+                    {entry.completedAt ? ` · Concluída em ${formatDate(entry.completedAt, timeFormat)}` : ''}
                   </p>
                 </div>
                 <p className="text-sm font-bold text-slate-900">{formatBRL(entry.totalCents)}</p>

@@ -16,7 +16,9 @@ import { CustomerForm } from './customer-form';
 import { VehicleForm } from '../vehicles/vehicle-form';
 import { PageHeader } from '../../components/page-header';
 import { btnDanger, btnPrimary, btnSecondary } from '../../components/ui';
-import { formatCpf, formatDate, formatPhone } from '../../utils/format';
+import { formatCpf, formatPhone } from '../../utils/format';
+import { useTimeFormat } from '../../hooks/use-time-format';
+import { formatDate } from '../../utils/datetime';
 
 interface HistoryEntry {
   date: string;
@@ -25,6 +27,7 @@ interface HistoryEntry {
 }
 
 export function CustomerDetailPage(): React.ReactNode {
+  const timeFormat = useTimeFormat();
   const { id = '' } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -142,7 +145,7 @@ export function CustomerDetailPage(): React.ReactNode {
       <div className="mt-3">
         <PageHeader
           title={customer.name}
-          description={`Cliente desde ${formatDate(customer.createdAt)}`}
+          description={`Cliente desde ${formatDate(customer.createdAt, timeFormat)}`}
           actions={
             <>
               <button type="button" onClick={handleToggleActive} className={btnSecondary}>
@@ -220,7 +223,7 @@ export function CustomerDetailPage(): React.ReactNode {
               {history.map((entry) => (
                 <li key={entry.key} className="flex justify-between gap-4">
                   <span className="text-slate-600">{entry.description}</span>
-                  <span className="shrink-0 text-slate-500">{formatDate(entry.date)}</span>
+                  <span className="shrink-0 text-slate-500">{formatDate(entry.date, timeFormat)}</span>
                 </li>
               ))}
             </ul>

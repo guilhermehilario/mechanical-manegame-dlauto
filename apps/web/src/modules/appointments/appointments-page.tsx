@@ -16,7 +16,6 @@ import { AppointmentsAgenda, type AgendaMode } from './appointments-agenda';
 import {
   APPOINTMENT_STATUS_BADGES,
   APPOINTMENT_STATUS_LABELS,
-  formatAppointmentDateTime,
 } from './appointment-status';
 import {
   addDays,
@@ -25,11 +24,23 @@ import {
   startOfWeek,
 } from '../../utils/dates';
 import { PageHeader } from '../../components/page-header';
-import { btnPrimary, btnSecondary, inputClass, linkBtn, linkBtnDanger, linkBtnNeutral, tableHead, tableWrap } from '../../components/ui';
-import { IconPlus } from '../../components/icons';
+import { btnPrimary, btnSecondary, inputClass, tableHead, tableWrap } from '../../components/ui';
+import { IconButton, IconActionGroup } from '../../components/icon-button';
+import {
+  IconBan,
+  IconCheck,
+  IconFlag,
+  IconPencil,
+  IconPlay,
+  IconPlus,
+  IconTrash,
+} from '../../components/icons';
+import { useTimeFormat } from '../../hooks/use-time-format';
+import { formatDateTime } from '../../utils/datetime';
 
 export function AppointmentsPage() {
   const queryClient = useQueryClient();
+  const timeFormat = useTimeFormat();
   const [view, setView] = useState<'list' | AgendaMode>('list');
   const [cursor, setCursor] = useState<Date>(startOfDay(new Date()));
   const [page, setPage] = useState(1);
@@ -216,8 +227,8 @@ export function AppointmentsPage() {
                       appointment.status !== 'COMPLETED' && appointment.status !== 'CANCELLED';
                     return (
                       <tr key={appointment.id} className="border-b border-slate-100 last:border-0">
-                        <td className="px-4 py-3 font-medium text-slate-800">
-                          {formatAppointmentDateTime(appointment.scheduledAt)}
+                        <td className="whitespace-nowrap px-4 py-3 font-medium text-slate-800">
+                          {formatDateTime(appointment.scheduledAt, timeFormat)}
                         </td>
                         <td className="px-4 py-3 text-slate-600">{appointment.customerName}</td>
                         <td className="px-4 py-3 font-mono text-xs text-slate-600">
@@ -233,39 +244,47 @@ export function AppointmentsPage() {
                             {APPOINTMENT_STATUS_LABELS[appointment.status]}
                           </span>
                         </td>
-                        <td className="whitespace-nowrap px-4 py-3 text-right">
-                          {nextStatuses.map((next) => (
-                            <button
-                              key={next}
-                              type="button"
+                        <td className="px-4 py-3 text-right">
+                          <IconActionGroup>
+                            {nextStatuses.map((next) => {
+                              const isCancel = next === 'CANCELLED';
+                              const icon = isCancel
+                                ? IconBan
+                                : next === 'CONFIRMED'
+                                  ? IconCheck
+                                  : next === 'IN_PROGRESS'
+                                    ? IconPlay
+                                    : IconFlag;
+                              return (
+                                <IconButton
+                                  key={next}
+                                  icon={icon}
+                                  tone={isCancel ? 'red' : next === 'COMPLETED' ? 'green' : 'blue'}
+                                  label={`Marcar: ${APPOINTMENT_STATUS_LABELS[next]}`}
+                                  onClick={() => {
+                                    transitionMutation.mutate({ id: appointment.id, status: next });
+                                  }}
+                                />
+                              );
+                            })}
+                            {canReschedule ? (
+                              <IconButton
+                                icon={IconPencil}
+                                label="Editar agendamento"
+                                onClick={() => {
+                                  openForm(appointment);
+                                }}
+                              />
+                            ) : null}
+                            <IconButton
+                              icon={IconTrash}
+                              tone="red"
+                              label="Excluir agendamento"
                               onClick={() => {
-                                transitionMutation.mutate({ id: appointment.id, status: next });
+                                handleDelete(appointment);
                               }}
-                              className={`${next === 'CANCELLED' ? linkBtnDanger : linkBtn} mr-3`}
-                            >
-                              {next === 'CANCELLED' ? 'Cancelar' : APPOINTMENT_STATUS_LABELS[next]}
-                            </button>
-                          ))}
-                          {canReschedule ? (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                openForm(appointment);
-                              }}
-                              className={`${linkBtnNeutral} mr-3`}
-                            >
-                              Editar
-                            </button>
-                          ) : null}
-                          <button
-                            type="button"
-                            onClick={() => {
-                              handleDelete(appointment);
-                            }}
-                            className={linkBtnDanger}
-                          >
-                            Excluir
-                          </button>
+                            />
+                          </IconActionGroup>
                         </td>
                       </tr>
                     );
@@ -335,13 +354,13 @@ export function AppointmentsPage() {
               className={btnSecondary}
             >
               Próximo →
-            </button>
-            <span className="ml-2 text-sm font-medium text-slate-700">
+            </button>            <span className="ml-2 text-sm font-medium text-slate-700">
               {view === 'day'
                 ? formatDayLabel(cursor)
                 : `${formatDayLabel(startOfWeek(cursor))} – ${formatDayLabel(
                     addDays(startOfWeek(cursor), 6),
-                  )}`}
+                  )}`
+              }
             </span>
           </div>
 
