@@ -85,15 +85,17 @@ desenhada para acomodá-los sem rewrites:
   estados de carregamento/vazio consistentes entre páginas.
 - **Observabilidade:** pino já estruturado; adicionar correlação de requestId
   por operação de negócio (base para suporte da oficina).
-- **CI remota:** a qualidade hoje é "CI local" (husky + turbo); adicionar
-  pipeline remoto (GitHub Actions) com os mesmos gates + e2e + smoke.
+- **CI remota (G4):** ✅ **implementado (2026-09-18)** — `.github/workflows/ci.yml`
+  (audit + quality + e2e + smoke); falta apenas push/ativação no repositório.
+  A "CI local" (husky + turbo) continua funcionando.
 
 ---
 
 ## 5. Dívida técnica conhecida (pequena)
 
 - `pnpm audit` hoje conta **dependências de produção** com CVEs (ver R1) —
-  após correção, considerar gate automático de audit no CI.
+  gate automático adicionado: `pnpm audit --prod --audit-level=high` (G3),
+  embarcado no job `audit` da CI remota (G4).
 - Nem todas as decisões recentes têm ADR (ex.: StorageService content-addressed,
   padrão transacional de estoque/retirada, bridge síncrona do Electron quando
   R2 for feito). Criar ADR-006+ para as próximas decisões relevantes.

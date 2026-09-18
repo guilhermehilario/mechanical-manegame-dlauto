@@ -26,8 +26,10 @@ pnpm db:seed              # cria o ADMIN — exige SEED_ADMIN_EMAIL/SEED_ADMIN_P
 | `pnpm typecheck` | `tsc --noEmit` em todos |
 | `pnpm test` | Vitest em todos |
 | `pnpm build` | builds de produção (turbo, com cache) |
+| `pnpm audit --prod --audit-level=high` | gate de segurança (G3) — falha só em high/critical |
 | `pnpm db:migrate` / `db:seed` / `db:studio` | banco |
 | `pnpm --filter @mechanic-system/api smoke` | teste de fumaça da API |
+| `E2E_API_PORT=… E2E_WEB_PORT=… pnpm --filter @mechanic-system/e2e test:e2e` | E2E em portas isoladas (G1) |
 
 ## Regras do projeto (resumo da spec)
 
@@ -52,8 +54,14 @@ Antes de considerar qualquer funcionalidade concluída:
 
 ```bash
 pnpm lint && pnpm typecheck && pnpm test && pnpm build
+pnpm audit --prod --audit-level=high
 pnpm --filter @mechanic-system/api smoke
+E2E_API_PORT=3101 E2E_WEB_PORT=5174 pnpm --filter @mechanic-system/e2e test:e2e
 ```
+
+A CI remota (G4) roda exatamente esses gates em `.github/workflows/ci.yml`
+(4 jobs: `audit`, `quality`, `e2e`, `smoke`). A "CI local" (husky + turbo)
+continua para o dia a dia.
 
 Commits no padrão Conventional:
 

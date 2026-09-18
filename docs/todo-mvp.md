@@ -23,8 +23,8 @@
 > doc do operador, seed de catálogo opcional e estados vazios
 > consistentes) e corrigida a flakiness do smoke (`smoke.ts` replica em
 > placa duplicada). **G2 (decisão R8)** encerrado — ADR-007. Faltam **só
-> homologação no hardware/CI**: C1/C2 (binário na máquina alvo), E3
-> (restauração real) e G3/G4 (audit + CI remota).
+> homologação no hardware + ativação da CI**: C1/C2 (binário na máquina
+> alvo), E3 (restauração real) e push/habilitação do workflow (G3/G4).
 
 ---
 
@@ -54,16 +54,23 @@
   sem restart), botão "Fazer backup agora", carregar catálogo de exemplo e
   link para alterar senha. **154 testes API + 52 testes web + 10 desktop**
   verdes + typecheck/lint + smoke (`ALL CHECKS PASSED`) + **E2E 10/10**.
+- ✅ Revisão 2026-09-18 (3): **decisão R8 registrada** (G2 → ADR-007) e **CI
+  remota implementada** (G3/G4 → `.github/workflows/ci.yml`: audit +
+  quality + e2e + smoke; gate `pnpm audit --prod --audit-level=high` e job
+  smoke validados localmente). Restam só homologação no hardware (C1/C2) e
+  restauração real (E3) — ver "Ainda pendente".
 
 **Gaps para MVP (revisado 2026-09-18):** ciclo financeiro (Bloco A),
 impressão de OS/recibo (B1–B3), sessão persistente + refresh automático
 (D1/D5), relatórios imprimíveis/exportáveis (B4), **onboarding de primeira
 execução (F1)**, a **doc de implantação do operador (C3)**, o **seed
 opcional de catálogo com estados vazios consistentes (F3/F4)** estão
-**fechados e verificados**. O que resta é **homologar o binário na máquina
-alvo** (C1–C2), **restauração real de backup** (E3) e **CI remota** (G3/G4) —
-a rede de E2E (G1/B5) está fechada e o E2E roda em portas isoladas, sem
-bloquear os dev servers. Ver "Ainda pendente".
+**fechados e verificados**. G2 (decisão R8) está registrado (ADR-007) e a
+**CI remota (G3/G4)** está implementada (`.github/workflows/ci.yml` —
+audit + quality + e2e + smoke), pendente apenas de push/ativação. O que
+resta é **homologar o binário na máquina alvo** (C1–C2) e **restauração
+real de backup** (E3) — a rede de E2E (G1/B5) está fechada e o E2E roda em
+portas isoladas, sem bloquear os dev servers. Ver "Ainda pendente".
 
 ---
 
@@ -162,12 +169,14 @@ Todo o código de produto está fechado (A/B/D/E/F verificados). O que falta
 | 🔴 | C2 | ⛔ bloqueado | Instalador Windows (ou AppImage) — **decidir o SO alvo antes** |
 | 🟡 | E3 | ⛔ bloqueado | Teste de restauração de backup no binário real |
 | 🟠 | G2 | ✅ feito | Decisão R8 registrada (ADR-007): assinatura = evidência, não valor legal; sessão 15 min/7 dias mantida (D4) |
-| 🟠 | G3 | ⏳ precisa de CI | Gate de `pnpm audit` — pode rodar localmente agora, entra no pipeline em G4 |
-| 🟠 | G4 | ⏳ precisa de repo | CI remota (GitHub Actions) — lint + typecheck + testes + build + e2e + smoke |
+| 🟠 | G3 | ✅ feito | Gate de `pnpm audit --prod --audit-level=high` — local e no CI (job `audit`) |
+| 🟠 | G4 | ✅ quase | Workflow GitHub Actions criado e validado (`.github/workflows/ci.yml`) — resta dar **push** e habilitar Actions no repo |
 
 **C1/C2/E3** dependem da **máquina alvo** e da definição do SO da oficina.
-**G3/G4** precisam da presença do repositório em plataforma de CI remota.
-**G2** (decisão R8) foi encerrado em 2026-09-18 — ver ADR-007.
+**G2** (decisão R8) foi encerrado em 2026-09-18 — ver ADR-007. **G3** fechado
+com o gate local + job no CI. **G4** está implementado (4 jobs: audit,
+quality, e2e, smoke — validações locais verdes); falta apenas a ativação
+remota (push + GitHub Actions).
 
 **E2E agora roda em qualquer máquina:** `E2E_API_PORT=<livre>
 E2E_WEB_PORT=<livre> pnpm --filter @mechanic-system/e2e test:e2e` sobe o
@@ -391,9 +400,18 @@ A oficina precisa entregar papel (OS, recibo). Hoje não existe fluxo algum.
   `docs/decisions/ADR-007-signature-evidence-policy.md` (razões, gatilhos de
   reavaliação e expiração de sessão mantida em 15 min/7 dias — D4). R8
   encerrado no `remediation-plan.md`; roadmap atualizado.
-- [ ] **G3. Gate de `pnpm audit` no CI** quando houver pipeline remota.
-- [ ] **G4. CI remota (GitHub Actions)**: lint + typecheck + testes + build
-  + e2e + smoke (hoje é "CI local" via husky/turbo).
+- [x] **G3. Gate de `pnpm audit` no CI** ✅ 2026-09-18: gate local pronto
+  (`pnpm audit --prod --audit-level=high` — falha só em high/critical; o
+  resíduo moderado CVE-2026-35515 é aceito e documentado em R1) e já
+  embarcado no job `audit` do workflow `G4`.
+- [x] **G4. CI remota (GitHub Actions)** ✅ 2026-09-18 (implementado):
+  `.github/workflows/ci.yml` com 4 jobs — `audit` (G3), `quality`
+  (lint + typecheck + tests + build), `e2e` (instala Chromium e roda a
+  suíte 10/10 em portas isoladas) e `smoke` (banco limpo `ci-smoke.db` +
+  seed do admin + smoke idempotente). Roda em `push`/`main` e PR.
+  **Ativação**: push do branch + habilitação do Actions no repositório
+  (`guilhermehilario/mechanical-manegame-dlauto`). Job smoke validado
+  localmente (ALL CHECKS PASSED).
 
 ---
 
