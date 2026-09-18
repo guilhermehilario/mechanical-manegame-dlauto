@@ -18,6 +18,13 @@
 > caminhos de arquivo divergentes). Todos com teste e com verificação ao
 > vivo (API real e E2E em portas isoladas) — ver "Revisão 2026-09-17"
 > abaixo.
+>
+> Revisão 2026-09-18: fechados **F1, C3, F3 e F4** (primeiro acesso,
+> doc do operador, seed de catálogo opcional e estados vazios
+> consistentes) e corrigida a flakiness do smoke (`smoke.ts` replica em
+> placa duplicada). Faltam **só homologação no hardware/CI**: C1/C2 (binário
+> na máquina alvo), E3 (restauração real), G2 (decisão R8) e G3/G4 (audit
+> + CI remota).
 
 ---
 
@@ -55,6 +62,7 @@ portas isoladas, sem bloquear os dev servers. Ver "Ainda pendente".
 ---
 
 ## Revisão 2026-09-17 — auditoria de fluxos (bugs corrigidos e achados)
+<!-- Adicionados em 2026-09-18: smoke flaky (placa duplicada), F3/F4 -->
 
 Auditoria prática (API real + revisão de código + web) que fechou os gaps
 de **funcionamento** encontrados após a Fase 11. Todos com teste.
@@ -136,17 +144,24 @@ de **funcionamento** encontrados após a Fase 11. Todos com teste.
 - Artefato acidental `apps/api/apps/desktop/staging` removido (56K, não
   versionado).
 
-### Ainda pendente (backlog remanescente)
+### Ainda pendente (backlog remanescente — 2026-09-18)
 
-O "chão de fábrica" e o caixa estão fechados e verificados; o que falta é
-**distribuição, onboarding e rede de segurança**. Ordem sugerida:
+Todo o código de produto está fechado (A/B/D/E/F verificados). O que falta
+é **homologação em ambiente real e rede de segurança remota** — nada disso
+é bloqueado por código, mas depende de decisão/recursos:
 
-| Prio | Item | Resumo |
-|---|---|---|
-| 🔴 | C1 | Revalidar o binário empacotado na máquina alvo (login, OS completa, upload, assinatura, backup, impressão, migração de 1ª execução) |
-| 🔴 | C2 | Instalador Windows (ou AppImage) — **decidir o SO alvo antes** |
-| 🟡 | E3 | Teste de restauração de backup no binário real |
-| 🟠 | G2/G3/G4 | Decisão R8, `pnpm audit` no CI, CI remota (GitHub Actions) |
+| Prio | Item | Status | Resumo |
+|---|---|---|---|
+| 🔴 | C1 | ⛔ bloqueado | Revalidar o binário empacotado na máquina alvo (login, OS completa, upload, assinatura, backup, impressão, migração de 1ª execução) |
+| 🔴 | C2 | ⛔ bloqueado | Instalador Windows (ou AppImage) — **decidir o SO alvo antes** |
+| 🟡 | E3 | ⛔ bloqueado | Teste de restauração de backup no binário real |
+| 🟠 | G2 | ✅ executável | Decisão R8: registrar definitivamente a política de assinatura (imagem = evidência, não valor legal) |
+| 🟠 | G3 | ⏳ precisa de CI | Gate de `pnpm audit` — pode rodar localmente agora, entra no pipeline em G4 |
+| 🟠 | G4 | ⏳ precisa de repo | CI remota (GitHub Actions) — lint + typecheck + testes + build + e2e + smoke |
+
+**C1/C2/E3** dependem da **máquina alvo** e da definição do SO da oficina.
+**G2** é o único pendente executável agora (decisão/política). **G3/G4**
+precisam da presença do repositório em plataforma de CI remota.
 
 **E2E agora roda em qualquer máquina:** `E2E_API_PORT=<livre>
 E2E_WEB_PORT=<livre> pnpm --filter @mechanic-system/e2e test:e2e` sobe o
