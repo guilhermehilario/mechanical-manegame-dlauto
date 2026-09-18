@@ -253,6 +253,16 @@ export function IconPrinter(props: IconProps) {
   );
 }
 
+export function IconRestore(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7" />
+      <path d="M12 3v12" />
+      <path d="m7 8 5-5 5 5" />
+    </svg>
+  );
+}
+
 export function IconBoxes(props: IconProps) {
   return (
     <svg {...base(props)}>

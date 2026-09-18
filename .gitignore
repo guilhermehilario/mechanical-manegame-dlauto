@@ -45,8 +45,8 @@ Thumbs.db
 .vscode/*
 !.vscode/extensions.json
 
-# Backups
-backups/
+# Backups (root artifacts only — NOT the web module directory)
+/backups/
 *.bak
 .turbo/cache
 # Uploaded files (Fase 6 images — never commit binary blobs)
