@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { formatBRL } from '@mechanic-system/shared';
-import type { PaymentMethod, WorkOrderStatusDto } from '@mechanic-system/types';
+import type { WorkOrderStatusDto } from '@mechanic-system/types';
 import {
   getPaymentMethodsReport,
   getRevenueReport,
@@ -10,7 +10,18 @@ import {
   getTopServices,
   getWorkOrderStatusReport,
 } from '../../services/reports.service';
+import { downloadCsv } from '../../utils/csv';
+import { printReport, type ReportPrintData } from '../../utils/print';
 import { WORK_ORDER_STATUS_LABELS } from '../work-orders/work-orders-page';
+import {
+  buildPaymentsReport,
+  buildProductsReport,
+  buildRevenueReport,
+  buildServicesReport,
+  buildStatusReport,
+  PAYMENT_METHOD_LABELS,
+  reportToCsvRows,
+} from './report-export';
 
 const STATUS_BADGES: Record<WorkOrderStatusDto, string> = {
   OPEN: 'bg-blue-50 text-blue-700',
@@ -34,14 +45,6 @@ const TABS: Array<{ id: ReportTab; label: string }> = [
   { id: 'products', label: 'Produtos' },
   { id: 'status', label: 'Status das OS' },
 ];
-
-const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
-  CASH: 'Dinheiro',
-  PIX: 'Pix',
-  DEBIT_CARD: 'Cartão de débito',
-  CREDIT_CARD: 'Cartão de crédito',
-  TRANSFER: 'Transferência',
-};
 
 function toInputDate(date: Date): string {
   const year = date.getFullYear();
@@ -135,6 +138,28 @@ export function ReportsPage() {
             ? productsQuery
             : statusQuery;
 
+  const reportTable: ReportPrintData | null =
+    tab === 'revenue' && revenueQuery.data
+      ? buildRevenueReport(revenueQuery.data)
+      : tab === 'payments' && paymentsQuery.data
+        ? buildPaymentsReport(paymentsQuery.data)
+        : tab === 'services' && servicesQuery.data
+          ? buildServicesReport(servicesQuery.data)
+          : tab === 'products' && productsQuery.data
+            ? buildProductsReport(productsQuery.data)
+            : tab === 'status' && statusQuery.data
+              ? buildStatusReport(statusQuery.data)
+              : null;
+
+  function handleExportCsv(): void {
+    if (!reportTable) return;
+    downloadCsv(`relatorio-${tab}-${from}_${to}.csv`, reportToCsvRows(reportTable));
+  }
+
+  function handlePrint(): void {
+    if (reportTable) void printReport(reportTable);
+  }
+
   return (
     <section className="space-y-6">
       <div>
@@ -198,23 +223,43 @@ export function ReportsPage() {
           </button>
         </form>
 
-        <div className="flex rounded-md border border-slate-200 bg-white p-1">
-          {TABS.map((item) => (
+        <div className="flex flex-col items-end gap-2">
+          <div className="flex rounded-md border border-slate-200 bg-white p-1">
+            {TABS.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => {
+                  setTab(item.id);
+                }}
+                className={`rounded-md px-3 py-1.5 text-sm font-medium ${
+                  tab === item.id
+                    ? 'bg-blue-50 text-blue-700'
+                    : 'text-slate-600 hover:bg-slate-50'
+                }`}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+          <div className="flex gap-2">
             <button
-              key={item.id}
               type="button"
-              onClick={() => {
-                setTab(item.id);
-              }}
-              className={`rounded-md px-3 py-1.5 text-sm font-medium ${
-                tab === item.id
-                  ? 'bg-blue-50 text-blue-700'
-                  : 'text-slate-600 hover:bg-slate-50'
-              }`}
+              onClick={handleExportCsv}
+              disabled={!reportTable}
+              className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
             >
-              {item.label}
+              Exportar CSV
             </button>
-          ))}
+            <button
+              type="button"
+              onClick={handlePrint}
+              disabled={!reportTable}
+              className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+            >
+              Imprimir
+            </button>
+          </div>
         </div>
       </div>
 

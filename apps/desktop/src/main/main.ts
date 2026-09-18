@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import { existsSync } from 'node:fs';
 import { registerIpcHandlers } from './ipc';
 import { startApiProcess, type RunningApiProcess } from './api-process';
+import { reportStartupFailure } from './startup-dialogs';
 
 /**
  * Electron main process (spec §21 + offline-first ADR-001).
@@ -71,6 +72,7 @@ function createWindow(apiBaseUrl: string): void {
       console.error(
         'Web app build not found. Run "pnpm build" (or set VITE_DEV_SERVER_URL for development).',
       );
+      reportStartupFailure('webBuildMissing');
       app.quit();
       return;
     }
@@ -87,16 +89,13 @@ function createWindow(apiBaseUrl: string): void {
 }
 
 void app.whenReady().then(async () => {
-  try {
-    apiProcess = await startApiProcess();
-  } catch (error) {
-    // No dialog with technical details to the end user (spec §20).
-    console.error('Failed to start the local API:', error instanceof Error ? error.message : error);
+  apiProcess = await startApiWithRetry();
+  const startedApi = apiProcess;
+  if (!startedApi) {
     app.quit();
     return;
   }
 
-  const startedApi = apiProcess;
   registerIpcHandlers(() => startedApi.baseUrl);
   // R2: main also pushes the URL to the preload's argv via additionalArguments
   // (createWindow) and notifies listeners after every load (api:ready).
@@ -108,6 +107,25 @@ void app.whenReady().then(async () => {
     }
   });
 });
+
+/**
+ * C4: starts the sidecar, offering a friendly "try again" dialog on failure
+ * instead of quitting silently. Returns null when the user gives up.
+ */
+async function startApiWithRetry(): Promise<RunningApiProcess | null> {
+  for (;;) {
+    try {
+      return await startApiProcess();
+    } catch (error) {
+      // Technical cause goes to the log only (spec §20).
+      console.error(
+        'Failed to start the local API:',
+        error instanceof Error ? error.message : error,
+      );
+      if (!reportStartupFailure('apiFailure')) return null;
+    }
+  }
+}
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {

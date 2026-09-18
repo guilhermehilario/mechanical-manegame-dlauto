@@ -6,9 +6,9 @@ import { dirname, join } from 'node:path';
 
 /**
  * Prepara um banco E2E limpo (migrações + seed do admin) ANTES de o Playwright
- * subir os servidores. Roda como Playwright globalSetup (chamado de
- * playwright.config.ts), que injeta credenciais ALEATÓRIAS por execução
- * (R4/SEC-04 — nenhuma senha padrão existe no repositório).
+ * subir os servidores. Roda no script `test:e2e` (antes de `playwright test`),
+ * que injeta credenciais ALEATÓRIAS por execução (R4/SEC-04 — nenhuma senha
+ * padrão existe no repositório).
  *
  * O API/prisma resolvem `file:./e2e.db` relativo ao schema, então o banco vive
  * em database/prisma/e2e.db (gitignored via *.db).
@@ -18,7 +18,8 @@ import { dirname, join } from 'node:path';
  * fica preso a um inode órfão e as escritas falham com SQLITE_READONLY.
  */
 const e2eDir = dirname(fileURLToPath(import.meta.url));
-const dbPath = join(e2eDir, '..', '..', 'database', 'prisma', 'e2e.db');
+// This file lives in apps/e2e/scripts → three levels up is the repo root.
+const dbPath = join(e2eDir, '..', '..', '..', 'database', 'prisma', 'e2e.db');
 
 const adminEmail = process.env.E2E_ADMIN_EMAIL || 'admin@oficina.local';
 const adminPassword = randomBytes(24).toString('base64url');
@@ -30,9 +31,11 @@ const env = {
   SEED_ADMIN_PASSWORD: adminPassword,
 };
 
-// The password is persisted ONLY to a local, gitignored file so the
-// Playwright config (a separate process) can log in during this run.
-const passwordFile = join(e2eDir, '.e2e-admin-password');
+// The password is persisted ONLY to a local, gitignored file so the tests
+// (support/credentials.ts, a separate process) can log in during this run.
+// Must match credentials.ts: `join(__dirname, '..', '.e2e-admin-password')`
+// i.e. apps/e2e/.e2e-admin-password (this file lives in apps/e2e/scripts/).
+const passwordFile = join(e2eDir, '..', '.e2e-admin-password');
 
 await rm(dbPath, { force: true });
 await writeFile(passwordFile, adminPassword, 'utf8');

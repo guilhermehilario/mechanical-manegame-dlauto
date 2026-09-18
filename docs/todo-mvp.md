@@ -11,9 +11,13 @@
 > ponta a ponta**.
 >
 > Revisão posterior (2026-09-17): auditoria prática de todos os fluxos
-> encontrou e corrigiu 2 bugs críticos de inicialização (DI), 1 bug de
-> exclusão financeira e 4 bugs de integridade/sessão encontrados na revisão
-> de código — ver seção "Revisão 2026-09-17" abaixo.
+> encontrou e corrigiu **9 problemas** — 2 de integridade (estoque na
+> exclusão de OS e estorno cross-order), 1 de sessão (refresh 401), 1 de
+> permissão de storage, 3 de UI (lista de pagamentos, edição de agendamento
+> e gate de papéis em usuários) e 2 de setup do E2E (portas fixas e
+> caminhos de arquivo divergentes). Todos com teste e com verificação ao
+> vivo (API real e E2E em portas isoladas) — ver "Revisão 2026-09-17"
+> abaixo.
 
 ---
 
@@ -32,15 +36,20 @@
 - ✅ Backup/restauração local manual + permissões 0700/0600
 - ✅ Empacotamento autocontido Linux (API sidecar + renderer offline)
 - ✅ Qualidade: 117 testes verdes, typecheck/lint/build passando, E2E básico
-- ✅ Revisão 2026-09-17: **137 testes API + 29 testes web** verdes +
-  typecheck/lint/build + smoke (`ALL CHECKS PASSED`), além de **verificação
-  ao vivo** do estorno de estoque na exclusão de OS e do estorno
-  cross-order (404) contra a API real — seção própria abaixo.
+- ✅ Revisão 2026-09-17: **137 testes API + 36 testes web + 10 desktop** verdes +
+  typecheck/lint/build + smoke (`ALL CHECKS PASSED`) + **E2E 4/4** (portas
+  isoladas), além de **verificação ao vivo** do estorno de estoque na
+  exclusão de OS e do estorno cross-order (404) contra a API real — seção
+  própria abaixo.
 
-**Gaps para MVP:** a oficina consegue operar o "chão de fábrica" (agendar →
-executar → entregar), mas **não fecha o caixa** (sem pagamentos), **não
-imprime documentos**, exige **login a cada inicialização** e o binário
-empacotado ainda não foi revalidado após as mudanças de segurança (R2/R6).
+**Gaps para MVP (revisado 2026-09-17):** ciclo financeiro (Bloco A),
+impressão de OS/recibo (B1–B3), sessão persistente + refresh automático
+(D1/D5) e relatórios imprimíveis/exportáveis (B4) estão **fechados e
+verificados**. O que resta é **empacotar e homologar o binário na máquina
+alvo** (C1–C3), **onboarding de primeira execução** (F1/F3/F4),
+**restauração real de backup** (E3) e **ampliar a rede de E2E + CI**
+(G1–G4, B5) — o E2E agora roda em portas isoladas, sem bloquear os dev
+servers. Ver "Ainda pendente".
 
 ---
 
@@ -92,6 +101,18 @@ de **funcionamento** encontrados após a Fase 11. Todos com teste.
   backend rejeita (`400`). Agora a UI espelha o backend: ações visíveis só
   para ADMIN e reset apenas em alvos ADMIN/MANAGER; MANAGER/MECHANIC veem a
   lista somente-leitura. Coberto por `users-page.test.tsx` (3 testes).
+- **E2E impossível de rodar (2 bugs de setup)** 🟠 (infra de teste):
+  `playwright.config.ts` fixava API/web em 3001/5173 (conflito com os dev
+  servers locais) e o `prepare-e2e-db.mjs` tinha dois caminhos errados —
+  gravava a senha em `scripts/.e2e-admin-password` enquanto
+  `support/credentials.ts` lia de `apps/e2e/.e2e-admin-password`, e o
+  `dbPath` apontava para `apps/database/prisma/e2e.db` (um `..` a mais), de
+  modo que o banco **nunca era limpo** e o seed dava early-return com a
+  senha antiga (`E-mail ou senha inválidos`). Corrigido: portas
+  configuráveis por `E2E_API_PORT`/`E2E_WEB_PORT` (com `VITE_API_URL`
+  injetada no dev server do web) e caminhos alinhados. **Verificado ao
+  vivo:** `E2E_API_PORT=3101 E2E_WEB_PORT=5174 pnpm --filter
+  @mechanic-system/e2e test:e2e` → 3/3 passando sem derrubar o dev server.
 
 ### Achados que NÃO são bug
 
@@ -103,16 +124,30 @@ de **funcionamento** encontrados após a Fase 11. Todos com teste.
   compilação cruzando os workspaces. Revertido para `ts-node` (funciona).
 - Endpoint de veículos é `POST /vehicles` (body com `customerId`), não
   `POST /customers/:id/vehicles` — verificação ao vivo confirmou.
-- E2E não roda com o dev server do usuário na porta 3001 (conflito de
-  porta, `Error: ... is already used`).
 - Artefato acidental `apps/api/apps/desktop/staging` removido (56K, não
   versionado).
 
-### Ainda pendente
+### Ainda pendente (backlog remanescente)
 
-- **E2E completo** segue bloqueado (porta 3001 ocupada) e o **binário
-  empacotado** ainda não foi revalidado (C1) — não retroceder essas duas
-  tarefas do Bloco G / Bloco C.
+O "chão de fábrica" e o caixa estão fechados e verificados; o que falta é
+**distribuição, onboarding e rede de segurança**. Ordem sugerida:
+
+| Prio | Item | Resumo |
+|---|---|---|
+| 🔴 | C1 | Revalidar o binário empacotado na máquina alvo (login, OS completa, upload, assinatura, backup, impressão, migração de 1ª execução) |
+| 🔴 | C2 | Instalador Windows (ou AppImage) — **decidir o SO alvo antes** |
+| 🟡 | C3 | `docs/deployment.md` — passo a passo do operador |
+| 🟡 | F1 | First-run sem editar env à mão (tela de primeiro acesso) |
+| 🟡 | F3/F4 | Seed de catálogo opcional + estados vazios consistentes |
+| 🟡 | E3 | Teste de restauração de backup no binário real |
+| 🟠 | G1 | Ampliar E2E (ciclo completo da OS, conflito 409, estoque, pagamento) |
+| 🟠 | G2/G3/G4 | Decisão R8, `pnpm audit` no CI, CI remota (GitHub Actions) |
+| 🟠 | B5 | E2E da versão de impressão da OS |
+
+**E2E agora roda em qualquer máquina:** `E2E_API_PORT=<livre>
+E2E_WEB_PORT=<livre> pnpm --filter @mechanic-system/e2e test:e2e` sobe o
+stack completo em portas isoladas, sem conflitar com dev servers locais
+(validado em 3101/5174). Pré-requisito de B5/G1 desbloqueado.
 
 ---
 
@@ -182,8 +217,13 @@ A oficina precisa entregar papel (OS, recibo). Hoje não existe fluxo algum.
   dependências externas, funciona igual no navegador e no Electron
   empacotado (webContents imprime o mesmo DOM). Template removido do DOM
   no `afterprint`.
-- [ ] **B4. Relatórios imprimíveis/exportáveis** (mínimo: imprimir a
-  página; ideal: exportar CSV — sem libs externas).
+- [x] **B4. Relatórios imprimíveis/exportáveis** ✅ 2026-09-17: botões
+  "Imprimir" e "Exportar CSV" na página de relatórios, operando sobre a aba
+  ativa. Montagem pura em `report-export.ts` (5 abas → colunas/linhas/totais),
+  impressão via `printReport` (`utils/print.ts`, reaproveita o cabeçalho da
+  oficina) e download CSV sem libs (`utils/csv.ts`, delimitador `;` + BOM p/
+  Excel pt-BR). Coberto por `report-export.test.ts` (4), `csv.test.ts` (3) e
+  E2E de download (`exports the active report as CSV`).
 - [ ] **B5. Teste E2E** que abre a versão de impressão da OS.
 
 ## Bloco C — Distribuição e operação na máquina da oficina 🔴 Crítico
@@ -198,10 +238,12 @@ A oficina precisa entregar papel (OS, recibo). Hoje não existe fluxo algum.
 - [ ] **C3. Doc de implantação** (`docs/deployment.md`): passo a passo do
   operador (instalar, primeiro acesso, backup diário, restauração) — sem
   jargão de desenvolvedor.
-- [ ] **C4. Health check visível**: se a API sidecar falhar ao subir, o
-  usuário hoje vê o app fechar silenciosamente (`console.error` + quit no
-  main). Adicionar diálogo amigável "falha ao iniciar o sistema — tente
-  novamente / contate o suporte".
+- [x] **C4. Health check visível** ✅ 2026-09-17: falha do sidecar e build do
+  renderer ausente agora mostram diálogo amigável (sem detalhes técnicos,
+  spec §20) em vez de fechar em silêncio. `startup-dialogs.ts` oferece
+  "Tentar novamente"/"Fechar" e `startApiWithRetry` repete o boot quando o
+  usuário pede; a causa técnica continua só no log. Coberto por
+  `startup-dialogs.spec.ts` (3).
 
 ## Bloco D — Sessão e operação multiusuário 🟡 Importante
 
@@ -266,7 +308,8 @@ A oficina precisa entregar papel (OS, recibo). Hoje não existe fluxo algum.
 
 ## Bloco G — Qualidade e segurança remanescente 🟠 Desejável para MVP
 
-- [ ] **G1. Ampliar E2E** (hoje: login, criar cliente, abas de relatórios):
+- [ ] **G1. Ampliar E2E** (hoje: login, criar cliente, abas de relatórios,
+  exportar CSV):
   - Ciclo completo da OS: criar → itens → aprovar → executar → concluir →
     retirada com assinatura → pagamento (A6) → imprimir (B5).
   - Agendamento com conflito (409 visível na UI).

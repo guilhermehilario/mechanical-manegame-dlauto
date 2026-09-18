@@ -1,5 +1,6 @@
-import { expect, test, type Page } from '@playwright/test';
-import { E2E_ADMIN_EMAIL, readE2EAdminPassword } from '../support/credentials';
+import { expect, test } from '@playwright/test';
+import { validCpf } from '../support/data';
+import { login, nav } from '../support/ui';
 
 /**
  * End-to-end smoke (spec §Fase 8): the full stack (API real + web real)
@@ -8,33 +9,6 @@ import { E2E_ADMIN_EMAIL, readE2EAdminPassword } from '../support/credentials';
  *
  * R4/SEC-04: credentials are generated per run — never hardcoded.
  */
-
-async function login(page: Page): Promise<void> {
-  await page.goto('/#/login');
-  await page.getByLabel('E-mail').fill(E2E_ADMIN_EMAIL);
-  await page.getByLabel('Senha').fill(readE2EAdminPassword());
-  await page.getByRole('button', { name: 'Entrar' }).click();
-  await expect(page).toHaveURL(/#\/?$/);
-}
-
-/** Navigation link on the sidebar (the label also appears on KPI cards). */
-function nav(page: Page, label: string) {
-  return page.getByRole('link', { name: label, exact: true });
-}
-
-/** Gera um CPF válido (11 dígitos, dígitos verificadores corretos). */
-function validCpf(): string {
-  const base = Array.from({ length: 9 }, () => Math.floor(Math.random() * 10));
-  const dv = (digits: number[], span: number): number => {
-    const sum = digits.reduce((acc, d, i) => acc + d * (span - i), 0);
-    const rest = sum % 11;
-    return rest < 2 ? 0 : 11 - rest;
-  };
-  const dv1 = dv(base, 10);
-  const dv2 = dv([...base, dv1], 11);
-  const full = [...base, dv1, dv2].join('');
-  return `${full.slice(0, 3)}.${full.slice(3, 6)}.${full.slice(6, 9)}-${full.slice(9)}`;
-}
 
 test('login reaches the dashboard', async ({ page }) => {
   await login(page);
@@ -70,4 +44,19 @@ test('reports page renders its tabs', async ({ page }) => {
   await expect(page.getByRole('button', { name: 'Serviços' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Produtos' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Status das OS' })).toBeVisible();
+});
+
+test('exports the active report as CSV (B4)', async ({ page }) => {
+  await login(page);
+
+  await nav(page, 'Relatórios').click();
+  await expect(page.getByRole('heading', { name: 'Relatórios' })).toBeVisible();
+
+  const downloadPromise = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Exportar CSV' }).click();
+  const download = await downloadPromise;
+
+  expect(download.suggestedFilename()).toMatch(
+    /^relatorio-revenue-\d{4}-\d{2}-\d{2}_\d{4}-\d{2}-\d{2}\.csv$/,
+  );
 });

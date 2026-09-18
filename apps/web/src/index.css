@@ -124,6 +124,10 @@
     text-align: center;
     color: #888;
   }
+  .report-summary {
+    margin: 0 0 10px;
+    font-size: 12px;
+  }
   .strong {
     font-weight: 700;
   }

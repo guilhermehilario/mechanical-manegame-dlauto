@@ -251,3 +251,52 @@ export function printPickupReceipt(data: PickupReceiptPrintData): Promise<void> 
     title: 'Comprovante de Retirada de Veículo',
   });
 }
+
+// ─── Bloco B4: Reports ───────────────────────────────────────────────────────
+
+/** Generic tabular report payload (built from the already-fetched DTOs). */
+export interface ReportPrintData {
+  title: string;
+  /** Period subtitle, e.g. "Período: 2026-09-01 a 2026-09-30". */
+  period: string;
+  summary?: string;
+  columns: string[];
+  rows: string[][];
+  /** Column indexes rendered right-aligned. */
+  rightAlign?: number[];
+  /** Optional footer row (e.g. totals), rendered bold. */
+  totalsRow?: string[];
+}
+
+/** Opens the print dialog with a tabular report document. */
+export function printReport(data: ReportPrintData): Promise<void> {
+  const right = new Set(data.rightAlign ?? []);
+  const cell = (value: string, index: number): string =>
+    `<td class="${right.has(index) ? 'right' : ''}">${escapeHtml(value)}</td>`;
+  const head = data.columns
+    .map((column, index) => `<th class="${right.has(index) ? 'right' : ''}">${escapeHtml(column)}</th>`)
+    .join('');
+  const body =
+    data.rows.length === 0
+      ? `<tr><td colspan="${data.columns.length}" class="empty">—</td></tr>`
+      : data.rows
+          .map((row) => `<tr>${row.map((value, index) => cell(value, index)).join('')}</tr>`)
+          .join('');
+  const totals = data.totalsRow
+    ? `<tr class="strong">${data.totalsRow.map((value, index) => cell(value, index)).join('')}</tr>`
+    : '';
+
+  const summary = data.summary ? `<p class="strong report-summary">${escapeHtml(data.summary)}</p>` : '';
+  const html = `
+    ${summary}
+    <table class="items">
+      <thead><tr>${head}</tr></thead>
+      <tbody>${body}${totals}</tbody>
+    </table>`;
+
+  return printDocument(html, {
+    settings: null, // resolved by printDocument
+    title: data.title,
+    subtitle: data.period,
+  });
+}
