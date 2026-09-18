@@ -17,6 +17,15 @@ export class UsersRepository {
     return this.prisma.user.findUnique({ where: { id } });
   }
 
+  /** True when at least one active ADMIN exists (first-run setup gate, F1). */
+  async hasActiveAdmin(): Promise<boolean> {
+    const admin = await this.prisma.user.findFirst({
+      where: { role: 'ADMIN', active: true },
+      select: { id: true },
+    });
+    return admin !== null;
+  }
+
   list(page: number, limit: number, search?: string): Promise<User[]> {
     return this.prisma.user.findMany({
       where: search

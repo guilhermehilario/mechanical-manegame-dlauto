@@ -56,6 +56,7 @@ function usersRepoMock() {
   return {
     findByEmail: vi.fn(),
     findById: vi.fn(),
+    hasActiveAdmin: vi.fn(),
     create: vi.fn((data: Record<string, unknown>) => makeUser(data as Partial<User>)),
     update: vi.fn((id: string, data: Record<string, unknown>) => makeUser({ id, ...data })),
     updatePassword: vi.fn((_id: string, _passwordHash: string) => Promise.resolve(undefined)),
@@ -130,6 +131,66 @@ describe('AuthService.login', () => {
     await expect(
       service.login({ email: 'admin@oficina.local', password: 'secret123' }),
     ).rejects.toMatchObject({ code: 'INVALID_CREDENTIALS' });
+  });
+});
+
+// ─────────────────────────────────────────────────────────────
+// First-run setup (Bloco F/F1)
+// ─────────────────────────────────────────────────────────────
+
+describe('AuthService first-run setup', () => {
+  function setup() {
+    const hasher = new PasswordHasher();
+    const repo = usersRepoMock();
+    const prisma = prismaMock();
+    const tokens = new TokenService(jwtMock() as never, prisma as never);
+    const service = new AuthService(repo as unknown as UsersRepository, hasher, tokens);
+    return { repo, service, hasher };
+  }
+
+  it('reports needsSetup=true when no active admin exists', async () => {
+    const { repo, service } = setup();
+    repo.hasActiveAdmin.mockResolvedValue(false);
+    await expect(service.getSetupStatus()).resolves.toEqual({ needsSetup: true });
+  });
+
+  it('reports needsSetup=false when an active admin exists', async () => {
+    const { repo, service } = setup();
+    repo.hasActiveAdmin.mockResolvedValue(true);
+    await expect(service.getSetupStatus()).resolves.toEqual({ needsSetup: false });
+  });
+
+  it('creates the first admin with a hashed password and returns it without the hash', async () => {
+    const { repo, service, hasher } = setup();
+    repo.hasActiveAdmin.mockResolvedValue(false);
+
+    const user = await service.setupFirstAdmin({
+      name: 'Dono da Oficina',
+      email: 'dono@oficina.local',
+      password: 'secret123',
+    });
+
+    expect(user.role).toBe('ADMIN');
+    expect(user.email).toBe('dono@oficina.local');
+    expect(user).not.toHaveProperty('passwordHash');
+
+    const createArgs = repo.create.mock.calls[0]?.[0] as { passwordHash: string; role: string };
+    expect(createArgs.role).toBe('ADMIN');
+    expect(createArgs.passwordHash).not.toContain('secret123');
+    await expect(hasher.verify(createArgs.passwordHash, 'secret123')).resolves.toBe(true);
+  });
+
+  it('refuses to run once an admin exists (409)', async () => {
+    const { repo, service } = setup();
+    repo.hasActiveAdmin.mockResolvedValue(true);
+    await expect(
+      service.setupFirstAdmin({
+        name: 'Intruso',
+        email: 'intruso@oficina.local',
+        password: 'secret123',
+      }),
+    ).rejects.toMatchObject({ code: 'SETUP_ALREADY_COMPLETED', status: 409 });
+    expect(repo.create).not.toHaveBeenCalled();
   });
 });
 

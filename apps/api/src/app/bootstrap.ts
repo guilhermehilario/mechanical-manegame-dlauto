@@ -48,8 +48,8 @@ export async function bootstrapApi(env: Env): Promise<RunningApi> {
 
   await app.listen(env.API_PORT, '127.0.0.1');
 
-  // R4/SEC-04: the packaged flow never seeds — provision the initial ADMIN
-  // on first run (after listen, so the DB file exists and is migrated).
+  // R4/SEC-04 + F1: provision the initial ADMIN from env when provided;
+  // otherwise boot proceeds and the renderer shows the first-access screen.
   const { PrismaService } = await import('../prisma/prisma.service');
   const prisma = new PrismaService();
   try {

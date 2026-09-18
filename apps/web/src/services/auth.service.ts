@@ -1,5 +1,10 @@
-import type { AuthUser, LoginResponse, RefreshResponse } from '@mechanic-system/types';
-import type { LoginInput } from '@mechanic-system/validation';
+import type {
+  AuthUser,
+  LoginResponse,
+  RefreshResponse,
+  SetupStatus,
+} from '@mechanic-system/types';
+import type { LoginInput, SetupAdminInput } from '@mechanic-system/validation';
 import { authStore } from './auth-store';
 import { ApiClient } from './api-client';
 import { resolveApiBaseUrl } from './api-url';
@@ -52,6 +57,19 @@ export async function login(input: LoginInput): Promise<LoginResponse> {
   authStore.setSession(response);
   persistToDesktop(response);
   return response;
+}
+
+/**
+ * First-run setup (F1): public status check + creation of the very first
+ * ADMIN. Both hit @Public() endpoints; the POST is refused by the API once
+ * an admin exists (409 SETUP_ALREADY_COMPLETED).
+ */
+export function getSetupStatus(): Promise<SetupStatus> {
+  return api.get<SetupStatus>('/auth/setup');
+}
+
+export function setupFirstAdmin(input: SetupAdminInput): Promise<AuthUser> {
+  return api.post<AuthUser>('/auth/setup', input);
 }
 
 export async function refreshSession(): Promise<boolean> {

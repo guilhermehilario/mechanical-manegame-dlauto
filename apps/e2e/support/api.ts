@@ -70,7 +70,7 @@ export interface NewWorkOrder {
 
 interface ErrorEnvelope {
   success: false;
-  error?: { code?: string; message?: string };
+  error?: { code?: string; message?: string; details?: unknown };
 }
 type Envelope<T> = { success: true; data: T } | ErrorEnvelope;
 
@@ -78,8 +78,9 @@ async function unwrap<T>(response: APIResponse): Promise<T> {
   const body = (await response.json().catch(() => null)) as Envelope<T> | null;
   if (!response.ok() || body === null || !body.success) {
     const error = body && !body.success ? body.error : undefined;
+    const details = error?.details ? ` ${JSON.stringify(error.details)}` : '';
     throw new Error(
-      `E2E API ${response.status()} ${error?.code ?? 'UNKNOWN'}: ${error?.message ?? 'sem corpo'}`,
+      `E2E API ${response.status()} ${error?.code ?? 'UNKNOWN'}: ${error?.message ?? 'sem corpo'}${details}`,
     );
   }
   return body.data;

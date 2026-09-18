@@ -16,11 +16,11 @@ export function validCpf(): string {
 
 const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 
-/** Placa válida (Mercosul ou antiga): AAA9A99 / AAA9999. */
+/** Placa válida (formato antigo AAA9999). */
 export function uniquePlate(): string {
   const letter = (): string => LETTERS[Math.floor(Math.random() * LETTERS.length)] ?? 'A';
   const digit = (): string => String(Math.floor(Math.random() * 10));
-  return `${letter()}${letter()}${letter()}${digit()}${digit()}${letter()}${digit()}`;
+  return `${letter()}${letter()}${letter()}${digit()}${digit()}${digit()}${digit()}`;
 }
 
 /** Código de produto único (maiúsculas/dígitos/hífen). */

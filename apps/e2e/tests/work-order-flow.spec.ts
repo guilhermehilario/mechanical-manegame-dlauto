@@ -85,7 +85,7 @@ test('full work order cycle: open → items → approve → execute → complete
 
     // 4. Pay the full balance (service 150 + product 50 = R$ 200,00).
     await page.getByRole('button', { name: /Receber saldo/ }).click();
-    await page.getByRole('button', { name: 'Receber' }).click();
+    await page.getByRole('button', { name: 'Receber', exact: true }).click();
     await expect(page.getByText('PAGO', { exact: true })).toBeVisible();
 
     // 5. Hand the vehicle over through the pickup screen.
@@ -107,7 +107,10 @@ test('full work order cycle: open → items → approve → execute → complete
     await page.getByLabel('CPF/CNH (11 dígitos) *').fill('52998224725');
     await page.getByRole('button', { name: 'Confirmar retirada' }).click();
 
-    await expect(page.getByRole('button', { name: /Recibo/ })).toBeVisible();
+    const historyRow = page
+      .getByRole('row')
+      .filter({ has: page.getByText(`#${workOrder.orderNumber}`, { exact: true }) });
+    await expect(historyRow.getByRole('button', { name: /Recibo/ })).toBeVisible();
 
     // 6. The OS is now Entregue.
     await page.goto(`/#/work-orders/${workOrder.id}`);

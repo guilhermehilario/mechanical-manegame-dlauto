@@ -36,20 +36,20 @@
 - ✅ Backup/restauração local manual + permissões 0700/0600
 - ✅ Empacotamento autocontido Linux (API sidecar + renderer offline)
 - ✅ Qualidade: 117 testes verdes, typecheck/lint/build passando, E2E básico
-- ✅ Revisão 2026-09-17: **137 testes API + 36 testes web + 10 desktop** verdes +
-  typecheck/lint/build + smoke (`ALL CHECKS PASSED`) + **E2E 4/4** (portas
+- ✅ Revisão 2026-09-17: **144 testes API + 42 testes web + 10 desktop** verdes +
+  typecheck/lint/build + smoke (`ALL CHECKS PASSED`) + **E2E 9/9** (portas
   isoladas), além de **verificação ao vivo** do estorno de estoque na
   exclusão de OS e do estorno cross-order (404) contra a API real — seção
   própria abaixo.
 
 **Gaps para MVP (revisado 2026-09-17):** ciclo financeiro (Bloco A),
 impressão de OS/recibo (B1–B3), sessão persistente + refresh automático
-(D1/D5) e relatórios imprimíveis/exportáveis (B4) estão **fechados e
-verificados**. O que resta é **empacotar e homologar o binário na máquina
-alvo** (C1–C3), **onboarding de primeira execução** (F1/F3/F4),
-**restauração real de backup** (E3) e **ampliar a rede de E2E + CI**
-(G1–G4, B5) — o E2E agora roda em portas isoladas, sem bloquear os dev
-servers. Ver "Ainda pendente".
+(D1/D5), relatórios imprimíveis/exportáveis (B4) e **onboarding de primeira
+execução (F1)** estão **fechados e verificados**. O que resta é **empacotar
+e homologar o binário na máquina alvo** (C1–C3), **dados/UX de primeira
+semana** (F3/F4), **restauração real de backup** (E3) e **CI remota +
+auditoria** (G2–G4) — a rede de E2E (G1/B5) está fechada e o E2E roda em
+portas isoladas, sem bloquear os dev servers. Ver "Ainda pendente".
 
 ---
 
@@ -137,17 +137,16 @@ O "chão de fábrica" e o caixa estão fechados e verificados; o que falta é
 | 🔴 | C1 | Revalidar o binário empacotado na máquina alvo (login, OS completa, upload, assinatura, backup, impressão, migração de 1ª execução) |
 | 🔴 | C2 | Instalador Windows (ou AppImage) — **decidir o SO alvo antes** |
 | 🟡 | C3 | `docs/deployment.md` — passo a passo do operador |
-| 🟡 | F1 | First-run sem editar env à mão (tela de primeiro acesso) |
 | 🟡 | F3/F4 | Seed de catálogo opcional + estados vazios consistentes |
 | 🟡 | E3 | Teste de restauração de backup no binário real |
-| 🟠 | G1 | Ampliar E2E (ciclo completo da OS, conflito 409, estoque, pagamento) |
 | 🟠 | G2/G3/G4 | Decisão R8, `pnpm audit` no CI, CI remota (GitHub Actions) |
-| 🟠 | B5 | E2E da versão de impressão da OS |
 
 **E2E agora roda em qualquer máquina:** `E2E_API_PORT=<livre>
 E2E_WEB_PORT=<livre> pnpm --filter @mechanic-system/e2e test:e2e` sobe o
 stack completo em portas isoladas, sem conflitar com dev servers locais
-(validado em 3101/5174). Pré-requisito de B5/G1 desbloqueado.
+(validado em 3101/5174). **9 testes**: smoke, relatórios/CSV, ciclo da OS,
+estoque, conflito de agenda e impressão (OS + recibo). Pré-requisitos são
+semeados pela API (`support/api.ts`).
 
 ---
 
@@ -224,7 +223,10 @@ A oficina precisa entregar papel (OS, recibo). Hoje não existe fluxo algum.
   oficina) e download CSV sem libs (`utils/csv.ts`, delimitador `;` + BOM p/
   Excel pt-BR). Coberto por `report-export.test.ts` (4), `csv.test.ts` (3) e
   E2E de download (`exports the active report as CSV`).
-- [ ] **B5. Teste E2E** que abre a versão de impressão da OS.
+- [x] **B5. Teste E2E** ✅ 2026-09-17: `print.spec.ts` cobre a versão de
+  impressão da OS e o comprovante de retirada. `window.print` é stubado para
+  o `#print-root` permanecer no DOM; assertamos o documento gerado (título,
+  cliente, itens, assinaturas / dados do recebedor), não o diálogo do SO.
 
 ## Bloco C — Distribuição e operação na máquina da oficina 🔴 Crítico
 
@@ -289,12 +291,18 @@ A oficina precisa entregar papel (OS, recibo). Hoje não existe fluxo algum.
 
 ## Bloco F — Onboarding e UX mínima 🟡 Importante
 
-- [ ] **F1. First-run sem atrito**: `ensureFirstRunAdmin` exige
-  `FIRST_RUN_ADMIN_*` via env/arquivo — no app empacotado isso significa
-  edição manual de arquivo. Criar tela de "primeiro acesso" (definir
-  senha do admin no primeiro login) ou assistente que escreve o segredo
-  com permissão 0600. *(Verificar como o Electron main passa hoje essas
-  vars ao sidecar e documentar.)*
+- [x] **F1. First-run sem atrito** ✅ 2026-09-17: tela de primeiro acesso.
+  `ensureFirstRunAdmin` passou a **não derrubar** o boot quando faltam
+  `FIRST_RUN_ADMIN_*` (segue provisionando via env quando presentes —
+  automação/CI). Com o banco sem ADMIN, a API expõe `GET/POST /auth/setup`
+  (`@Public`): o web mostra a tela "Bem-vindo! Crie o acesso do
+  administrador" (nome/e-mail/senha+confirmação), cria o ADMIN via Argon2id
+  e faz login automático. O POST é recusado com `409
+  SETUP_ALREADY_COMPLETED` assim que existe admin — nunca há credencial
+  padrão. Arquivos: `apps/api/src/modules/auth/auth.{service,controller}.ts`,
+  `apps/api/src/app/first-run-admin.ts`,
+  `apps/web/src/modules/auth/first-access-form.tsx`,
+  `apps/web/src/modules/auth/login-page.tsx`.
 - [x] **F2. Configurações da oficina** ✅ 2026-09-16: entidade singleton
   `shop_settings` (migration `add_shop_settings`) + módulo `settings` na API
   (`GET/PUT /settings`, leitura para todos, escrita ADMIN/MANAGER) + página
@@ -308,12 +316,13 @@ A oficina precisa entregar papel (OS, recibo). Hoje não existe fluxo algum.
 
 ## Bloco G — Qualidade e segurança remanescente 🟠 Desejável para MVP
 
-- [ ] **G1. Ampliar E2E** (hoje: login, criar cliente, abas de relatórios,
-  exportar CSV):
-  - Ciclo completo da OS: criar → itens → aprovar → executar → concluir →
-    retirada com assinatura → pagamento (A6) → imprimir (B5).
-  - Agendamento com conflito (409 visível na UI).
-  - Estoque: venda de peça até estourar `INSUFFICIENT_STOCK`.
+- [x] **G1. Ampliar E2E** ✅ 2026-09-17: `work-order-flow.spec.ts` cobre o
+  ciclo completo da OS dirigido pela UI (abrir → adicionar serviço/peça →
+  aprovar → executar → concluir → pagar → registrar retirada → Entregue), o
+  guard de estoque (`INSUFFICIENT_STOCK` visível) e o conflito de
+  agendamento (409 visível). Pré-requisitos (cliente/veículo/catálogo) são
+  semeados via API (`support/api.ts`) porque o banco E2E só traz o admin.
+  Total: **9 E2E** (era 4).
 - [ ] **G2. R8 parcial**: assinatura como imagem já é aceito como
   evidência (não valor legal) — registrar decisão definitiva; expiração
   de sessão coberta em D4.
