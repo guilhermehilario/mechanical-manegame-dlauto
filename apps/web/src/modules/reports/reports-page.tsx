@@ -432,30 +432,34 @@ function ReportContent({
           OS criadas no período ({status.items.reduce((sum, item) => sum + item.count, 0)} no
           total)
         </p>
-        <div className="grid gap-x-8 gap-y-3 md:grid-cols-2">
-          {status.items.map((item) => (
-            <div key={item.status} className="flex items-center gap-3">
-              <div className="flex w-52 items-center gap-2">
-                <span
-                  className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-                    STATUS_BADGES[item.status]
-                  }`}
-                >
-                  {WORK_ORDER_STATUS_LABELS[item.status]}
+        {status.items.length === 0 ? (
+          <p className="text-sm text-slate-500">Nenhuma OS criada no período.</p>
+        ) : (
+          <div className="grid gap-x-8 gap-y-3 md:grid-cols-2">
+            {status.items.map((item) => (
+              <div key={item.status} className="flex items-center gap-3">
+                <div className="flex w-52 items-center gap-2">
+                  <span
+                    className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                      STATUS_BADGES[item.status]
+                    }`}
+                  >
+                    {WORK_ORDER_STATUS_LABELS[item.status]}
+                  </span>
+                </div>
+                <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-slate-100">
+                  <div
+                    className="h-full rounded-full bg-blue-600"
+                    style={{ width: `${(item.count / max) * 100}%` }}
+                  />
+                </div>
+                <span className="w-10 text-right text-sm font-medium text-slate-700">
+                  {item.count}
                 </span>
               </div>
-              <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-slate-100">
-                <div
-                  className="h-full rounded-full bg-blue-600"
-                  style={{ width: `${(item.count / max) * 100}%` }}
-                />
-              </div>
-              <span className="w-10 text-right text-sm font-medium text-slate-700">
-                {item.count}
-              </span>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
     );
   }

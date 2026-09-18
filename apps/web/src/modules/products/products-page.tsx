@@ -3,12 +3,15 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ProductDto } from '@mechanic-system/types';
 import { formatBRL } from '@mechanic-system/shared';
 import { ApiClientError } from '../../services/api-client';
-import { deleteProduct, listProducts } from '../../services/catalog.service';
+import { deleteProduct, listProducts, seedCatalogExample } from '../../services/catalog.service';
+import { EmptyTableRow } from '../../components/empty-state';
+import { useAuth } from '../auth/use-auth';
 import { ProductForm } from './product-form';
 import { StockMovementForm } from './stock-movement-form';
 
 export function ProductsPage() {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [submittedSearch, setSubmittedSearch] = useState('');
@@ -17,6 +20,9 @@ export function ProductsPage() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [movementProduct, setMovementProduct] = useState<ProductDto | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+
+  const canManageCatalog = user?.role === 'ADMIN' || user?.role === 'MANAGER';
 
   const productsQuery = useQuery({
     queryKey: ['products', page, submittedSearch, lowStockOnly],
@@ -51,6 +57,23 @@ export function ProductsPage() {
       deleteMutation.mutate(product.id);
     }
   }
+
+  const seedMutation = useMutation({
+    mutationFn: seedCatalogExample,
+    onSuccess: (result) => {
+      setActionError(null);
+      setNotice(
+        `Catálogo de exemplo carregado (${result.services} serviços, ${result.products} produtos, ${result.suppliers} fornecedores).`,
+      );
+      void queryClient.invalidateQueries({ queryKey: ['services'] });
+      void queryClient.invalidateQueries({ queryKey: ['products'] });
+      void queryClient.invalidateQueries({ queryKey: ['suppliers'] });
+    },
+    onError: () => {
+      setNotice(null);
+      setActionError('Não foi possível carregar o catálogo de exemplo.');
+    },
+  });
 
   return (
     <section>
@@ -113,6 +136,12 @@ export function ProductsPage() {
         </div>
       ) : null}
 
+      {notice ? (
+        <div role="status" className="mb-4 rounded-md bg-green-50 px-3 py-2 text-sm text-green-700">
+          {notice}
+        </div>
+      ) : null}
+
       <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
         <table className="w-full text-left text-sm">
           <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase text-slate-500">
@@ -133,11 +162,36 @@ export function ProductsPage() {
                 </td>
               </tr>
             ) : items.length === 0 ? (
-              <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-slate-500">
-                  Nenhum produto encontrado.
-                </td>
-              </tr>
+              <EmptyTableRow
+                colSpan={6}
+                message="Nenhum produto encontrado."
+                actions={
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setFormProduct(null);
+                        setIsFormOpen(true);
+                      }}
+                      className="rounded-md bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700"
+                    >
+                      Criar primeiro produto
+                    </button>
+                    {canManageCatalog ? (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          seedMutation.mutate();
+                        }}
+                        disabled={seedMutation.isPending}
+                        className="rounded-md border border-blue-600 px-3 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-50 disabled:opacity-50"
+                      >
+                        {seedMutation.isPending ? 'Carregando…' : 'Carregar catálogo de exemplo'}
+                      </button>
+                    ) : null}
+                  </>
+                }
+              />
             ) : (
               items.map((product) => {
                 const isLow = product.stockQuantity <= product.minStock;

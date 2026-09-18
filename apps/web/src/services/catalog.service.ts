@@ -1,6 +1,7 @@
 import type {
   Paginated,
   ProductDto,
+  SeedCatalogResultDto,
   ServiceDto,
   StockMovementDto,
   SupplierDto,
@@ -51,6 +52,14 @@ export function updateService(id: string, input: UpdateServiceInput): Promise<Se
 
 export function deleteService(id: string): Promise<unknown> {
   return api.delete<unknown>(`/services/${id}`);
+}
+
+/**
+ * Optional example catalog (Bloco F/F3). Explicit opt-in — nothing is
+ * seeded automatically. Requires ADMIN/MANAGER (the API enforces it).
+ */
+export function seedCatalogExample(): Promise<SeedCatalogResultDto> {
+  return api.post<SeedCatalogResultDto>('/catalog/seed-examples');
 }
 
 // ─── Suppliers ────────────────────────────────────────────────

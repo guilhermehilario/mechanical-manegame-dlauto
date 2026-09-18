@@ -8,6 +8,7 @@ import {
   listCustomers,
 } from '../../services/customers.service';
 import { CustomerForm } from './customer-form';
+import { EmptyTableRow } from '../../components/empty-state';
 import { formatCpf, formatPhone } from '../../utils/format';
 
 export function CustomersPage() {
@@ -121,11 +122,21 @@ export function CustomersPage() {
                 </td>
               </tr>
             ) : items.length === 0 ? (
-              <tr>
-                <td colSpan={5} className="px-4 py-8 text-center text-slate-500">
-                  Nenhum cliente encontrado.
-                </td>
-              </tr>
+              <EmptyTableRow
+                colSpan={5}
+                message="Nenhum cliente encontrado."
+                actions={
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsFormOpen(true);
+                    }}
+                    className="rounded-md bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700"
+                  >
+                    Cadastrar primeiro cliente
+                  </button>
+                }
+              />
             ) : (
               items.map((customer) => (
                 <tr key={customer.id} className="border-b border-slate-100 last:border-0">

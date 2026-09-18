@@ -56,3 +56,13 @@ export interface StockMovementDto {
   userId: string | null;
   createdAt: string;
 }
+
+/**
+ * Result of the optional example-catalog seed (Bloco F/F3). Counts of rows
+ * actually created; existing items are skipped (idempotent).
+ */
+export interface SeedCatalogResultDto {
+  services: number;
+  products: number;
+  suppliers: number;
+}

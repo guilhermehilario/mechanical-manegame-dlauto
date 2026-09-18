@@ -36,18 +36,19 @@
 - ✅ Backup/restauração local manual + permissões 0700/0600
 - ✅ Empacotamento autocontido Linux (API sidecar + renderer offline)
 - ✅ Qualidade: 117 testes verdes, typecheck/lint/build passando, E2E básico
-- ✅ Revisão 2026-09-17: **144 testes API + 42 testes web + 10 desktop** verdes +
+- ✅ Revisão 2026-09-18: **147 testes API + 45 testes web + 10 desktop** verdes +
   typecheck/lint/build + smoke (`ALL CHECKS PASSED`) + **E2E 9/9** (portas
-  isoladas), além de **verificação ao vivo** do estorno de estoque na
+  isoladas), além da **verificação ao vivo** do estorno de estoque na
   exclusão de OS e do estorno cross-order (404) contra a API real — seção
   própria abaixo.
 
-**Gaps para MVP (revisado 2026-09-17):** ciclo financeiro (Bloco A),
+**Gaps para MVP (revisado 2026-09-18):** ciclo financeiro (Bloco A),
 impressão de OS/recibo (B1–B3), sessão persistente + refresh automático
-(D1/D5), relatórios imprimíveis/exportáveis (B4) e **onboarding de primeira
-execução (F1)** estão **fechados e verificados**. O que resta é **empacotar
-e homologar o binário na máquina alvo** (C1–C3), **dados/UX de primeira
-semana** (F3/F4), **restauração real de backup** (E3) e **CI remota +
+(D1/D5), relatórios imprimíveis/exportáveis (B4), **onboarding de primeira
+execução (F1)**, a **doc de implantação do operador (C3)**, o **seed
+opcional de catálogo com estados vazios consistentes (F3/F4)** estão
+**fechados e verificados**. O que resta é **homologar o binário na máquina
+alvo** (C1–C2), **restauração real de backup** (E3) e **CI remota +
 auditoria** (G2–G4) — a rede de E2E (G1/B5) está fechada e o E2E roda em
 portas isoladas, sem bloquear os dev servers. Ver "Ainda pendente".
 
@@ -136,7 +137,6 @@ O "chão de fábrica" e o caixa estão fechados e verificados; o que falta é
 |---|---|---|
 | 🔴 | C1 | Revalidar o binário empacotado na máquina alvo (login, OS completa, upload, assinatura, backup, impressão, migração de 1ª execução) |
 | 🔴 | C2 | Instalador Windows (ou AppImage) — **decidir o SO alvo antes** |
-| 🟡 | C3 | `docs/deployment.md` — passo a passo do operador |
 | 🟡 | F3/F4 | Seed de catálogo opcional + estados vazios consistentes |
 | 🟡 | E3 | Teste de restauração de backup no binário real |
 | 🟠 | G2/G3/G4 | Decisão R8, `pnpm audit` no CI, CI remota (GitHub Actions) |
@@ -237,9 +237,15 @@ A oficina precisa entregar papel (OS, recibo). Hoje não existe fluxo algum.
 - [ ] **C2. Instalador Windows** (`electron-builder --win` já configurado
   no `package.json` do desktop): gerar NSIS e validar se o alvo da oficina
   é Windows — **decidir SO alvo antes**. (Se Linux, validar AppImage.)
-- [ ] **C3. Doc de implantação** (`docs/deployment.md`): passo a passo do
-  operador (instalar, primeiro acesso, backup diário, restauração) — sem
-  jargão de desenvolvedor.
+- [x] **C3. Doc de implantação** ✅ 2026-09-17: `docs/deployment.md` — guia
+  do operador sem jargão: o que é o app (offline-first), instalação Linux
+  (AppImage + nota FUSE/extract-and-run), **primeiro acesso (F1)**, uso
+  diário, local dos dados (`~/.config/Mechanic DLAuto`), **backup diário**
+  (automático 24h + retenção 14 + alerta no painel + manual em Backups),
+  **restauração** (com confirmação e orientação de reiniciar), problemas
+  comuns (diálogo de erro do C4, senha esquecida, troca de máquina),
+  atualização e um apêndice de build para quem gera o instalador. Nota
+  honesta de que a validação na máquina alvo continua sendo C1/C2.
 - [x] **C4. Health check visível** ✅ 2026-09-17: falha do sidecar e build do
   renderer ausente agora mostram diálogo amigável (sem detalhes técnicos,
   spec §20) em vez de fechar em silêncio. `startup-dialogs.ts` oferece

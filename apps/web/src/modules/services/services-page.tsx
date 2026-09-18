@@ -3,17 +3,23 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ServiceDto } from '@mechanic-system/types';
 import { formatBRL } from '@mechanic-system/shared';
 import { ApiClientError } from '../../services/api-client';
-import { deleteService, listServices } from '../../services/catalog.service';
+import { deleteService, listServices, seedCatalogExample } from '../../services/catalog.service';
+import { EmptyTableRow } from '../../components/empty-state';
+import { useAuth } from '../auth/use-auth';
 import { ServiceForm } from './service-form';
 
 export function ServicesPage() {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [submittedSearch, setSubmittedSearch] = useState('');
   const [formService, setFormService] = useState<ServiceDto | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+
+  const canManageCatalog = user?.role === 'ADMIN' || user?.role === 'MANAGER';
 
   const servicesQuery = useQuery({
     queryKey: ['services', page, submittedSearch],
@@ -35,6 +41,23 @@ export function ServicesPage() {
     },
   });
 
+  const seedMutation = useMutation({
+    mutationFn: seedCatalogExample,
+    onSuccess: (result) => {
+      setActionError(null);
+      setNotice(
+        `Catálogo de exemplo carregado (${result.services} serviços, ${result.products} produtos, ${result.suppliers} fornecedores).`,
+      );
+      void queryClient.invalidateQueries({ queryKey: ['services'] });
+      void queryClient.invalidateQueries({ queryKey: ['products'] });
+      void queryClient.invalidateQueries({ queryKey: ['suppliers'] });
+    },
+    onError: () => {
+      setNotice(null);
+      setActionError('Não foi possível carregar o catálogo de exemplo.');
+    },
+  });
+
   const items = servicesQuery.data?.items ?? [];
   const totalPages = servicesQuery.data?.totalPages ?? 1;
 
@@ -44,16 +67,18 @@ export function ServicesPage() {
     }
   }
 
+  function openCreateForm(): void {
+    setFormService(null);
+    setIsFormOpen(true);
+  }
+
   return (
     <section>
       <div className="mb-4 flex items-center justify-between">
         <h1 className="text-lg font-bold text-slate-900">Serviços</h1>
         <button
           type="button"
-          onClick={() => {
-            setFormService(null);
-            setIsFormOpen(true);
-          }}
+          onClick={openCreateForm}
           className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
         >
           Novo serviço
@@ -91,6 +116,12 @@ export function ServicesPage() {
         </div>
       ) : null}
 
+      {notice ? (
+        <div role="status" className="mb-4 rounded-md bg-green-50 px-3 py-2 text-sm text-green-700">
+          {notice}
+        </div>
+      ) : null}
+
       <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
         <table className="w-full text-left text-sm">
           <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase text-slate-500">
@@ -110,11 +141,33 @@ export function ServicesPage() {
                 </td>
               </tr>
             ) : items.length === 0 ? (
-              <tr>
-                <td colSpan={5} className="px-4 py-8 text-center text-slate-500">
-                  Nenhum serviço encontrado.
-                </td>
-              </tr>
+              <EmptyTableRow
+                colSpan={5}
+                message="Nenhum serviço encontrado."
+                actions={
+                  <>
+                    <button
+                      type="button"
+                      onClick={openCreateForm}
+                      className="rounded-md bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700"
+                    >
+                      Criar primeiro serviço
+                    </button>
+                    {canManageCatalog ? (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          seedMutation.mutate();
+                        }}
+                        disabled={seedMutation.isPending}
+                        className="rounded-md border border-blue-600 px-3 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-50 disabled:opacity-50"
+                      >
+                        {seedMutation.isPending ? 'Carregando…' : 'Carregar catálogo de exemplo'}
+                      </button>
+                    ) : null}
+                  </>
+                }
+              />
             ) : (
               items.map((service) => (
                 <tr key={service.id} className="border-b border-slate-100 last:border-0">

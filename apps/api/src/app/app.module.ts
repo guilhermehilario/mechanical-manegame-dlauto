@@ -24,6 +24,7 @@ import { DashboardModule } from '../modules/dashboard/dashboard.module';
 import { ReportsModule } from '../modules/reports/reports.module';
 import { SettingsModule } from '../modules/settings/settings.module';
 import { PaymentsModule } from '../modules/payments/payments.module';
+import { CatalogSeedModule } from '../modules/catalog-seed/catalog-seed.module';
 import { HealthController } from './health.controller';
 
 /**
@@ -60,6 +61,7 @@ import { HealthController } from './health.controller';
     ReportsModule,
     SettingsModule,
     PaymentsModule,
+    CatalogSeedModule,
   ],
   controllers: [HealthController],
   providers: [

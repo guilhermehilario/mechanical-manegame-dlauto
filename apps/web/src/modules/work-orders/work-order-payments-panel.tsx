@@ -179,6 +179,16 @@ export function WorkOrderPaymentsPanel({ workOrder }: { workOrder: WorkOrderDto 
             ))}
           </tbody>
         </table>
+      ) : summary ? (
+        <table className="w-full text-left text-sm">
+          <tbody>
+            <tr>
+              <td className="px-4 py-6 text-center text-sm text-slate-500">
+                Nenhum pagamento registrado ainda — use o formulário abaixo.
+              </td>
+            </tr>
+          </tbody>
+        </table>
       ) : null}
 
       {summary && summary.status !== 'PAID' ? (
