@@ -9,6 +9,9 @@ import {
   listWorkOrders,
 } from '../../services/work-orders.service';
 import { ApiClientError } from '../../services/api-client';
+import { PageHeader } from '../../components/page-header';
+import { btnPrimary, btnSecondary, inputClass, linkBtnDanger, tableHead, tableWrap } from '../../components/ui';
+import { IconPlus } from '../../components/icons';
 import { WorkOrderForm } from './work-order-form';
 
 export const WORK_ORDER_STATUS_LABELS: Record<WorkOrderStatus, string> = {
@@ -73,27 +76,30 @@ export function WorkOrdersPage() {
 
   return (
     <section>
-      <div className="mb-4 flex items-center justify-between">
-        <h1 className="text-lg font-bold text-slate-900">Ordens de Serviço</h1>
-        <button
-          type="button"
-          onClick={() => {
-            setFormOpen(true);
-          }}
-          className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
-        >
-          Nova OS
-        </button>
-      </div>
+      <PageHeader
+        title="Ordens de Serviço"
+        actions={
+          <button
+            type="button"
+            onClick={() => {
+              setFormOpen(true);
+            }}
+            className={btnPrimary}
+          >
+            <IconPlus className="h-4 w-4" />
+            Nova OS
+          </button>
+        }
+      />
 
-      <div className="mb-4 flex gap-2">
+      <div className="mb-4 flex flex-wrap gap-2">
         <select
           value={statusFilter}
           onChange={(event) => {
             setPage(1);
             setStatusFilter(event.target.value as '' | WorkOrderStatus);
           }}
-          className="rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+          className={`${inputClass} sm:max-w-60`}
         >
           <option value="">Todos os status</option>
           {(Object.keys(WORK_ORDER_STATUS_LABELS) as WorkOrderStatus[]).map((status) => (
@@ -110,9 +116,9 @@ export function WorkOrdersPage() {
         </div>
       ) : null}
 
-      <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
-        <table className="w-full text-left text-sm">
-          <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase text-slate-500">
+      <div className={tableWrap}>
+        <table className="w-full min-w-[760px] text-left text-sm">
+          <thead className={tableHead}>
             <tr>
               <th className="px-4 py-3">Nº</th>
               <th className="px-4 py-3">Cliente</th>
@@ -163,13 +169,13 @@ export function WorkOrdersPage() {
                       {WORK_ORDER_STATUS_LABELS[workOrder.status]}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-right">
+                  <td className="whitespace-nowrap px-4 py-3 text-right">
                     <button
                       type="button"
                       onClick={() => {
                         handleDelete(workOrder);
                       }}
-                      className="text-xs font-medium text-red-600 hover:underline"
+                      className={linkBtnDanger}
                     >
                       Excluir
                     </button>
@@ -181,7 +187,7 @@ export function WorkOrdersPage() {
         </table>
       </div>
 
-      <div className="mt-4 flex items-center justify-between text-sm text-slate-600">
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-2 text-sm text-slate-600">
         <span>
           Página {page} de {totalPages}
         </span>
@@ -192,7 +198,7 @@ export function WorkOrdersPage() {
             onClick={() => {
               setPage((current) => current - 1);
             }}
-            className="rounded-md border border-slate-300 bg-white px-3 py-1.5 hover:bg-slate-50 disabled:opacity-50"
+            className={btnSecondary}
           >
             Anterior
           </button>
@@ -202,7 +208,7 @@ export function WorkOrdersPage() {
             onClick={() => {
               setPage((current) => current + 1);
             }}
-            className="rounded-md border border-slate-300 bg-white px-3 py-1.5 hover:bg-slate-50 disabled:opacity-50"
+            className={btnSecondary}
           >
             Próxima
           </button>

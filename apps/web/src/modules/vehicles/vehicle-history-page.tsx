@@ -49,7 +49,7 @@ export function VehicleHistoryPage() {
       </Link>
 
       <div className="mt-3">
-        <h1 className="text-lg font-bold text-slate-900">
+        <h1 className="text-xl font-semibold tracking-tight text-slate-900">
           Histórico — <span className="font-mono">{vehicle?.plate ?? '…'}</span>
         </h1>
         {vehicle ? (

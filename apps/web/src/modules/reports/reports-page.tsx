@@ -22,6 +22,8 @@ import {
   PAYMENT_METHOD_LABELS,
   reportToCsvRows,
 } from './report-export';
+import { PageHeader } from '../../components/page-header';
+import { btnPrimary, btnSecondary, inputClass } from '../../components/ui';
 
 const STATUS_BADGES: Record<WorkOrderStatusDto, string> = {
   OPEN: 'bg-blue-50 text-blue-700',
@@ -75,7 +77,7 @@ function last30Days(): { from: string; to: string } {
 
 function Section({ children }: { children: React.ReactNode }) {
   return (
-    <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">{children}</div>
+    <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">{children}</div>
   );
 }
 
@@ -162,12 +164,12 @@ export function ReportsPage() {
 
   return (
     <section className="space-y-6">
-      <div>
-        <h1 className="text-lg font-bold text-slate-900">Relatórios</h1>
-        <p className="text-sm text-slate-500">Períodos inclusive · OS entregues</p>
-      </div>
+      <PageHeader
+        title="Relatórios"
+        description="Períodos inclusive · OS entregues"
+      />
 
-      <div className="flex flex-wrap items-end justify-between gap-4">
+      <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
         <form
           className="flex flex-wrap items-end gap-3"
           onSubmit={(event) => {
@@ -175,7 +177,7 @@ export function ReportsPage() {
             setAppliedPeriod({ from: draftFrom, to: draftTo });
           }}
         >
-<label className="flex flex-col gap-1 text-xs text-slate-500">
+          <label className="flex flex-col gap-1 text-xs text-slate-500">
             De
             <input
               type="date"
@@ -183,7 +185,7 @@ export function ReportsPage() {
               onChange={(event) => {
                 setDraftFrom(event.target.value);
               }}
-              className="rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+              className={`${inputClass} w-44 sm:w-auto`}
             />
           </label>
           <label className="flex flex-col gap-1 text-xs text-slate-500">
@@ -194,13 +196,10 @@ export function ReportsPage() {
               onChange={(event) => {
                 setDraftTo(event.target.value);
               }}
-              className="rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+              className={`${inputClass} w-44 sm:w-auto`}
             />
           </label>
-          <button
-            type="submit"
-            className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
-          >
+          <button type="submit" className={btnPrimary}>
             Aplicar
           </button>
           <button
@@ -208,7 +207,7 @@ export function ReportsPage() {
             onClick={() => {
               apply(defaultPeriod());
             }}
-            className="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+            className={btnSecondary}
           >
             Este mês
           </button>
@@ -217,14 +216,14 @@ export function ReportsPage() {
             onClick={() => {
               apply(last30Days());
             }}
-            className="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+            className={btnSecondary}
           >
             Últimos 30 dias
           </button>
         </form>
 
-        <div className="flex flex-col items-end gap-2">
-          <div className="flex rounded-md border border-slate-200 bg-white p-1">
+        <div className="flex flex-col gap-2 xl:items-end">
+          <div className="flex w-full max-w-full overflow-x-auto rounded-lg border border-slate-200 bg-white p-1 shadow-sm">
             {TABS.map((item) => (
               <button
                 key={item.id}
@@ -232,9 +231,9 @@ export function ReportsPage() {
                 onClick={() => {
                   setTab(item.id);
                 }}
-                className={`rounded-md px-3 py-1.5 text-sm font-medium ${
+                className={`whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
                   tab === item.id
-                    ? 'bg-blue-50 text-blue-700'
+                    ? 'bg-blue-600 text-white shadow-sm'
                     : 'text-slate-600 hover:bg-slate-50'
                 }`}
               >
@@ -247,7 +246,7 @@ export function ReportsPage() {
               type="button"
               onClick={handleExportCsv}
               disabled={!reportTable}
-              className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+              className={btnSecondary}
             >
               Exportar CSV
             </button>
@@ -255,7 +254,7 @@ export function ReportsPage() {
               type="button"
               onClick={handlePrint}
               disabled={!reportTable}
-              className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+              className={btnSecondary}
             >
               Imprimir
             </button>

@@ -13,10 +13,9 @@ import {
 } from '../../services/vehicle-pickups.service';
 import { formatDate, formatPhone } from '../../utils/format';
 import { printPickupReceipt } from '../../utils/print';
+import { PageHeader } from '../../components/page-header';
 import { SignaturePad } from './signature-pad';
-
-const inputClass =
-  'w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none';
+import { btnPrimary, btnSecondary, inputClass, tableHead, tableWrap } from '../../components/ui';
 
 export function VehiclePickupsPage() {
   const [page, setPage] = useState(1);
@@ -66,10 +65,14 @@ export function VehiclePickupsPage() {
 
   return (
     <section>
-      <h1 className="text-lg font-bold text-slate-900">Retirada / Entrega de Veículos</h1>
-      <p className="mt-1 text-sm text-slate-500">
-        Registre a saída do veículo e emita o comprovante — a OS vai para <b>Entregue</b>.
-      </p>
+      <PageHeader
+        title="Retirada / Entrega de Veículos"
+        description={
+          <>
+            Registre a saída do veículo e emita o comprovante — a OS vai para <b>Entregue</b>.
+          </>
+        }
+      />
 
       {error ? (
         <div role="alert" className="mt-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
@@ -78,12 +81,12 @@ export function VehiclePickupsPage() {
       ) : null}
 
       {/* Queue: OS awaiting pickup */}
-      <h2 className="mt-6 text-base font-bold text-slate-900">
+      <h2 className="mt-6 text-base font-semibold text-slate-900">
         Aguardando retirada ({queue.length})
       </h2>
-      <div className="mt-3 overflow-hidden rounded-lg border border-slate-200 bg-white">
-        <table className="w-full text-left text-sm">
-          <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase text-slate-500">
+      <div className={`mt-3 ${tableWrap}`}>
+        <table className="w-full min-w-[680px] text-left text-sm">
+          <thead className={tableHead}>
             <tr>
               <th className="px-4 py-3">OS</th>
               <th className="px-4 py-3">Cliente</th>
@@ -144,10 +147,10 @@ export function VehiclePickupsPage() {
       </div>
 
       {/* History of registered pickups */}
-      <h2 className="mt-8 text-base font-bold text-slate-900">Retiradas registradas</h2>
-      <div className="mt-3 overflow-hidden rounded-lg border border-slate-200 bg-white">
-        <table className="w-full text-left text-sm">
-          <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase text-slate-500">
+      <h2 className="mt-8 text-base font-semibold text-slate-900">Retiradas registradas</h2>
+      <div className={`mt-3 ${tableWrap}`}>
+        <table className="w-full min-w-[760px] text-left text-sm">
+          <thead className={tableHead}>
             <tr>
               <th className="px-4 py-3">OS</th>
               <th className="px-4 py-3">Veículo</th>
@@ -400,17 +403,13 @@ function RegisterPickupModal({
           ) : null}
 
           <div className="flex justify-end gap-2 pt-1">
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
-            >
+            <button type="button" onClick={onClose} className={btnSecondary}>
               Cancelar
             </button>
             <button
               type="submit"
               disabled={registerMutation.isPending}
-              className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
+              className={btnPrimary}
             >
               {registerMutation.isPending ? 'Registrando…' : 'Confirmar retirada'}
             </button>

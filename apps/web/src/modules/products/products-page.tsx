@@ -5,6 +5,9 @@ import { formatBRL } from '@mechanic-system/shared';
 import { ApiClientError } from '../../services/api-client';
 import { deleteProduct, listProducts, seedCatalogExample } from '../../services/catalog.service';
 import { EmptyTableRow } from '../../components/empty-state';
+import { PageHeader } from '../../components/page-header';
+import { btnPrimary, btnSecondary, inputClass, linkBtn, linkBtnDanger, linkBtnNeutral, tableHead, tableWrap } from '../../components/ui';
+import { IconPlus, IconSearch } from '../../components/icons';
 import { useAuth } from '../auth/use-auth';
 import { ProductForm } from './product-form';
 import { StockMovementForm } from './stock-movement-form';
@@ -77,46 +80,49 @@ export function ProductsPage() {
 
   return (
     <section>
-      <div className="mb-4 flex items-center justify-between">
-        <h1 className="text-lg font-bold text-slate-900">Produtos</h1>
-        <button
-          type="button"
-          onClick={() => {
-            setFormProduct(null);
-            setIsFormOpen(true);
-          }}
-          className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
-        >
-          Novo produto
-        </button>
-      </div>
+      <PageHeader
+        title="Produtos"
+        actions={
+          <button
+            type="button"
+            onClick={() => {
+              setFormProduct(null);
+              setIsFormOpen(true);
+            }}
+            className={btnPrimary}
+          >
+            <IconPlus className="h-4 w-4" />
+            Novo produto
+          </button>
+        }
+      />
 
-      <div className="mb-4 flex items-center gap-3">
+      <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center">
         <form
-          className="flex gap-2"
+          className="flex flex-col gap-2 sm:flex-row"
           onSubmit={(event) => {
             event.preventDefault();
             setPage(1);
             setSubmittedSearch(search.trim());
           }}
         >
-          <input
-            type="search"
-            placeholder="Buscar por código, nome…"
-            className="w-72 rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
-            value={search}
-            onChange={(event) => {
-              setSearch(event.target.value);
-            }}
-          />
-          <button
-            type="submit"
-            className="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
-          >
+          <div className="relative flex-1 sm:max-w-sm">
+            <IconSearch className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <input
+              type="search"
+              placeholder="Buscar por código, nome…"
+              className={`${inputClass} pl-9`}
+              value={search}
+              onChange={(event) => {
+                setSearch(event.target.value);
+              }}
+            />
+          </div>
+          <button type="submit" className={btnSecondary}>
             Buscar
           </button>
         </form>
-        <label className="flex items-center gap-2 text-sm text-slate-600">
+        <label className="flex items-center gap-2 text-sm text-slate-600 sm:ml-2">
           <input
             type="checkbox"
             checked={lowStockOnly}
@@ -142,9 +148,9 @@ export function ProductsPage() {
         </div>
       ) : null}
 
-      <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
-        <table className="w-full text-left text-sm">
-          <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase text-slate-500">
+      <div className={tableWrap}>
+        <table className="w-full min-w-[720px] text-left text-sm">
+          <thead className={tableHead}>
             <tr>
               <th className="px-4 py-3">Código</th>
               <th className="px-4 py-3">Nome</th>
@@ -173,7 +179,7 @@ export function ProductsPage() {
                         setFormProduct(null);
                         setIsFormOpen(true);
                       }}
-                      className="rounded-md bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700"
+                      className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700"
                     >
                       Criar primeiro produto
                     </button>
@@ -184,7 +190,7 @@ export function ProductsPage() {
                           seedMutation.mutate();
                         }}
                         disabled={seedMutation.isPending}
-                        className="rounded-md border border-blue-600 px-3 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-50 disabled:opacity-50"
+                        className="rounded-lg border border-blue-600 px-3 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-50 disabled:opacity-50"
                       >
                         {seedMutation.isPending ? 'Carregando…' : 'Carregar catálogo de exemplo'}
                       </button>
@@ -224,13 +230,13 @@ export function ProductsPage() {
                         {product.active ? 'Ativo' : 'Inativo'}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-right">
+                    <td className="whitespace-nowrap px-4 py-3 text-right">
                       <button
                         type="button"
                         onClick={() => {
                           setMovementProduct(product);
                         }}
-                        className="mr-3 text-xs font-medium text-green-700 hover:underline"
+                        className={`${linkBtnNeutral} mr-3`}
                       >
                         Estoque
                       </button>
@@ -240,7 +246,7 @@ export function ProductsPage() {
                           setFormProduct(product);
                           setIsFormOpen(true);
                         }}
-                        className="mr-3 text-xs font-medium text-blue-600 hover:underline"
+                        className={`${linkBtn} mr-3`}
                       >
                         Editar
                       </button>
@@ -249,7 +255,7 @@ export function ProductsPage() {
                         onClick={() => {
                           handleDelete(product);
                         }}
-                        className="text-xs font-medium text-red-600 hover:underline"
+                        className={linkBtnDanger}
                       >
                         Excluir
                       </button>
@@ -262,7 +268,7 @@ export function ProductsPage() {
         </table>
       </div>
 
-      <div className="mt-4 flex items-center justify-between text-sm text-slate-600">
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-2 text-sm text-slate-600">
         <span>
           Página {page} de {totalPages}
         </span>
@@ -273,7 +279,7 @@ export function ProductsPage() {
             onClick={() => {
               setPage((current) => current - 1);
             }}
-            className="rounded-md border border-slate-300 bg-white px-3 py-1.5 hover:bg-slate-50 disabled:opacity-50"
+            className={btnSecondary}
           >
             Anterior
           </button>
@@ -283,7 +289,7 @@ export function ProductsPage() {
             onClick={() => {
               setPage((current) => current + 1);
             }}
-            className="rounded-md border border-slate-300 bg-white px-3 py-1.5 hover:bg-slate-50 disabled:opacity-50"
+            className={btnSecondary}
           >
             Próxima
           </button>

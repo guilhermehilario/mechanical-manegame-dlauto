@@ -84,7 +84,7 @@ export function ChangePasswordPage() {
 
   return (
     <section className="mx-auto max-w-md">
-      <h1 className="text-lg font-bold text-slate-900">Trocar senha</h1>
+      <h1 className="text-xl font-semibold tracking-tight text-slate-900">Trocar senha</h1>
       <p className="mb-4 text-sm text-slate-500">
         Após trocar a senha você será desconectado e deverá entrar novamente.
       </p>

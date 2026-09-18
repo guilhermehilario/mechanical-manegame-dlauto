@@ -14,6 +14,8 @@ import {
 } from '../../services/vehicles.service';
 import { CustomerForm } from './customer-form';
 import { VehicleForm } from '../vehicles/vehicle-form';
+import { PageHeader } from '../../components/page-header';
+import { btnDanger, btnPrimary, btnSecondary } from '../../components/ui';
 import { formatCpf, formatDate, formatPhone } from '../../utils/format';
 
 interface HistoryEntry {
@@ -133,42 +135,34 @@ export function CustomerDetailPage(): React.ReactNode {
 
   return (
     <section>
-      <Link to="/customers" className="text-sm text-blue-600 hover:underline">
+      <Link to="/customers" className="text-sm font-medium text-blue-600 hover:underline">
         ← Voltar para clientes
       </Link>
 
-      <div className="mt-3 flex items-start justify-between">
-        <div>
-          <h1 className="text-lg font-bold text-slate-900">{customer.name}</h1>
-          <p className="mt-0.5 text-sm text-slate-500">
-            Cliente desde {formatDate(customer.createdAt)}
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={handleToggleActive}
-            className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
-          >
-            {customer.active ? 'Desativar' : 'Reativar'}
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setIsEditOpen(true);
-            }}
-            className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
-          >
-            Editar
-          </button>
-          <button
-            type="button"
-            onClick={handleDeleteCustomer}
-            className="rounded-md border border-red-200 bg-white px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50"
-          >
-            Excluir
-          </button>
-        </div>
+      <div className="mt-3">
+        <PageHeader
+          title={customer.name}
+          description={`Cliente desde ${formatDate(customer.createdAt)}`}
+          actions={
+            <>
+              <button type="button" onClick={handleToggleActive} className={btnSecondary}>
+                {customer.active ? 'Desativar' : 'Reativar'}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsEditOpen(true);
+                }}
+                className={btnPrimary}
+              >
+                Editar
+              </button>
+              <button type="button" onClick={handleDeleteCustomer} className={btnDanger}>
+                Excluir
+              </button>
+            </>
+          }
+        />
       </div>
 
       {actionError ? (

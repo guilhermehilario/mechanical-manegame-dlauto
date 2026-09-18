@@ -242,12 +242,12 @@ export function WorkOrderDetailPage() {
 
   return (
     <section>
-      <div className="mb-4 flex items-center justify-between">
-        <div>
-          <h1 className="text-lg font-bold text-slate-900">
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <h1 className="text-xl font-semibold tracking-tight text-slate-900">
             OS #{workOrder.orderNumber}{' '}
             <span
-              className={`ml-2 rounded-full px-2 py-0.5 text-xs font-medium ${
+              className={`ml-2 inline-block translate-y-[-2px] rounded-full px-2 py-0.5 text-xs font-medium ${
                 WORK_ORDER_STATUS_BADGES[workOrder.status]
               }`}
             >
@@ -262,7 +262,7 @@ export function WorkOrderDetailPage() {
         </div>
         <Link
           to="/work-orders"
-          className="text-sm font-medium text-blue-600 hover:underline"
+          className="shrink-0 text-sm font-medium text-blue-600 hover:underline"
         >
           ← Voltar
         </Link>

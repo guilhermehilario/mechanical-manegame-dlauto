@@ -4,6 +4,9 @@ import type { SupplierDto } from '@mechanic-system/types';
 import { ApiClientError } from '../../services/api-client';
 import { deleteSupplier, listSuppliers } from '../../services/catalog.service';
 import { SupplierForm } from './supplier-form';
+import { PageHeader } from '../../components/page-header';
+import { btnPrimary, btnSecondary, inputClass, linkBtn, linkBtnDanger, tableHead, tableWrap } from '../../components/ui';
+import { IconPlus, IconSearch } from '../../components/icons';
 import { formatCnpj, formatPhone } from '../../utils/format';
 
 export function SuppliersPage() {
@@ -46,41 +49,44 @@ export function SuppliersPage() {
 
   return (
     <section>
-      <div className="mb-4 flex items-center justify-between">
-        <h1 className="text-lg font-bold text-slate-900">Fornecedores</h1>
-        <button
-          type="button"
-          onClick={() => {
-            setFormSupplier(null);
-            setIsFormOpen(true);
-          }}
-          className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
-        >
-          Novo fornecedor
-        </button>
-      </div>
+      <PageHeader
+        title="Fornecedores"
+        actions={
+          <button
+            type="button"
+            onClick={() => {
+              setFormSupplier(null);
+              setIsFormOpen(true);
+            }}
+            className={btnPrimary}
+          >
+            <IconPlus className="h-4 w-4" />
+            Novo fornecedor
+          </button>
+        }
+      />
 
       <form
-        className="mb-4 flex gap-2"
+        className="mb-4 flex flex-col gap-2 sm:flex-row"
         onSubmit={(event) => {
           event.preventDefault();
           setPage(1);
           setSubmittedSearch(search.trim());
         }}
       >
-        <input
-          type="search"
-          placeholder="Buscar por nome ou CNPJ…"
-          className="w-72 rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
-          value={search}
-          onChange={(event) => {
-            setSearch(event.target.value);
-          }}
-        />
-        <button
-          type="submit"
-          className="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
-        >
+        <div className="relative flex-1 sm:max-w-sm">
+          <IconSearch className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+          <input
+            type="search"
+            placeholder="Buscar por nome ou CNPJ…"
+            className={`${inputClass} pl-9`}
+            value={search}
+            onChange={(event) => {
+              setSearch(event.target.value);
+            }}
+          />
+        </div>
+        <button type="submit" className={btnSecondary}>
           Buscar
         </button>
       </form>
@@ -91,9 +97,9 @@ export function SuppliersPage() {
         </div>
       ) : null}
 
-      <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
-        <table className="w-full text-left text-sm">
-          <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase text-slate-500">
+      <div className={tableWrap}>
+        <table className="w-full min-w-[640px] text-left text-sm">
+          <thead className={tableHead}>
             <tr>
               <th className="px-4 py-3">Nome</th>
               <th className="px-4 py-3">CNPJ</th>
@@ -132,14 +138,14 @@ export function SuppliersPage() {
                       {supplier.active ? 'Ativo' : 'Inativo'}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-right">
+                  <td className="whitespace-nowrap px-4 py-3 text-right">
                     <button
                       type="button"
                       onClick={() => {
                         setFormSupplier(supplier);
                         setIsFormOpen(true);
                       }}
-                      className="mr-3 text-xs font-medium text-blue-600 hover:underline"
+                      className={`${linkBtn} mr-3`}
                     >
                       Editar
                     </button>
@@ -148,7 +154,7 @@ export function SuppliersPage() {
                       onClick={() => {
                         handleDelete(supplier);
                       }}
-                      className="text-xs font-medium text-red-600 hover:underline"
+                      className={linkBtnDanger}
                     >
                       Excluir
                     </button>
@@ -160,7 +166,7 @@ export function SuppliersPage() {
         </table>
       </div>
 
-      <div className="mt-4 flex items-center justify-between text-sm text-slate-600">
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-2 text-sm text-slate-600">
         <span>
           Página {page} de {totalPages}
         </span>
@@ -171,7 +177,7 @@ export function SuppliersPage() {
             onClick={() => {
               setPage((current) => current - 1);
             }}
-            className="rounded-md border border-slate-300 bg-white px-3 py-1.5 hover:bg-slate-50 disabled:opacity-50"
+            className={btnSecondary}
           >
             Anterior
           </button>
@@ -181,7 +187,7 @@ export function SuppliersPage() {
             onClick={() => {
               setPage((current) => current + 1);
             }}
-            className="rounded-md border border-slate-300 bg-white px-3 py-1.5 hover:bg-slate-50 disabled:opacity-50"
+            className={btnSecondary}
           >
             Próxima
           </button>

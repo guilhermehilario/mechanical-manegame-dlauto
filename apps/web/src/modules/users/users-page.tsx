@@ -10,10 +10,10 @@ import {
   listUsers,
 } from '../../services/users.service';
 import { useAuth } from '../auth/use-auth';
+import { PageHeader } from '../../components/page-header';
+import { btnPrimary, btnSecondary, inputClass, linkBtn, linkBtnDanger, tableHead, tableWrap } from '../../components/ui';
+import { IconPlus, IconSearch } from '../../components/icons';
 import { formatDate } from '../../utils/format';
-
-const inputClass =
-  'w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none';
 
 const ROLE_LABELS: Record<UserDto['role'], string> = {
   ADMIN: 'Administrador',
@@ -101,47 +101,46 @@ export function UsersPage() {
 
   return (
     <section>
-      <div className="mb-4 flex items-center justify-between">
-        <div>
-          <h1 className="text-lg font-bold text-slate-900">Usuários</h1>
-          <p className="text-sm text-slate-500">
-            Contas de acesso ao sistema. Desativar não apaga o histórico de ações.
-          </p>
-        </div>
-        {canManageUsers ? (
-          <button
-            type="button"
-            onClick={() => {
-              setIsFormOpen(true);
-            }}
-            className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
-          >
-            Novo usuário
-          </button>
-        ) : null}
-      </div>
+      <PageHeader
+        title="Usuários"
+        description="Contas de acesso ao sistema. Desativar não apaga o histórico de ações."
+        actions={
+          canManageUsers ? (
+            <button
+              type="button"
+              onClick={() => {
+                setIsFormOpen(true);
+              }}
+              className={btnPrimary}
+            >
+              <IconPlus className="h-4 w-4" />
+              Novo usuário
+            </button>
+          ) : undefined
+        }
+      />
 
       <form
-        className="mb-4 flex gap-2"
+        className="mb-4 flex flex-col gap-2 sm:flex-row"
         onSubmit={(event: FormEvent<HTMLFormElement>) => {
           event.preventDefault();
           setPage(1);
           setSubmittedSearch(search.trim());
         }}
       >
-        <input
-          type="search"
-          placeholder="Buscar por nome ou e-mail…"
-          className="w-72 rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
-          value={search}
-          onChange={(event) => {
-            setSearch(event.target.value);
-          }}
-        />
-        <button
-          type="submit"
-          className="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
-        >
+        <div className="relative flex-1 sm:max-w-sm">
+          <IconSearch className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+          <input
+            type="search"
+            placeholder="Buscar por nome ou e-mail…"
+            className={`${inputClass} pl-9`}
+            value={search}
+            onChange={(event) => {
+              setSearch(event.target.value);
+            }}
+          />
+        </div>
+        <button type="submit" className={btnSecondary}>
           Buscar
         </button>
       </form>
@@ -157,9 +156,9 @@ export function UsersPage() {
         </div>
       ) : null}
 
-      <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
-        <table className="w-full text-left text-sm">
-          <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase text-slate-500">
+      <div className={tableWrap}>
+        <table className="w-full min-w-[720px] text-left text-sm">
+          <thead className={tableHead}>
             <tr>
               <th className="px-4 py-3">Nome</th>
               <th className="px-4 py-3">E-mail</th>
@@ -198,7 +197,7 @@ export function UsersPage() {
                     </span>
                   </td>
                   <td className="px-4 py-3 text-slate-500">{formatDate(user.createdAt)}</td>
-                  <td className="px-4 py-3 text-right">
+                  <td className="whitespace-nowrap px-4 py-3 text-right">
                     {canManageUsers &&
                     (user.role === 'ADMIN' || user.role === 'MANAGER') ? (
                       <button
@@ -206,7 +205,7 @@ export function UsersPage() {
                         onClick={() => {
                           setPasswordReset({ user, password: '' });
                         }}
-                        className="mr-3 text-xs font-medium text-blue-600 hover:underline"
+                        className={`${linkBtn} mr-3`}
                       >
                         Redefinir senha
                       </button>
@@ -217,7 +216,7 @@ export function UsersPage() {
                         onClick={() => {
                           handleDeactivate(user);
                         }}
-                        className="text-xs font-medium text-red-600 hover:underline"
+                        className={linkBtnDanger}
                       >
                         Desativar
                       </button>
@@ -230,7 +229,7 @@ export function UsersPage() {
         </table>
       </div>
 
-      <div className="mt-4 flex items-center justify-between text-sm text-slate-600">
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-2 text-sm text-slate-600">
         <span>
           Página {page} de {totalPages}
         </span>
@@ -241,7 +240,7 @@ export function UsersPage() {
             onClick={() => {
               setPage((current) => current - 1);
             }}
-            className="rounded-md border border-slate-300 bg-white px-3 py-1.5 hover:bg-slate-50 disabled:opacity-50"
+            className={btnSecondary}
           >
             Anterior
           </button>
@@ -251,7 +250,7 @@ export function UsersPage() {
             onClick={() => {
               setPage((current) => current + 1);
             }}
-            className="rounded-md border border-slate-300 bg-white px-3 py-1.5 hover:bg-slate-50 disabled:opacity-50"
+            className={btnSecondary}
           >
             Próxima
           </button>
@@ -430,17 +429,13 @@ function UserFormModal({ onClose, onSaved }: { onClose: () => void; onSaved: () 
           ) : null}
 
           <div className="flex justify-end gap-2 pt-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
-            >
+            <button type="button" onClick={onClose} className={btnSecondary}>
               Cancelar
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
+              className={btnPrimary}
             >
               {isSubmitting ? 'Salvando…' : 'Criar usuário'}
             </button>
@@ -509,17 +504,13 @@ function PasswordResetModal({
           </div>
 
           <div className="flex justify-end gap-2 pt-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
-            >
+            <button type="button" onClick={onClose} className={btnSecondary}>
               Cancelar
             </button>
             <button
               type="submit"
               disabled={!valid || pending}
-              className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
+              className={btnPrimary}
             >
               {pending ? 'Salvando…' : 'Redefinir senha'}
             </button>

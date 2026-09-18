@@ -7,6 +7,7 @@ import { BackupAlertBanner } from './backup-alert-banner';
 import { WORK_ORDER_STATUS_LABELS, WORK_ORDER_STATUS_BADGES } from '../work-orders/work-orders-page';
 import { APPOINTMENT_STATUS_BADGES } from '../appointments/appointment-status';
 import { formatTime } from '../../utils/dates';
+import { PageHeader } from '../../components/page-header';
 
 function KpiCard({
   label,
@@ -22,13 +23,13 @@ function KpiCard({
   return (
     <Link
       to={to}
-      className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm transition hover:border-blue-300"
+      className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition hover:border-blue-300 hover:shadow"
     >
       <div className="flex items-center justify-between">
-        <p className="text-sm text-slate-500">{label}</p>
-        <span className={`h-2.5 w-2.5 rounded-full ${accent}`} />
+        <p className="truncate text-sm text-slate-500">{label}</p>
+        <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${accent}`} />
       </div>
-      <p className="mt-2 text-3xl font-bold text-slate-900">{value}</p>
+      <p className="mt-2 text-3xl font-semibold tracking-tight text-slate-900">{value}</p>
     </Link>
   );
 }
@@ -56,7 +57,7 @@ function StatusBar({
 
 function Card({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+    <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
       <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">
         {title}
       </h2>
@@ -93,15 +94,12 @@ export function DashboardPage() {
 
   return (
     <section className="space-y-6">
-      <div>
-        <h1 className="text-lg font-bold text-slate-900">Dashboard</h1>
-        <p className="text-sm text-slate-500">Visão geral da oficina</p>
-      </div>
+      <PageHeader title="Dashboard" description="Visão geral da oficina" />
 
       {/* Stale/missing backup warning (Bloco E/E2) — admin/manager only. */}
       <BackupAlertBanner />
 
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
         <KpiCard
           label="Clientes"
           value={summary.counts.customers}

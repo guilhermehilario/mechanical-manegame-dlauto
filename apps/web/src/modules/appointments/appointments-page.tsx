@@ -24,6 +24,9 @@ import {
   startOfDay,
   startOfWeek,
 } from '../../utils/dates';
+import { PageHeader } from '../../components/page-header';
+import { btnPrimary, btnSecondary, inputClass, linkBtn, linkBtnDanger, linkBtnNeutral, tableHead, tableWrap } from '../../components/ui';
+import { IconPlus } from '../../components/icons';
 
 export function AppointmentsPage() {
   const queryClient = useQueryClient();
@@ -119,21 +122,24 @@ export function AppointmentsPage() {
 
   return (
     <section>
-      <div className="mb-4 flex items-center justify-between">
-        <h1 className="text-lg font-bold text-slate-900">Agendamentos</h1>
-        <button
-          type="button"
-          onClick={() => {
-            openForm(null);
-          }}
-          className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
-        >
-          Novo agendamento
-        </button>
-      </div>
+      <PageHeader
+        title="Agendamentos"
+        actions={
+          <button
+            type="button"
+            onClick={() => {
+              openForm(null);
+            }}
+            className={btnPrimary}
+          >
+            <IconPlus className="h-4 w-4" />
+            Novo agendamento
+          </button>
+        }
+      />
 
       {/* View toggle */}
-      <div className="mb-4 flex gap-2">
+      <div className="mb-4 inline-flex rounded-lg border border-slate-200 bg-white p-1 shadow-sm">
         {(['list', 'day', 'week'] as const).map((option) => (
           <button
             key={option}
@@ -141,10 +147,10 @@ export function AppointmentsPage() {
             onClick={() => {
               setView(option);
             }}
-            className={`rounded-md px-3 py-1.5 text-sm font-medium ${
+            className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
               view === option
-                ? 'bg-blue-600 text-white'
-                : 'border border-slate-300 bg-white text-slate-700 hover:bg-slate-50'
+                ? 'bg-blue-600 text-white shadow-sm'
+                : 'text-slate-600 hover:bg-slate-50'
             }`}
           >
             {option === 'list' ? 'Lista' : option === 'day' ? 'Dia' : 'Semana'}
@@ -160,14 +166,14 @@ export function AppointmentsPage() {
 
       {view === 'list' ? (
         <>
-          <div className="mb-4 flex gap-2">
+          <div className="mb-4 flex flex-wrap gap-2">
             <select
               value={statusFilter}
               onChange={(event) => {
                 setPage(1);
                 setStatusFilter(event.target.value as '' | AppointmentStatus);
               }}
-              className="rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+              className={`${inputClass} sm:max-w-60`}
             >
               <option value="">Todos os status</option>
               {(Object.keys(APPOINTMENT_STATUS_LABELS) as AppointmentStatus[]).map((status) => (
@@ -178,9 +184,9 @@ export function AppointmentsPage() {
             </select>
           </div>
 
-          <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
-            <table className="w-full text-left text-sm">
-              <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase text-slate-500">
+          <div className={tableWrap}>
+            <table className="w-full min-w-[760px] text-left text-sm">
+              <thead className={tableHead}>
                 <tr>
                   <th className="px-4 py-3">Data/hora</th>
                   <th className="px-4 py-3">Cliente</th>
@@ -227,7 +233,7 @@ export function AppointmentsPage() {
                             {APPOINTMENT_STATUS_LABELS[appointment.status]}
                           </span>
                         </td>
-                        <td className="px-4 py-3 text-right">
+                        <td className="whitespace-nowrap px-4 py-3 text-right">
                           {nextStatuses.map((next) => (
                             <button
                               key={next}
@@ -235,7 +241,7 @@ export function AppointmentsPage() {
                               onClick={() => {
                                 transitionMutation.mutate({ id: appointment.id, status: next });
                               }}
-                              className="mr-3 text-xs font-medium text-blue-600 hover:underline"
+                              className={`${next === 'CANCELLED' ? linkBtnDanger : linkBtn} mr-3`}
                             >
                               {next === 'CANCELLED' ? 'Cancelar' : APPOINTMENT_STATUS_LABELS[next]}
                             </button>
@@ -246,7 +252,7 @@ export function AppointmentsPage() {
                               onClick={() => {
                                 openForm(appointment);
                               }}
-                              className="mr-3 text-xs font-medium text-slate-600 hover:underline"
+                              className={`${linkBtnNeutral} mr-3`}
                             >
                               Editar
                             </button>
@@ -256,7 +262,7 @@ export function AppointmentsPage() {
                             onClick={() => {
                               handleDelete(appointment);
                             }}
-                            className="text-xs font-medium text-red-600 hover:underline"
+                            className={linkBtnDanger}
                           >
                             Excluir
                           </button>
@@ -269,7 +275,7 @@ export function AppointmentsPage() {
             </table>
           </div>
 
-          <div className="mt-4 flex items-center justify-between text-sm text-slate-600">
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-2 text-sm text-slate-600">
             <span>
               Página {page} de {totalPages}
             </span>
@@ -280,7 +286,7 @@ export function AppointmentsPage() {
                 onClick={() => {
                   setPage((current) => current - 1);
                 }}
-                className="rounded-md border border-slate-300 bg-white px-3 py-1.5 hover:bg-slate-50 disabled:opacity-50"
+                className={btnSecondary}
               >
                 Anterior
               </button>
@@ -290,7 +296,7 @@ export function AppointmentsPage() {
                 onClick={() => {
                   setPage((current) => current + 1);
                 }}
-                className="rounded-md border border-slate-300 bg-white px-3 py-1.5 hover:bg-slate-50 disabled:opacity-50"
+                className={btnSecondary}
               >
                 Próxima
               </button>
@@ -300,7 +306,7 @@ export function AppointmentsPage() {
       ) : (
         <div>
           {/* Agenda navigation */}
-          <div className="mb-4 flex items-center gap-2">
+          <div className="mb-4 flex flex-wrap items-center gap-2">
             <button
               type="button"
               onClick={() => {
@@ -308,7 +314,7 @@ export function AppointmentsPage() {
                   addDays(current, view === 'day' ? -1 : -7),
                 );
               }}
-              className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm hover:bg-slate-50"
+              className={btnSecondary}
             >
               ← Anterior
             </button>
@@ -317,7 +323,7 @@ export function AppointmentsPage() {
               onClick={() => {
                 setCursor(startOfDay(new Date()));
               }}
-              className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm hover:bg-slate-50"
+              className={btnSecondary}
             >
               Hoje
             </button>
@@ -326,7 +332,7 @@ export function AppointmentsPage() {
               onClick={() => {
                 setCursor((current) => addDays(current, view === 'day' ? 1 : 7));
               }}
-              className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm hover:bg-slate-50"
+              className={btnSecondary}
             >
               Próximo →
             </button>
