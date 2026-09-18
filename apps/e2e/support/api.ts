@@ -142,6 +142,11 @@ export class E2eApi {
     return this.post<ApiProduct>('/products', input);
   }
 
+  /** F3/F4: optional example catalog (ADMIN/MANAGER). Returns created counts. */
+  seedCatalogExample(): Promise<{ services: number; products: number; suppliers: number }> {
+    return this.post('/catalog/seed-examples', {});
+  }
+
   createWorkOrder(input: NewWorkOrder): Promise<ApiWorkOrder> {
     return this.post<ApiWorkOrder>('/work-orders', input);
   }

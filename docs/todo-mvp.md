@@ -37,7 +37,7 @@
 - ✅ Empacotamento autocontido Linux (API sidecar + renderer offline)
 - ✅ Qualidade: 117 testes verdes, typecheck/lint/build passando, E2E básico
 - ✅ Revisão 2026-09-18: **147 testes API + 45 testes web + 10 desktop** verdes +
-  typecheck/lint/build + smoke (`ALL CHECKS PASSED`) + **E2E 9/9** (portas
+  typecheck/lint/build + smoke (`ALL CHECKS PASSED`) + **E2E 10/10** (portas
   isoladas), além da **verificação ao vivo** do estorno de estoque na
   exclusão de OS e do estorno cross-order (404) contra a API real — seção
   própria abaixo.
@@ -114,6 +114,14 @@ de **funcionamento** encontrados após a Fase 11. Todos com teste.
   injetada no dev server do web) e caminhos alinhados. **Verificado ao
   vivo:** `E2E_API_PORT=3101 E2E_WEB_PORT=5174 pnpm --filter
   @mechanic-system/e2e test:e2e` → 3/3 passando sem derrubar o dev server.
+- **Smoke flaky por colisão de placa** 🟠 (infra de teste) 2026-09-18: o
+  `generateUniquePlate()` do smoke usa só `Date.now()` (poucas combinações);
+  o banco dev guarda placas de execuções passadas e o smoke caía com "WO
+  vehicle failed" de vez em quando. `createVehicleWithUniquePlate()` agora
+  regenera a placa e **replica quando a API responde
+  `VEHICLE_PLATE_ALREADY_EXISTS`** (máx. 5 tentativas) nos 3 pontos de
+  criação; a asserção de normalização da placa continuou intacta. Rodado
+  2× hoje — passou nas duas.
 
 ### Achados que NÃO são bug
 
@@ -137,16 +145,16 @@ O "chão de fábrica" e o caixa estão fechados e verificados; o que falta é
 |---|---|---|
 | 🔴 | C1 | Revalidar o binário empacotado na máquina alvo (login, OS completa, upload, assinatura, backup, impressão, migração de 1ª execução) |
 | 🔴 | C2 | Instalador Windows (ou AppImage) — **decidir o SO alvo antes** |
-| 🟡 | F3/F4 | Seed de catálogo opcional + estados vazios consistentes |
 | 🟡 | E3 | Teste de restauração de backup no binário real |
 | 🟠 | G2/G3/G4 | Decisão R8, `pnpm audit` no CI, CI remota (GitHub Actions) |
 
 **E2E agora roda em qualquer máquina:** `E2E_API_PORT=<livre>
 E2E_WEB_PORT=<livre> pnpm --filter @mechanic-system/e2e test:e2e` sobe o
 stack completo em portas isoladas, sem conflitar com dev servers locais
-(validado em 3101/5174). **9 testes**: smoke, relatórios/CSV, ciclo da OS,
-estoque, conflito de agenda e impressão (OS + recibo). Pré-requisitos são
-semeados pela API (`support/api.ts`).
+(validado em 3101/5174). **10 testes**: smoke, relatórios/CSV, seed de
+catálogo idempotente (F3/F4), ciclo da OS, estoque, conflito de agenda e
+impressão (OS + recibo). Pré-requisitos são semeados pela API
+(`support/api.ts`).
 
 ---
 
@@ -314,11 +322,24 @@ A oficina precisa entregar papel (OS, recibo). Hoje não existe fluxo algum.
   (`GET/PUT /settings`, leitura para todos, escrita ADMIN/MANAGER) + página
   "Configurações" no menu. Nome/telefone/endereço/rodapé alimentam o
   cabeçalho e rodapé dos documentos impressos (B1/B2).
-- [ ] **F3. Dados de exemplo opcionais**: seed de catálogo básico
-  (serviços comuns: troca de óleo, revisão...) desativado por padrão para
-  facilitar a primeira semana de uso.
-- [ ] **F4. Estados vazios consistentes**: revisar listagens sem dados
-  (mensagem + CTA "criar primeiro registro").
+- [x] **F3. Dados de exemplo opcionais** ✅ 2026-09-18: **nada é semeado
+  automaticamente** — `POST /catalog/seed-examples` (ADMIN/MANAGER, RBAC no
+  controlador) insere 10 serviços, 10 produtos e 3 fornecedores com CNPJ
+  válido (`apps/api/src/modules/catalog-seed/`), idempotente dentro de
+  `$transaction` (skip serviço por nome, fornecedor por cnpj, produto por
+  code). No web, o estado vazio de Serviços/Produtos mostra o CTA "Carregar
+  catálogo de exemplo" só para ADMIN/MANAGER + "Criar primeiro registro" e
+  reporta o resultado ("X serviços, Y produtos, Z fornecedores"). Coberto
+  por `catalog-seed.spec.ts` (3 API), `services-page.test.tsx` (3 web) e
+  `seed-catalog.spec.ts` (E2E: cria 1× e reexecução é idempotente).
+- [x] **F4. Estados vazios consistentes** ✅ 2026-09-18: novo componente
+  compartilhado `apps/web/src/components/empty-state.tsx` (`EmptyState` para
+  blocos sem tabela e `EmptyTableRow` para linhas vazias com CTAs opcionais).
+  Aplicado em Serviços, Produtos e Clientes ("Criar primeiro…") e nas duas
+  lacunas reais encontradas: **painel de pagamentos da OS** exibia uma tabela
+  em branco (agora "Nenhum pagamento registrado ainda — use o formulário
+  abaixo") e a **aba "Status das OS" do relatório** (agora "Nenhuma OS criada
+  no período"). As demais listagens já exibiam mensagem própria.
 
 ## Bloco G — Qualidade e segurança remanescente 🟠 Desejável para MVP
 
@@ -328,7 +349,9 @@ A oficina precisa entregar papel (OS, recibo). Hoje não existe fluxo algum.
   guard de estoque (`INSUFFICIENT_STOCK` visível) e o conflito de
   agendamento (409 visível). Pré-requisitos (cliente/veículo/catálogo) são
   semeados via API (`support/api.ts`) porque o banco E2E só traz o admin.
-  Total: **9 E2E** (era 4).
+  **2026-09-18:** `seed-catalog.spec.ts` valida o seed opcional (F3) — 1ª
+  chamada cria 10/10/3 e a 2ª é idempotente (0/0/0). Total: **10 E2E**
+  (era 4).
 - [ ] **G2. R8 parcial**: assinatura como imagem já é aceito como
   evidência (não valor legal) — registrar decisão definitiva; expiração
   de sessão coberta em D4.

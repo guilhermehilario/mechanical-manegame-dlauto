@@ -31,6 +31,34 @@ function generateUniquePlate(): string {
   return `SMK${p4}${p5}${p67}`;
 }
 
+interface VehiclePayload { customerId: string; brand: string; model: string; year: number; mileage?: number }
+interface VehicleResponse { success: boolean; data?: { id: string; plate: string }; error?: { code?: string } }
+
+/**
+ * The dev database keeps plates from previous smoke runs, so a time-based
+ * generator can collide across runs. Regenerate the plate and retry when the
+ * API answers `VEHICLE_PLATE_ALREADY_EXISTS`; any other failure propagates.
+ */
+async function createVehicleWithUniquePlate(
+  base: string,
+  headers: Record<string, string>,
+  payload: VehiclePayload,
+): Promise<VehicleResponse> {
+  let lastBody: VehicleResponse = { success: false };
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const plate = generateUniquePlate();
+    const res = await fetch(`${base}/vehicles`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ ...payload, plate }),
+    });
+    lastBody = (await res.json()) as VehicleResponse;
+    if (res.ok && lastBody.success) return lastBody;
+    if (lastBody.error?.code !== 'VEHICLE_PLATE_ALREADY_EXISTS') break;
+  }
+  return lastBody;
+}
+
 /** Local "YYYY-MM-DD" for a Date (report input format). */
 function formatYmd(date: Date): string {
   const year = date.getFullYear();
@@ -159,26 +187,28 @@ async function main(): Promise<void> {
   }
   console.log('[smoke] duplicate CPF rejected (409): OK');
 
-  // 8. Create a vehicle for the customer
-  const uniquePlate = generateUniquePlate();
-  const createVehicle = await fetch(`${base}/vehicles`, {
-    method: 'POST',
-    headers: authHeaders,
-    body: JSON.stringify({
-      customerId: createdCustomer.data.id,
-      plate: uniquePlate.toLowerCase(),
-      brand: 'Volkswagen',
-      model: 'Gol',
-      year: 2020,
-      mileage: 45000,
-    }),
-  });
-  const createdVehicle = (await createVehicle.json()) as {
-    success: boolean;
-    data?: { id: string; plate: string };
-    error?: { code: string };
-  };
-  if (!createVehicle.ok || !createdVehicle.success || !createdVehicle.data) {
+  // 8. Create a vehicle for the customer (retry plate on cross-run conflicts)
+  let createdVehicle: VehicleResponse = { success: false };
+  let uniquePlate = '';
+  for (let attempt = 0; attempt < 5 && !createdVehicle.success; attempt += 1) {
+    uniquePlate = generateUniquePlate();
+    const createVehicle = await fetch(`${base}/vehicles`, {
+      method: 'POST',
+      headers: authHeaders,
+      body: JSON.stringify({
+        customerId: createdCustomer.data.id,
+        plate: uniquePlate.toLowerCase(),
+        brand: 'Volkswagen',
+        model: 'Gol',
+        year: 2020,
+        mileage: 45000,
+      }),
+    });
+    createdVehicle = (await createVehicle.json()) as VehicleResponse;
+    if (createVehicle.ok && createdVehicle.success) break;
+    if (createdVehicle.error?.code !== 'VEHICLE_PLATE_ALREADY_EXISTS') break;
+  }
+  if (!createdVehicle.success || !createdVehicle.data) {
     throw new Error(`create vehicle failed: ${JSON.stringify(createdVehicle.error ?? {})}`);
   }
   if (createdVehicle.data.plate !== uniquePlate) {
@@ -383,20 +413,13 @@ async function main(): Promise<void> {
     throw new Error('smoke: create customer for appointments failed');
   }
 
-  const plate2 = generateUniquePlate();
-  const veh2 = await fetch(`${base}/vehicles`, {
-    method: 'POST',
-    headers: authHeaders,
-    body: JSON.stringify({
-      customerId: cust2Body.data.id,
-      plate: plate2,
-      brand: 'Honda',
-      model: 'Civic',
-      year: 2021,
-    }),
+  const veh2 = await createVehicleWithUniquePlate(base, authHeaders, {
+    customerId: cust2Body.data.id,
+    brand: 'Honda',
+    model: 'Civic',
+    year: 2021,
   });
-  const veh2Body = (await veh2.json()) as { success: boolean; data?: { id: string } };
-  if (!veh2.ok || !veh2Body.success || !veh2Body.data) {
+  if (!veh2.success || !veh2.data) {
     throw new Error('smoke: create vehicle for appointments failed');
   }
 
@@ -416,7 +439,7 @@ async function main(): Promise<void> {
   apptAt.setMinutes(0, 0, 0);
   const apptBody = {
     customerId: cust2Body.data.id,
-    vehicleId: veh2Body.data.id,
+    vehicleId: veh2.data.id,
     serviceId: svcBody.data.id,
     scheduledAt: apptAt.toISOString(),
   };
@@ -495,7 +518,7 @@ async function main(): Promise<void> {
     method: 'DELETE',
     headers: authHeaders,
   });
-  await fetch(`${base}/vehicles/${veh2Body.data.id}`, {
+  await fetch(`${base}/vehicles/${veh2.data.id}`, {
     method: 'DELETE',
     headers: authHeaders,
   });
@@ -521,20 +544,14 @@ async function main(): Promise<void> {
   if (!woCustomerBody.success || !woCustomerBody.data) {
     throw new Error('smoke: WO customer failed');
   }
-  const woPlate = generateUniquePlate();
-  const woVehicle = await fetch(`${base}/vehicles`, {
-    method: 'POST',
-    headers: authHeaders,
-    body: JSON.stringify({
-      customerId: woCustomerBody.data.id,
-      plate: woPlate,
-      brand: 'Toyota',
-      model: 'Corolla',
-      year: 2022,
-    }),
+  const woVehicle = await createVehicleWithUniquePlate(base, authHeaders, {
+    customerId: woCustomerBody.data.id,
+    brand: 'Toyota',
+    model: 'Corolla',
+    year: 2022,
   });
-  const woVehicleBody = (await woVehicle.json()) as { success: boolean; data?: { id: string } };
-  if (!woVehicleBody.success || !woVehicleBody.data) {
+  if (!woVehicle.success || !woVehicle.data) {
+    console.log('[smoke-debug] WO vehicle body:', JSON.stringify(woVehicle));
     throw new Error('smoke: WO vehicle failed');
   }
 
@@ -572,7 +589,7 @@ async function main(): Promise<void> {
     headers: authHeaders,
     body: JSON.stringify({
       customerId: woCustomerBody.data.id,
-      vehicleId: woVehicleBody.data.id,
+      vehicleId: woVehicle.data.id,
     }),
   });
   const woBody = (await woRes.json()) as {
@@ -772,7 +789,7 @@ async function main(): Promise<void> {
 
   // 32. Derived vehicle history — one entry with the snapshot items
   const historyRes = await fetch(
-    `${base}/work-orders/vehicle/${woVehicleBody.data.id}/history`,
+    `${base}/work-orders/vehicle/${woVehicle.data.id}/history`,
     { headers: authHeaders },
   );
   const historyBody = (await historyRes.json()) as {
@@ -851,7 +868,7 @@ async function main(): Promise<void> {
     headers: authHeaders,
     body: JSON.stringify({
       customerId: woCustomerBody.data.id,
-      vehicleId: woVehicleBody.data.id,
+      vehicleId: woVehicle.data.id,
     }),
   });
   const wo2Body = (await wo2Res.json()) as { success: boolean; data?: { id: string } };
@@ -1051,7 +1068,7 @@ async function main(): Promise<void> {
     );
   }
   console.log('[smoke] public OS delete protected (409 WORK_ORDER_HAS_FINANCIAL_RECORDS): OK');
-  await fetch(`${base}/vehicles/${woVehicleBody.data.id}`, { method: 'DELETE', headers: authHeaders });
+  await fetch(`${base}/vehicles/${woVehicle.data.id}`, { method: 'DELETE', headers: authHeaders });
   await fetch(`${base}/customers/${woCustomerBody.data.id}`, { method: 'DELETE', headers: authHeaders });
   await fetch(`${base}/services/${woServiceBody.data.id}`, { method: 'DELETE', headers: authHeaders });
   await fetch(`${base}/products/${woProductBody.data.id}`, { method: 'DELETE', headers: authHeaders });
