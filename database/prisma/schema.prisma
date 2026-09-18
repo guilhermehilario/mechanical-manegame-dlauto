@@ -421,6 +421,11 @@ model ShopSettings {
   phone       String?
   address     String?
   documentFooter String?
+  // Runtime backup configuration (Bloco E/E2) — NULL means "use env default".
+  backupAutoEnabled     Boolean?
+  backupIntervalHours   Int?
+  backupKeep            Int?
+  backupAlertAfterHours Int?
   updatedAt   DateTime @updatedAt
 
   @@map("shop_settings")

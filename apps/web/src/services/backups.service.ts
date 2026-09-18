@@ -1,4 +1,9 @@
-import type { BackupDto, CreateBackupResultDto, RestoreResultDto } from '@mechanic-system/types';
+import type {
+  BackupConfigDto,
+  BackupDto,
+  CreateBackupResultDto,
+  RestoreResultDto,
+} from '@mechanic-system/types';
 import { api } from './auth.service';
 
 /**
@@ -19,4 +24,14 @@ export function restoreBackup(id: string): Promise<RestoreResultDto> {
 
 export function deleteBackup(id: string): Promise<void> {
   return api.delete(`/backups/${id}`);
+}
+
+// ─── Runtime backup configuration (settings screen, 2026-09-18) ─────────────
+
+export function getBackupConfig(): Promise<BackupConfigDto> {
+  return api.get<BackupConfigDto>('/backups/config');
+}
+
+export function updateBackupConfig(input: BackupConfigDto): Promise<BackupConfigDto> {
+  return api.put<BackupConfigDto>('/backups/config', input);
 }

@@ -7,13 +7,16 @@ import {
   HttpStatus,
   Param,
   Post,
+  Put,
   UseGuards,
 } from '@nestjs/common';
 import { ZodValidationPipe } from '../pipes/zod-validation.pipe';
-import type { BackupDto, CreateBackupResultDto, RestoreResultDto } from '@mechanic-system/types';
+import type { BackupConfigDto, BackupDto, CreateBackupResultDto, RestoreResultDto } from '@mechanic-system/types';
 import {
+  backupConfigSchema,
   backupIdParamSchema,
   restoreBackupSchema,
+  type BackupConfigInput,
   type RestoreBackupInput,
 } from './backup-validation';
 import { BackupSchedulerService } from './backup-scheduler.service';
@@ -25,6 +28,10 @@ import { RequireRoles, RolesGuard } from '../../modules/auth/roles.guard';
  * business dataset (PII + finance), and restore REPLACES the live data.
  * The global JwtAuthGuard (R5) already requires a valid session; the
  * RolesGuard restricts to ADMIN.
+ *
+ * 2026-09-18: runtime backup config (GET/PUT /backups/config) lets the
+ * operator change interval/keep/alert/enable from the settings screen
+ * without restarting.
  */
 @UseGuards(RolesGuard)
 @RequireRoles('ADMIN')
@@ -45,6 +52,26 @@ export class BackupsController {
   status() {
     return this.scheduler.getStatus();
   }
+
+  // ─── Runtime configuration (2026-09-18) ──────────────────────────────────
+
+  /** Effective backup configuration (DB overrides env when saved). */
+  @Get('config')
+  getConfig(): Promise<BackupConfigDto> {
+    return this.scheduler.getConfig();
+  }
+
+  /** Persist new backup configuration and reschedule immediately. */
+  @Put('config')
+  @HttpCode(HttpStatus.OK)
+  async updateConfig(
+    @Body(new ZodValidationPipe(backupConfigSchema)) input: BackupConfigInput,
+  ): Promise<BackupConfigDto> {
+    await this.scheduler.updateAndReschedule(input);
+    return this.scheduler.getConfig();
+  }
+
+  // ─── Manual backup / list ────────────────────────────────────────────────
 
   @Post()
   @HttpCode(HttpStatus.CREATED)

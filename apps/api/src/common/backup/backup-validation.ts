@@ -21,3 +21,19 @@ export const restoreBackupSchema = z
   .strict();
 
 export type RestoreBackupInput = z.infer<typeof restoreBackupSchema>;
+
+/**
+ * Runtime backup configuration (settings screen, Bloco E/E2 — 2026-09-18).
+ * Bounded the same way as the env defaults (packages/config) so the UI
+ * cannot set absurd values.
+ */
+export const backupConfigSchema = z
+  .object({
+    autoEnabled: z.boolean(),
+    intervalHours: z.coerce.number().int().min(1).max(168),
+    keep: z.coerce.number().int().min(1).max(365),
+    alertAfterHours: z.coerce.number().int().min(1).max(720),
+  })
+  .strict();
+
+export type BackupConfigInput = z.infer<typeof backupConfigSchema>;

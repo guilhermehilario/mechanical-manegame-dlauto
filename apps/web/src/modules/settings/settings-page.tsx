@@ -1,18 +1,58 @@
 import { type FormEvent, useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { shopSettingsSchema } from '@mechanic-system/validation';
 import { ApiClientError } from '../../services/api-client';
 import { getShopSettings, updateShopSettings } from '../../services/settings.service';
 import { useAuth } from '../auth/use-auth';
+import { BackupSettingsSection } from './backup-settings-section';
 
 const inputClass =
   'w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none';
 
-/**
- * Shop settings (Bloco F2 mínimo): identity used by the printed OS and pickup
- * receipt. Everyone can read; ADMIN/MANAGER can edit (API enforces).
- */
-export function SettingsPage() {
+const tabClass =
+  'rounded-t-md border-b-2 px-4 py-2 text-sm font-semibold transition-colors';
+
+type Tab = 'identidade' | 'operacao' | 'conta';
+
+const ROLE_LABELS: Record<string, string> = {
+  ADMIN: 'Administrador',
+  MANAGER: 'Gerente',
+  MECHANIC: 'Mecânico',
+  ATTENDANT: 'Atendente',
+};
+
+function Tabs({ active, onChange }: { active: Tab; onChange: (tab: Tab) => void }) {
+  const items: Array<{ id: Tab; label: string }> = [
+    { id: 'identidade', label: 'Identidade da oficina' },
+    { id: 'operacao', label: 'Operação' },
+    { id: 'conta', label: 'Minha conta' },
+  ];
+  return (
+    <div className="mb-4 flex gap-1 border-b border-slate-200" role="tablist">
+      {items.map((item) => (
+        <button
+          key={item.id}
+          type="button"
+          role="tab"
+          aria-selected={active === item.id}
+          onClick={() => {
+            onChange(item.id);
+          }}
+          className={`${tabClass} ${
+            active === item.id
+              ? 'border-blue-600 text-blue-700'
+              : 'border-transparent text-slate-500 hover:text-slate-800'
+          }`}
+        >
+          {item.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function IdentitySection() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const canEdit = user?.role === 'ADMIN' || user?.role === 'MANAGER';
@@ -71,108 +111,163 @@ export function SettingsPage() {
     saveMutation.mutate(parsed.data);
   }
 
+  if (settingsQuery.isLoading) {
+    return <p className="text-sm text-slate-500">Carregando…</p>;
+  }
+
   return (
-    <section className="mx-auto max-w-lg">
+    <form className="space-y-4 rounded-lg border border-slate-200 bg-white p-6" onSubmit={handleSubmit} noValidate>
+      <div>
+        <label htmlFor="shop-name" className="mb-1 block text-sm font-medium text-slate-700">
+          Nome da oficina *
+        </label>
+        <input
+          id="shop-name"
+          className={inputClass}
+          value={name}
+          onChange={(event) => {
+            setName(event.target.value);
+          }}
+          disabled={!canEdit || saveMutation.isPending}
+        />
+      </div>
+
+      <div>
+        <label htmlFor="shop-phone" className="mb-1 block text-sm font-medium text-slate-700">
+          Telefone
+        </label>
+        <input
+          id="shop-phone"
+          className={inputClass}
+          value={phone}
+          onChange={(event) => {
+            setPhone(event.target.value);
+          }}
+          placeholder="(11) 3333-4444"
+          disabled={!canEdit || saveMutation.isPending}
+        />
+      </div>
+
+      <div>
+        <label htmlFor="shop-address" className="mb-1 block text-sm font-medium text-slate-700">
+          Endereço
+        </label>
+        <input
+          id="shop-address"
+          className={inputClass}
+          value={address}
+          onChange={(event) => {
+            setAddress(event.target.value);
+          }}
+          disabled={!canEdit || saveMutation.isPending}
+        />
+      </div>
+
+      <div>
+        <label htmlFor="shop-footer" className="mb-1 block text-sm font-medium text-slate-700">
+          Rodapé dos documentos
+        </label>
+        <textarea
+          id="shop-footer"
+          rows={2}
+          className={inputClass}
+          value={documentFooter}
+          onChange={(event) => {
+            setDocumentFooter(event.target.value);
+          }}
+          placeholder="Ex.: Obrigado pela preferência! Garantia de 90 dias."
+          disabled={!canEdit || saveMutation.isPending}
+        />
+      </div>
+
+      {formError ? (
+        <div role="alert" className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
+          {formError}
+        </div>
+      ) : null}
+      {saved ? (
+        <div className="rounded-md bg-green-50 px-3 py-2 text-sm text-green-700">
+          Configurações salvas.
+        </div>
+      ) : null}
+
+      {canEdit ? (
+        <div className="flex justify-end">
+          <button
+            type="submit"
+            disabled={saveMutation.isPending}
+            className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
+          >
+            {saveMutation.isPending ? 'Salvando…' : 'Salvar'}
+          </button>
+        </div>
+      ) : (
+        <p className="text-xs text-slate-400">
+          Somente administradores e gerentes podem editar.
+        </p>
+      )}
+    </form>
+  );
+}
+
+function OperationsSection() {
+  const { user } = useAuth();
+  if (user?.role !== 'ADMIN') {
+    return (
+      <div className="rounded-lg border border-slate-200 bg-white p-6 text-sm text-slate-500">
+        A área de operação (backup e catálogo de exemplo) é exclusiva do administrador.
+      </div>
+    );
+  }
+  return <BackupSettingsSection />;
+}
+
+function AccountSection() {
+  const { user } = useAuth();
+  if (!user) return null;
+  return (
+    <div className="space-y-4 rounded-lg border border-slate-200 bg-white p-6">
+      <div>
+        <p className="text-sm font-semibold text-slate-800">{user.name}</p>
+        <p className="text-sm text-slate-500">{user.email}</p>
+        <p className="mt-1 text-sm text-slate-600">Papel: {ROLE_LABELS[user.role] ?? user.role}</p>
+      </div>
+      <div className="border-t border-slate-100 pt-4">
+        <Link
+          to="/change-password"
+          className="text-sm font-semibold text-blue-600 hover:underline"
+        >
+          Alterar minha senha
+        </Link>
+        <p className="mt-1 text-xs text-slate-400">
+          Trocar a senha revoga as outras sessões abertas.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Settings (2026-09-18) — reorganized in tabs:
+ * Identidade (F2, printed documents); Operação (backup runtime config +
+ * manual backup + optional example catalog); Conta (who am I + change
+ * password). RBAC mirrored from the API.
+ */
+export function SettingsPage() {
+  const [tab, setTab] = useState<Tab>('identidade');
+
+  return (
+    <section className="mx-auto max-w-xl">
       <h1 className="text-lg font-bold text-slate-900">Configurações</h1>
       <p className="mb-4 text-sm text-slate-500">
-        Dados da oficina impressos na OS e no comprovante de retirada.
+        Identidade da oficina, backup automático e sua conta.
       </p>
 
-      {settingsQuery.isLoading ? (
-        <p className="text-sm text-slate-500">Carregando…</p>
-      ) : (
-        <form className="space-y-4 rounded-lg border border-slate-200 bg-white p-6" onSubmit={handleSubmit} noValidate>
-          <div>
-            <label htmlFor="shop-name" className="mb-1 block text-sm font-medium text-slate-700">
-              Nome da oficina *
-            </label>
-            <input
-              id="shop-name"
-              className={inputClass}
-              value={name}
-              onChange={(event) => {
-                setName(event.target.value);
-              }}
-              disabled={!canEdit || saveMutation.isPending}
-            />
-          </div>
+      <Tabs active={tab} onChange={setTab} />
 
-          <div>
-            <label htmlFor="shop-phone" className="mb-1 block text-sm font-medium text-slate-700">
-              Telefone
-            </label>
-            <input
-              id="shop-phone"
-              className={inputClass}
-              value={phone}
-              onChange={(event) => {
-                setPhone(event.target.value);
-              }}
-              placeholder="(11) 3333-4444"
-              disabled={!canEdit || saveMutation.isPending}
-            />
-          </div>
-
-          <div>
-            <label htmlFor="shop-address" className="mb-1 block text-sm font-medium text-slate-700">
-              Endereço
-            </label>
-            <input
-              id="shop-address"
-              className={inputClass}
-              value={address}
-              onChange={(event) => {
-                setAddress(event.target.value);
-              }}
-              disabled={!canEdit || saveMutation.isPending}
-            />
-          </div>
-
-          <div>
-            <label htmlFor="shop-footer" className="mb-1 block text-sm font-medium text-slate-700">
-              Rodapé dos documentos
-            </label>
-            <textarea
-              id="shop-footer"
-              rows={2}
-              className={inputClass}
-              value={documentFooter}
-              onChange={(event) => {
-                setDocumentFooter(event.target.value);
-              }}
-              placeholder="Ex.: Obrigado pela preferência! Garantia de 90 dias."
-              disabled={!canEdit || saveMutation.isPending}
-            />
-          </div>
-
-          {formError ? (
-            <div role="alert" className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
-              {formError}
-            </div>
-          ) : null}
-          {saved ? (
-            <div className="rounded-md bg-green-50 px-3 py-2 text-sm text-green-700">
-              Configurações salvas.
-            </div>
-          ) : null}
-
-          {canEdit ? (
-            <div className="flex justify-end">
-              <button
-                type="submit"
-                disabled={saveMutation.isPending}
-                className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
-              >
-                {saveMutation.isPending ? 'Salvando…' : 'Salvar'}
-              </button>
-            </div>
-          ) : (
-            <p className="text-xs text-slate-400">
-              Somente administradores e gerentes podem editar.
-            </p>
-          )}
-        </form>
-      )}
+      {tab === 'identidade' ? <IdentitySection /> : null}
+      {tab === 'operacao' ? <OperationsSection /> : null}
+      {tab === 'conta' ? <AccountSection /> : null}
     </section>
   );
 }

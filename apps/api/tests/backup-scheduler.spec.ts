@@ -4,7 +4,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { BackupSchedulerService } from '../src/common/backup/backup-scheduler.service';
 import type { BackupService } from '../src/common/backup/backup.service';
-import type { Env } from '@mechanic-system/config';
+import type { SettingsService } from '../src/modules/settings/settings.service';
+import type { BackupConfigDto } from '@mechanic-system/types';
 
 /**
  * Bloco E (docs/todo-mvp.md) — automatic backup scheduler:
@@ -42,18 +43,47 @@ function backupServiceMock() {
   };
 }
 
+function settingsMock(overrides: Partial<BackupConfigDto> = {}) {
+  let config: BackupConfigDto = {
+    autoEnabled: true,
+    intervalHours: 24,
+    keep: 3,
+    alertAfterHours: 24,
+    ...overrides,
+  };
+  return {
+    getBackupRuntimeConfig: vi.fn(() => Promise.resolve(config)),
+    updateBackupRuntimeConfig: vi.fn((input: BackupConfigDto) => {
+      config = { ...config, ...input };
+      return Promise.resolve(config);
+    }),
+  };
+}
+
 function makeScheduler(
   backupService: ReturnType<typeof backupServiceMock>,
-  overrides: Partial<Env> = {},
+  configOverrides: Partial<BackupConfigDto> = {},
 ): BackupSchedulerService {
-  const env = {
-    BACKUP_AUTO_ENABLED: '1',
-    BACKUP_INTERVAL_HOURS: 24,
-    BACKUP_ALERT_AFTER_HOURS: 24,
-    BACKUP_KEEP: 3,
-    ...overrides,
-  } as unknown as Env;
-  return new BackupSchedulerService(backupService as unknown as BackupService, env);
+  const settings = settingsMock(configOverrides);
+  return new BackupSchedulerService(
+    backupService as unknown as BackupService,
+    settings as unknown as SettingsService,
+  );
+}
+
+/** Like makeScheduler, but exposes the settings mock for config assertions. */
+function makeSchedulerAndSettings(
+  backupService: ReturnType<typeof backupServiceMock>,
+  configOverrides: Partial<BackupConfigDto> = {},
+): { scheduler: BackupSchedulerService; settings: ReturnType<typeof settingsMock> } {
+  const settings = settingsMock(configOverrides);
+  return {
+    scheduler: new BackupSchedulerService(
+      backupService as unknown as BackupService,
+      settings as unknown as SettingsService,
+    ),
+    settings,
+  };
 }
 
 let baseDir: string;
@@ -94,7 +124,7 @@ describe('BackupSchedulerService', () => {
     backupService.list.mockResolvedValue([
       makeBackupDto(new Date(Date.now() - 25 * 3_600_000)), // 25h ago
     ]);
-    const scheduler = makeScheduler(backupService, { BACKUP_INTERVAL_HOURS: 24 });
+    const scheduler = makeScheduler(backupService, { intervalHours: 24 });
 
     const result = await scheduler.sweep();
 
@@ -111,7 +141,7 @@ describe('BackupSchedulerService', () => {
       makeBackupDto(hoursAgo(30), 'bk-old-4'),
       makeBackupDto(hoursAgo(50), 'bk-old-5'),
     ]);
-    const scheduler = makeScheduler(backupService, { BACKUP_KEEP: 3 });
+    const scheduler = makeScheduler(backupService, { keep: 3 });
 
     const result = await scheduler.sweep();
 
@@ -138,7 +168,7 @@ describe('BackupSchedulerService', () => {
     backupService.list.mockResolvedValue([
       makeBackupDto(new Date(Date.now() - 30 * 3_600_000)),
     ]);
-    const scheduler = makeScheduler(backupService, { BACKUP_ALERT_AFTER_HOURS: 24 });
+    const scheduler = makeScheduler(backupService, { alertAfterHours: 24 });
 
     const status = await scheduler.getStatus();
 
@@ -151,7 +181,7 @@ describe('BackupSchedulerService', () => {
     backupService.list.mockResolvedValue([
       makeBackupDto(new Date(Date.now() - 2 * 3_600_000)),
     ]);
-    const scheduler = makeScheduler(backupService, { BACKUP_ALERT_AFTER_HOURS: 24 });
+    const scheduler = makeScheduler(backupService, { alertAfterHours: 24 });
 
     const status = await scheduler.getStatus();
 
@@ -160,7 +190,7 @@ describe('BackupSchedulerService', () => {
 
   it('is disabled via BACKUP_AUTO_ENABLED=0 (no timer, no sweep on init)', async () => {
     const backupService = backupServiceMock();
-    const scheduler = makeScheduler(backupService, { BACKUP_AUTO_ENABLED: '0' });
+    const scheduler = makeScheduler(backupService, { autoEnabled: false });
 
     // onModuleInit must not schedule anything; sweep stays manual/test-only.
     scheduler.onModuleInit();
@@ -176,5 +206,56 @@ describe('BackupSchedulerService', () => {
     expect(() => {
       scheduler.onModuleDestroy();
     }).not.toThrow();
+  });
+
+  it('getConfig() returns the effective runtime configuration', async () => {
+    const backupService = backupServiceMock();
+    const { scheduler } = makeSchedulerAndSettings(backupService, {
+      intervalHours: 6,
+      keep: 2,
+      alertAfterHours: 12,
+      autoEnabled: true,
+    });
+
+    const config = await scheduler.getConfig();
+
+    expect(config).toEqual({ autoEnabled: true, intervalHours: 6, keep: 2, alertAfterHours: 12 });
+  });
+
+  it('updateAndReschedule() persists the new config and status reflects it', async () => {
+    const backupService = backupServiceMock();
+    backupService.list.mockResolvedValue([
+      makeBackupDto(new Date(Date.now() - 3 * 3_600_000)),
+    ]);
+    const { scheduler, settings } = makeSchedulerAndSettings(backupService, {
+      alertAfterHours: 24,
+    });
+
+    await scheduler.updateAndReschedule({ autoEnabled: true, intervalHours: 12, keep: 4, alertAfterHours: 2 });
+
+    expect(settings.updateBackupRuntimeConfig).toHaveBeenCalledWith({
+      autoEnabled: true,
+      intervalHours: 12,
+      keep: 4,
+      alertAfterHours: 2,
+    });
+    const status = await scheduler.getStatus();
+    expect(status.alertAfterHours).toBe(2);
+    expect(status.isStale).toBe(true);
+    // The timer reschedules itself after a save (no throw, unref'd handle).
+    scheduler.onModuleDestroy();
+  });
+
+  it('is disabled via runtime config (no timer, status reports it)', async () => {
+    const backupService = backupServiceMock();
+    const scheduler = makeScheduler(backupService, { autoEnabled: false });
+
+    scheduler.onModuleInit();
+    const status = await scheduler.getStatus();
+    expect(status.autoEnabled).toBe(false);
+
+    const result = await scheduler.sweep();
+    expect(result.created).toBe(false);
+    expect(backupService.create).not.toHaveBeenCalled();
   });
 });

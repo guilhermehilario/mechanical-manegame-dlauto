@@ -48,6 +48,12 @@
   isoladas), além da **verificação ao vivo** do estorno de estoque na
   exclusão de OS e do estorno cross-order (404) contra a API real — seção
   própria abaixo.
+- ✅ Revisão 2026-09-18 (2): **tela de Configurações em abas** (Identidade da
+  oficina / Operação / Minha conta) — backup automático com **configuração em
+  runtime** (`GET/PUT /backups/config`, valida zod, valores null → env default,
+  sem restart), botão "Fazer backup agora", carregar catálogo de exemplo e
+  link para alterar senha. **154 testes API + 52 testes web + 10 desktop**
+  verdes + typecheck/lint + smoke (`ALL CHECKS PASSED`) + **E2E 10/10**.
 
 **Gaps para MVP (revisado 2026-09-18):** ciclo financeiro (Bloco A),
 impressão de OS/recibo (B1–B3), sessão persistente + refresh automático
@@ -337,6 +343,19 @@ A oficina precisa entregar papel (OS, recibo). Hoje não existe fluxo algum.
   (`GET/PUT /settings`, leitura para todos, escrita ADMIN/MANAGER) + página
   "Configurações" no menu. Nome/telefone/endereço/rodapé alimentam o
   cabeçalho e rodapé dos documentos impressos (B1/B2).
+- [x] **F2.1. Tela de Configurações em abas** ✅ 2026-09-18: a página vira
+  **Configurações** com abas Identidade da oficina / **Operação** / Minha
+  conta (`apps/web/src/modules/settings/settings-page.tsx` +
+  `backup-settings-section.tsx`). Operação é ADMIN-only e traz: **backup
+  automático configurável em runtime** — `shop_settings` ganhou 4 colunas
+  nullable (migration `add_backup_runtime_settings`); `GET/PUT /backups/config`
+  (validação zod 1–168h/1–365/1–720h; `NULL` = usa env default); o
+  `BackupSchedulerService` re-sincroniza o timer e a retenção sem restart
+  (`updateAndReschedule`), o botão "Fazer backup agora" (POST /backups) com
+  feedback do status (há quantas horas) — e **carregar catálogo de exemplo**
+  (F3). Conta mostra usuário/papel e link para `/change-password`. Coberto por
+  `backup-scheduler.spec.ts`/`settings.spec.ts` (API +7) e
+  `settings-page.test.tsx` (web +7).
 - [x] **F3. Dados de exemplo opcionais** ✅ 2026-09-18: **nada é semeado
   automaticamente** — `POST /catalog/seed-examples` (ADMIN/MANAGER, RBAC no
   controlador) insere 10 serviços, 10 produtos e 3 fornecedores com CNPJ

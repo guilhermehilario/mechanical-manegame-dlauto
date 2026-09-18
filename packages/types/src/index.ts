@@ -11,5 +11,6 @@ export * from './dashboard';
 export * from './reports';
 export * from './backup';
 export * from './backup-status';
+export * from './backup-config';
 export * from './shop-settings';
 export * from './payment';
