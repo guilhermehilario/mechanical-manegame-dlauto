@@ -7,6 +7,7 @@ import {
   Post,
   Req,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import { UnauthorizedError } from '../../common/errors/domain.error';
 import { loginSchema, refreshSchema, setupAdminSchema } from '@mechanic-system/validation';
@@ -46,15 +47,26 @@ export class AuthController {
   @Public()
   @Post('setup')
   @HttpCode(HttpStatus.CREATED)
+  // Stricter than the global 120/min: first-run credential creation is a
+  // one-shot action — tighter throttling blunts brute force of the initial
+  // admin password while remaining ample for a workshop terminal.
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   setup(
     @Body(new ZodValidationPipe(setupAdminSchema)) input: SetupAdminInput,
   ): Promise<AuthUser> {
     return this.authService.setupFirstAdmin(input);
   }
 
+  /**
+   * Stricter than the global 120/min: online password guessing against a
+   * single terminal should burn out quickly. 10 attempts/min per IP keeps
+   * legitimate shared-terminal use (staff logging in/out) comfortable while
+   * making brute force impractical.
+   */
   @Public()
   @Post('login')
   @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   login(@Body(new ZodValidationPipe(loginSchema)) input: LoginInput): Promise<LoginResponse> {
     return this.authService.login(input);
   }

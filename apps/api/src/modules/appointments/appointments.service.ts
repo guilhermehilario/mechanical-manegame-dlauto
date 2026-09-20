@@ -9,9 +9,11 @@ import type {
   UpdateAppointmentInput,
 } from '@mechanic-system/validation';
 import type { AppointmentDto } from '@mechanic-system/types';
+import type { Appointment } from '@prisma/client';
 import { AppointmentsRepository, type AppointmentWithRelations } from './appointments.repository';
 import { VehiclesRepository } from '../vehicles/vehicles.repository';
 import { ServicesRepository } from '../services/services.repository';
+import { PrismaService } from '../../prisma/prisma.service';
 
 function toDto(appointment: AppointmentWithRelations): AppointmentDto {
   return {
@@ -45,6 +47,7 @@ export class AppointmentsService {
     private readonly appointmentsRepository: AppointmentsRepository,
     private readonly vehiclesRepository: VehiclesRepository,
     private readonly servicesRepository: ServicesRepository,
+    private readonly prisma: PrismaService,
   ) {}
 
   /**
@@ -80,24 +83,12 @@ export class AppointmentsService {
     }
   }
 
-  private async assertNoConflict(
-    vehicleId: string,
-    scheduledAt: Date,
-    excludeId?: string,
-  ): Promise<void> {
-    const conflict = await this.appointmentsRepository.findConflict(
-      vehicleId,
-      scheduledAt,
-      this.slotEnd(scheduledAt),
-      excludeId,
+  private conflictError(conflict: Appointment): ConflictError {
+    return new ConflictError(
+      ErrorCodes.APPOINTMENT_CONFLICT,
+      'Veículo já possui um agendamento ativo nesse horário',
+      { conflictingAppointmentId: conflict.id, scheduledAt: conflict.scheduledAt.toISOString() },
     );
-    if (conflict) {
-      throw new ConflictError(
-        ErrorCodes.APPOINTMENT_CONFLICT,
-        'Veículo já possui um agendamento ativo nesse horário',
-        { conflictingAppointmentId: conflict.id, scheduledAt: conflict.scheduledAt.toISOString() },
-      );
-    }
   }
 
   private async assertServiceExists(serviceId: string): Promise<void> {
@@ -112,14 +103,27 @@ export class AppointmentsService {
     this.assertValidDate(scheduledAt);
     await this.assertVehicleOwnedByCustomer(input.vehicleId, input.customerId);
     await this.assertServiceExists(input.serviceId);
-    await this.assertNoConflict(input.vehicleId, scheduledAt);
 
-    const appointment = await this.appointmentsRepository.create({
-      customerId: input.customerId,
-      vehicleId: input.vehicleId,
-      serviceId: input.serviceId,
-      scheduledAt,
-      notes: input.notes || null,
+    // Conflict check + insert share ONE transaction (SQLite serializes
+    // writers): two concurrent creates cannot both pass the check and
+    // double-book the same slot (spec §13 — race guard, same pattern as
+    // the payment balance check in PaymentsService).
+    const appointment = await this.prisma.$transaction(async (tx) => {
+      const conflict = await this.appointmentsRepository.findConflict(
+        tx,
+        input.vehicleId,
+        scheduledAt,
+        this.slotEnd(scheduledAt),
+      );
+      if (conflict) throw this.conflictError(conflict);
+
+      return this.appointmentsRepository.create(tx, {
+        customerId: input.customerId,
+        vehicleId: input.vehicleId,
+        serviceId: input.serviceId,
+        scheduledAt,
+        notes: input.notes || null,
+      });
     });
     return toDto(appointment);
   }
@@ -188,26 +192,40 @@ export class AppointmentsService {
       await this.assertServiceExists(input.serviceId);
     }
 
-    if (scheduledAt) {
-      await this.assertNoConflict(current.vehicleId, scheduledAt, id);
-    }
-
-    if (input.status !== undefined && input.status !== current.status) {
-      if (!canTransitionAppointment(current.status, input.status)) {
-        throw new ConflictError(
-          ErrorCodes.INVALID_APPOINTMENT_TRANSITION,
-          `Transição de status inválida: ${current.status} → ${input.status}`,
-        );
-      }
-    }
-
-    const updated = await this.appointmentsRepository.update(id, {
+    const data = {
       ...(input.scheduledAt !== undefined ? { scheduledAt } : {}),
       ...(input.serviceId !== undefined ? { serviceId: input.serviceId } : {}),
       ...(input.notes !== undefined ? { notes: input.notes || null } : {}),
       ...(input.status !== undefined && input.status !== current.status
         ? { status: input.status }
         : {}),
+    };
+
+    // Rescheduling re-checks conflicts and writes in the SAME transaction —
+    // same race guard as create. Status-only updates run through the same
+    // transaction for uniformity (single cheap statement).
+    const updated = await this.prisma.$transaction(async (tx) => {
+      if (scheduledAt) {
+        const conflict = await this.appointmentsRepository.findConflict(
+          tx,
+          current.vehicleId,
+          scheduledAt,
+          this.slotEnd(scheduledAt),
+          id,
+        );
+        if (conflict) throw this.conflictError(conflict);
+      }
+
+      if (input.status !== undefined && input.status !== current.status) {
+        if (!canTransitionAppointment(current.status, input.status)) {
+          throw new ConflictError(
+            ErrorCodes.INVALID_APPOINTMENT_TRANSITION,
+            `Transição de status inválida: ${current.status} → ${input.status}`,
+          );
+        }
+      }
+
+      return this.appointmentsRepository.update(tx, id, data);
     });
     return toDto(updated);
   }

@@ -25,6 +25,17 @@ export type AppointmentWithRelations = Prisma.AppointmentGetPayload<{
  * Data access for appointments (spec §22). No business rules here.
  * The (vehicleId, scheduledAt) index supports the conflict check (spec §13).
  */
+
+const APPOINTMENT_INCLUDE = {
+  customer: { select: { name: true } },
+  vehicle: { select: { plate: true } },
+  service: { select: { name: true } },
+} as const;
+
+/** Any client that can run appointment queries: the global PrismaService or
+ * a transaction client (conflict check + write share ONE transaction). */
+type AppointmentClient = Prisma.TransactionClient | PrismaService;
+
 @Injectable()
 export class AppointmentsRepository {
   constructor(private readonly prisma: PrismaService) {}
@@ -32,12 +43,27 @@ export class AppointmentsRepository {
   findById(id: string): Promise<AppointmentWithRelations | null> {
     return this.prisma.appointment.findFirst({
       where: { id },
-      include: {
-        customer: { select: { name: true } },
-        vehicle: { select: { plate: true } },
-        service: { select: { name: true } },
-      },
+      include: APPOINTMENT_INCLUDE,
     });
+  }
+
+  private conflictWhere(
+    vehicleId: string,
+    start: Date,
+    end: Date,
+    excludeId?: string,
+  ): Prisma.AppointmentWhereInput {
+    return {
+      vehicleId,
+      status: { in: [...ACTIVE_APPOINTMENT_STATUSES] },
+      OR: [
+        { scheduledAt: { equals: start } },
+        ...(start.getTime() !== end.getTime()
+          ? [{ scheduledAt: { gte: start, lt: end } }]
+          : []),
+      ],
+      ...(excludeId ? { id: { not: excludeId } } : {}),
+    };
   }
 
   /**
@@ -45,25 +71,20 @@ export class AppointmentsRepository {
    * whose slot overlaps [start, end). Cancelled/completed do not block.
    * With instant slots (start === end) this reduces to an exact-timestamp
    * match; duration-based windows work without changes once durations exist.
+   *
+   * `client` must be the caller's transaction client when the result gates a
+   * write — the check and the write then share one transaction (SQLite
+   * serializes writers), so two concurrent creates cannot both pass.
    */
   findConflict(
+    client: AppointmentClient,
     vehicleId: string,
     start: Date,
     end: Date,
     excludeId?: string,
   ): Promise<Appointment | null> {
-    return this.prisma.appointment.findFirst({
-      where: {
-        vehicleId,
-        status: { in: [...ACTIVE_APPOINTMENT_STATUSES] },
-        OR: [
-          { scheduledAt: { equals: start } },
-          ...(start.getTime() !== end.getTime()
-            ? [{ scheduledAt: { gte: start, lt: end } }]
-            : []),
-        ],
-        ...(excludeId ? { id: { not: excludeId } } : {}),
-      },
+    return client.appointment.findFirst({
+      where: this.conflictWhere(vehicleId, start, end, excludeId),
       orderBy: { scheduledAt: 'asc' },
     });
   }
@@ -116,11 +137,7 @@ export class AppointmentsRepository {
     return this.prisma.appointment.findMany({
       where: this.listWhere(filters, search),
       orderBy: buildOrderBy(sortBy, sortDir, SORT_FIELD_MAP, { scheduledAt: 'asc' }),
-      include: {
-        customer: { select: { name: true } },
-        vehicle: { select: { plate: true } },
-        service: { select: { name: true } },
-      },
+      include: APPOINTMENT_INCLUDE,
       skip: (page - 1) * limit,
       take: limit,
     });
@@ -149,24 +166,21 @@ export class AppointmentsRepository {
     });
   }
 
-  create(data: {
-    customerId: string;
-    vehicleId: string;
-    serviceId: string;
-    scheduledAt: Date;
-    notes: string | null;
-  }): Promise<AppointmentWithRelations> {
-    return this.prisma.appointment.create({
-      data,
-      include: {
-        customer: { select: { name: true } },
-        vehicle: { select: { plate: true } },
-        service: { select: { name: true } },
-      },
-    });
+  create(
+    client: AppointmentClient,
+    data: {
+      customerId: string;
+      vehicleId: string;
+      serviceId: string;
+      scheduledAt: Date;
+      notes: string | null;
+    },
+  ): Promise<AppointmentWithRelations> {
+    return client.appointment.create({ data, include: APPOINTMENT_INCLUDE });
   }
 
   update(
+    client: AppointmentClient,
     id: string,
     data: Partial<{
       serviceId: string;
@@ -175,14 +189,10 @@ export class AppointmentsRepository {
       status: AppointmentStatus;
     }>,
   ): Promise<AppointmentWithRelations> {
-    return this.prisma.appointment.update({
+    return client.appointment.update({
       where: { id },
       data,
-      include: {
-        customer: { select: { name: true } },
-        vehicle: { select: { plate: true } },
-        service: { select: { name: true } },
-      },
+      include: APPOINTMENT_INCLUDE,
     });
   }
 

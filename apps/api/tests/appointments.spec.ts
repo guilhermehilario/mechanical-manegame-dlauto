@@ -4,6 +4,7 @@ import { AppointmentsService } from '../src/modules/appointments/appointments.se
 import type { AppointmentsRepository, AppointmentWithRelations } from '../src/modules/appointments/appointments.repository';
 import type { VehiclesRepository } from '../src/modules/vehicles/vehicles.repository';
 import type { ServicesRepository } from '../src/modules/services/services.repository';
+import type { PrismaService } from '../src/prisma/prisma.service';
 
 function makeVehicle(overrides: Partial<Vehicle> = {}): Vehicle {
   return {
@@ -65,28 +66,39 @@ function repoMock() {
     findConflict: vi.fn(),
     list: vi.fn(),
     count: vi.fn(),
-    create: vi.fn((_data: unknown) => makeAppointment()),
-    update: vi.fn((_id: string, data: unknown) =>
+    create: vi.fn((_client: unknown, _data: unknown) => makeAppointment()),
+    update: vi.fn((_client: unknown, _id: string, data: unknown) =>
       makeAppointment(data as Partial<Appointment>),
     ),
     delete: vi.fn(),
   };
 }
 
+const TX = Symbol('tx');
+
+function prismaMock() {
+  return {
+    $transaction: vi.fn((fn: (tx: unknown) => Promise<unknown>) => fn(TX)),
+  };
+}
+
 describe('AppointmentsService', () => {
   let repo: ReturnType<typeof repoMock>;
+  let prisma: ReturnType<typeof prismaMock>;
   let vehiclesRepo: { findById: ReturnType<typeof vi.fn> };
   let servicesRepo: { findById: ReturnType<typeof vi.fn> };
   let service: AppointmentsService;
 
   beforeEach(() => {
     repo = repoMock();
+    prisma = prismaMock();
     vehiclesRepo = { findById: vi.fn() };
     servicesRepo = { findById: vi.fn() };
     service = new AppointmentsService(
       repo as unknown as AppointmentsRepository,
       vehiclesRepo as unknown as VehiclesRepository,
       servicesRepo as unknown as ServicesRepository,
+      prisma as unknown as PrismaService,
     );
   });
 
@@ -108,7 +120,24 @@ describe('AppointmentsService', () => {
     expect(created.status).toBe('SCHEDULED');
     expect(created.vehiclePlate).toBe('ABC1D23');
     expect(repo.create).toHaveBeenCalledWith(
+      TX,
       expect.objectContaining({ vehicleId: 'veh_1', serviceId: 'svc_1' }),
+    );
+  });
+
+  it('runs the conflict check and the insert in one transaction (race guard)', async () => {
+    vehiclesRepo.findById.mockResolvedValue(makeVehicle());
+    servicesRepo.findById.mockResolvedValue(makeService());
+    repo.findConflict.mockResolvedValue(null);
+
+    await service.create(baseInput);
+
+    expect(prisma.$transaction).toHaveBeenCalledTimes(1);
+    expect(repo.findConflict).toHaveBeenCalledWith(
+      TX,
+      'veh_1',
+      expect.any(Date),
+      expect.any(Date),
     );
   });
 
@@ -147,6 +176,17 @@ describe('AppointmentsService', () => {
     expect(repo.create).not.toHaveBeenCalled();
   });
 
+  it('rejects a conflicting reschedule inside the same transaction (race guard)', async () => {
+    repo.findById.mockResolvedValue(makeAppointment());
+    repo.findConflict.mockResolvedValue(makeAppointment());
+
+    await expect(
+      service.update('apt_1', { scheduledAt: '2026-10-02T11:00:00.000Z' }),
+    ).rejects.toMatchObject({ code: 'APPOINTMENT_CONFLICT', status: 409 });
+    expect(repo.update).not.toHaveBeenCalled();
+    expect(prisma.$transaction).toHaveBeenCalledTimes(1);
+  });
+
   it('ignores cancelled/completed appointments in conflict check', async () => {
     vehiclesRepo.findById.mockResolvedValue(makeVehicle());
     servicesRepo.findById.mockResolvedValue(makeService());
@@ -172,7 +212,13 @@ describe('AppointmentsService', () => {
 
     await service.update('apt_1', { scheduledAt: '2026-10-02T11:00:00.000Z' });
 
-    expect(repo.findConflict).toHaveBeenCalledWith('veh_1', expect.any(Date), expect.any(Date), 'apt_1');
+    expect(repo.findConflict).toHaveBeenCalledWith(
+      TX,
+      'veh_1',
+      expect.any(Date),
+      expect.any(Date),
+      'apt_1',
+    );
     expect(repo.update).toHaveBeenCalled();
   });
 

@@ -134,14 +134,16 @@ describe('WorkOrdersService', () => {
     findProductItem: ReturnType<typeof vi.fn>;
     deleteServiceItem: ReturnType<typeof vi.fn>;
     deleteProductItem: ReturnType<typeof vi.fn>;
-    deleteServiceItemInTransaction: ReturnType<typeof vi.fn>;
     deleteProductItemInTransaction: ReturnType<typeof vi.fn>;
   };
   let vehiclesRepo: { findById: ReturnType<typeof vi.fn> };
   let servicesRepo: { findById: ReturnType<typeof vi.fn> };
   let productsRepo: { findById: ReturnType<typeof vi.fn> };
   let stockService: { applyInTransaction: ReturnType<typeof vi.fn> };
-  let paymentsRepo: { paidTotal: ReturnType<typeof vi.fn> };
+  let paymentsRepo: {
+    paidTotal: ReturnType<typeof vi.fn>;
+    paidTotalsByWorkOrder: ReturnType<typeof vi.fn>;
+  };
   let prismaMock: {
     $transaction: ReturnType<typeof vi.fn>;
     vehiclePickup: { count: ReturnType<typeof vi.fn> };
@@ -166,7 +168,6 @@ describe('WorkOrdersService', () => {
       deleteServiceItem: vi.fn(),
       deleteProductItem: vi.fn(),
       deleteProductItemInTransaction: vi.fn(() => Promise.resolve(makeProductItem())),
-      deleteServiceItemInTransaction: vi.fn(() => Promise.resolve(makeServiceItem())),
     };
     vehiclesRepo = { findById: vi.fn() };
     servicesRepo = { findById: vi.fn() };
@@ -178,6 +179,7 @@ describe('WorkOrdersService', () => {
     };
     paymentsRepo = {
       paidTotal: vi.fn(() => Promise.resolve(0)),
+      paidTotalsByWorkOrder: vi.fn(() => Promise.resolve(new Map())),
     };
     const workOrderDelete = vi.fn();
     prismaMock = {

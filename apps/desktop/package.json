@@ -14,7 +14,9 @@
     "test": "vitest run",
     "stage": "node scripts/stage.mjs",
     "package": "pnpm run build && pnpm run stage && electron-builder --linux",
-    "package:dir": "pnpm run build && pnpm run stage && electron-builder --linux dir"
+    "package:dir": "pnpm run build && pnpm run stage && electron-builder --linux dir",
+    "package:win": "pnpm run build && pnpm run stage && electron-builder --win nsis",
+    "package:win:dir": "pnpm run build && pnpm run stage && electron-builder --win dir"
   },
   "devDependencies": {
     "@mechanic-system/api": "workspace:*",

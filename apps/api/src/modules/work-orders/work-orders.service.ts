@@ -193,9 +193,18 @@ export class WorkOrdersService {
       this.workOrdersRepository.list(page, limit, filters, search, sortBy, sortDir),
       this.workOrdersRepository.count(filters, search),
     ]);
-    const items = await Promise.all(
-      workOrders.map(async (workOrder) =>
-        toDto(workOrder, await this.paidCentsFor(workOrder)),
+    // One grouped aggregate for the paid badges of the page (avoid N+1:
+    // one paidTotal query per row would fire up to `limit` extra queries).
+    const payableIds = workOrders
+      .filter((workOrder) => isPayableWorkOrderStatus(workOrder.status))
+      .map((workOrder) => workOrder.id);
+    const paidByOrder = await this.paymentsRepository.paidTotalsByWorkOrder(payableIds);
+    const items = workOrders.map((workOrder) =>
+      toDto(
+        workOrder,
+        isPayableWorkOrderStatus(workOrder.status)
+          ? paidByOrder.get(workOrder.id) ?? 0
+          : null,
       ),
     );
     return {

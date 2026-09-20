@@ -90,11 +90,15 @@ Credenciais de dev: `admin@oficina.local` / `admin-local-dev-2026`.
 
 ## 5. Bloqueios que dependem do usuário (não crie trabalho paralelo)
 
-- **C1/C2/C3 e E3**: homologação do binário na **máquina alvo da oficina**
-  (AppImage Linux vs instalador Windows — **decidir o SO alvo primeiro**).
+- **C1/C3 e E3**: homologação do binário na **máquina alvo da oficina** —
+  **SO definido (2026-09-20): Windows** (i5-5300U, 8 GB RAM, HDD 460 GB).
+  **C2** foi destravado: gerar o instalador NSIS com `package:win` do desktop
+  (local, requer Wine) ou pelo job `windows-build` do CI, e validar na máquina
+  real (instalação + SmartScreen D4 + fluxo completo).
 - **G4**: dar **push** e habilitar **GitHub Actions** no remote
   (`git@github.com:guilhermehilario/mechanical-manegame-dlauto.git`) — o
-  workflow já está em `.github/workflows/ci.yml` (4 jobs validados localmente).
+  workflow já está em `.github/workflows/ci.yml` (audit, quality, e2e, smoke +
+  `windows-build`, validações locais verdes).
 
 ## 6. Fazer quando uma tarefa acabar
 

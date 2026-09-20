@@ -6,8 +6,9 @@
 > **Status das seções:** o passo-a-passo abaixo descreve o comportamento
 > implementado. A *validação final na máquina alvo* (navegar o fluxo completo
 > dentro do aplicativo empacotado) é a tarefa **C1**; o instalador para
-> Windows é a tarefa **C2** — ainda abertas e dependentes do ambiente real
-> da oficina.
+> Windows (**C2**) está definido como **NSIS** — SO alvo confirmado
+> (2026-09-20) —, faltando gerar o executável (`package:win` ou CI) e validá-lo
+> na máquina da oficina.
 
 ---
 
@@ -47,11 +48,22 @@
 > Linux, rode com `./mechanic-dlauto-<versão>-x86_64.AppImage
 > --appimage-extract-and-run`.
 
-### Windows / outras plataformas
+### Windows (NSIS) — sistema alvo da oficina
 
-O instalador para **Windows** está planejado, mas ainda **não foi decidido/
-gerado** (tarefa **C2**). Nenhuma credencial ou dado nosso depende disso — a
-pasta de dados é a mesma em qualquer sistema operacional.
+A oficina roda **Windows** (i5-5300U · 8 GB RAM · HDD 460 GB — definido em
+2026-09-20). Este é o foco da homologação (**C2**).
+
+1. Receba o instalador: `mechanic-dlauto-<versão>-setup.exe`.
+2. Dê dois cliques e siga o assistente de instalação.
+3. Se o **SmartScreen** alertar que o arquivo "não é reconhecido", clique em
+   **Mais informações → Executar assim mesmo** — o instalador ainda **não tem
+   certificado de assinatura** (item pós-MVP); o app em si não fala com a
+   internet.
+4. Se o firewall pedir permissão para o próprio aplicativo, **recuse/bloqueie**:
+   o programa só fala com a própria máquina (`127.0.0.1`) e nunca precisa da
+   rede externa.
+5. Primeira execução: o programa cria sozinho a pasta de dados (ver §5) em
+   `%APPDATA%\Mechanic DLAuto`.
 
 ---
 
@@ -89,10 +101,11 @@ a ser a **tela normal de acesso** (e-mail + senha).
 
 ## 5. Onde ficam os dados e o backup
 
-Todos os dados ficam numa pasta **do usuário** do computador (Linux):
+Todos os dados ficam numa pasta **do usuário** do computador:
 
 ```
-~/.config/Mechanic DLAuto/
+Windows:  %APPDATA%\Mechanic DLAuto\
+Linux:    ~/.config/Mechanic DLAuto/
 ├── mechanic.db      banco principal (clientes, OS, estoque, financeiro)
 ├── storage/         fotos/arquivos anexados
 ├── backups/         backups automáticos e manuais (veja §6)
@@ -101,8 +114,9 @@ Todos os dados ficam numa pasta **do usuário** do computador (Linux):
 ```
 
 > **Para cópia de segurança externa**, o caminho mais seguro é copiar a
-> pasta inteira (`~/.config/Mechanic DLAuto`) para um pen drive ou serviço
-> de nuvem, com o programa **fechado**.
+> pasta inteira (`%APPDATA%\Mechanic DLAuto` no Windows /
+> `~/.config/Mechanic DLAuto` no Linux) para um pen drive ou serviço de
+> nuvem, com o programa **fechado**.
 
 ---
 
@@ -158,8 +172,9 @@ periodicamente. Único backup físico = único ponto de falha.
 1. **Faça um backup manual** antes (menu Backups).
 2. Feche o aplicativo.
 3. Substitua o arquivo do instalador pela versão nova e abra.
-4. Os dados **não são perdidos** — a pasta `~/.config/Mechanic DLAuto`
-   permanece intacta.
+4. Os dados **não são perdidos** — a pasta de dados do usuário
+   (`%APPDATA%\Mechanic DLAuto` no Windows / `~/.config/Mechanic DLAuto` no
+   Linux) permanece intacta.
 
 ---
 
@@ -181,12 +196,20 @@ periodicamente. Único backup físico = único ponto de falha.
 # Pré-requisito: builds de produção de web + API + pacotes
 pnpm build
 
-# Gera o AppImage Linux em apps/desktop/release/
+# Instalador Linux (AppImage) em apps/desktop/release/
 pnpm --filter @mechanic-system/desktop package
+
+# Instalador Windows (NSIS) — no Linux este comando exige Wine instalado;
+# o caminho recomendado é o job `windows-build` do GitHub Actions (G4), que
+# gera o arquivo em um runner Windows sem dependência local.
+pnpm --filter @mechanic-system/desktop package:win
+# Pasta de teste rápida (sem instalador): package:win:dir
 ```
 
-- Artefato: `apps/desktop/release/mechanic-dlauto-<versão>-x86_64.AppImage`.
-- A pasta `linux-unpacked/` permite testar antes de gerar o AppImage.
-- **Validar na máquina real (C1):** primeiro acesso (§3), OS completa com
+- Artefato Linux: `apps/desktop/release/mechanic-dlauto-<versão>-x86_64.AppImage`;
+  Windows: `apps/desktop/release/mechanic-dlauto-<versão>-setup.exe`.
+- As pastas `linux-unpacked/` / `win-unpacked/` permitem testar antes de
+  gerar o instalador.
+- **Validar na máquina real (C1/C2):** primeiro acesso (§3), OS completa com
   impressão, upload de imagem, backup/restauração e migração da primeira
   execução devem ser conferidos no binário final antes de distribuir.

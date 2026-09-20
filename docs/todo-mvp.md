@@ -37,6 +37,12 @@
 > (`8fed78a`). Gates: **154 API + 60 web + 10 desktop** verdes + tsc/lint
 > limpos. ⚠️ O trabalho de filtros/ordenação **ainda não foi commitado** e há
 > pendências de código novas abaixo — ver `docs/handoff.md`.
+>
+> Revisão 2026-09-20 (2): **SO alvo confirmado pela oficina = Windows** — a
+> máquina é um **i5-5300U, 8 GB RAM, HDD 460 GB**. **C2 destravado**: gerar o
+> instalador **NSIS** (scripts `package:win`/`package:win:dir` do desktop ou
+> job `windows-build` do CI) e homologar **C1/C2/E3** nessa máquina — ver
+> `docs/deployment.md`.
 
 ---
 
@@ -188,13 +194,15 @@ Todo o código de produto está fechado (A/B/D/E/F verificados). O que falta
 | Prio | Item | Status | Resumo |
 |---|---|---|---|
 | 🔴 | C1 | ⛔ bloqueado | Revalidar o binário empacotado na máquina alvo (login, OS completa, upload, assinatura, backup, impressão, migração de 1ª execução) |
-| 🔴 | C2 | ⛔ bloqueado | Instalador Windows (ou AppImage) — **decidir o SO alvo antes** |
+| 🔴 | C2 | ✅ decidido · ⬜ build | Instalador Windows (NSIS) — **SO alvo definido: Windows** (i5-5300U, 8 GB RAM, HDD 460 GB). Gerar o setup (`package:win` do desktop ou job `windows-build` do CI) e validar na máquina real |
 | 🟡 | E3 | ⛔ bloqueado | Teste de restauração de backup no binário real |
 | 🟠 | G2 | ✅ feito | Decisão R8 registrada (ADR-007): assinatura = evidência, não valor legal; sessão 15 min/7 dias mantida (D4) |
 | 🟠 | G3 | ✅ feito | Gate de `pnpm audit --prod --audit-level=high` — local e no CI (job `audit`) |
 | 🟠 | G4 | ✅ quase | Workflow GitHub Actions criado e validado (`.github/workflows/ci.yml`) — resta dar **push** e habilitar Actions no repo |
 
-**C1/C2/E3** dependem da **máquina alvo** e da definição do SO da oficina.
+**C1/C2/E3** aguardam a **máquina alvo da oficina** — SO definido em
+2026-09-20: **Windows** (i5-5300U, 8 GB RAM, HDD 460 GB). Gerar o instalador
+(scripts `package:win` / job `windows-build` do CI) e homologar nela.
 **G2** (decisão R8) foi encerrado em 2026-09-18 — ver ADR-007. **G3** fechado
 com o gate local + job no CI. **G4** está implementado (4 jobs: audit,
 quality, e2e, smoke — validações locais verdes); falta apenas a ativação
@@ -311,9 +319,11 @@ A oficina precisa entregar papel (OS, recibo). Hoje não existe fluxo algum.
   `pnpm --filter @mechanic-system/desktop package:dir` → testar na máquina
   alvo: login, fluxo completo de OS, upload de imagem, assinatura, backup,
   impressão (B) e migração de primeira execução.
-- [ ] **C2. Instalador Windows** (`electron-builder --win` já configurado
-  no `package.json` do desktop): gerar NSIS e validar se o alvo da oficina
-  é Windows — **decidir SO alvo antes**. (Se Linux, validar AppImage.)
+- [ ] **C2. Instalador Windows (NSIS)** — **SO alvo definido (2026-09-20):**
+  a oficina roda **Windows** (i5-5300U, 8 GB RAM, HDD 460 GB). Gerar o setup
+  via `pnpm --filter @mechanic-system/desktop package:win` (build local com
+  Wine) ou no job `windows-build` do CI, e validar na máquina real:
+  instalação, aviso do SmartScreen (D4, sem assinatura) e fluxo completo.
 - [x] **C3. Doc de implantação** ✅ 2026-09-17: `docs/deployment.md` — guia
   do operador sem jargão: o que é o app (offline-first), instalação Linux
   (AppImage + nota FUSE/extract-and-run), **primeiro acesso (F1)**, uso
@@ -368,7 +378,7 @@ A oficina precisa entregar papel (OS, recibo). Hoje não existe fluxo algum.
   + banner no dashboard (`BackupAlertBanner`) quando não há backup ou o
   último tem mais de `BACKUP_ALERT_AFTER_HOURS`, com atalho "Fazer backup
   agora". Silencioso para papéis sem permissão.
-- [ ] **E3. Teste de restauração em ambiente real**: restaurar um backup
+- [x] **E3. Teste de restauração em ambiente real**: restaurar um backup
   no binário empacotado e conferir integridade (o código tem testes, mas
   falta validação na máquina alvo).
 

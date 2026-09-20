@@ -171,13 +171,6 @@ export class WorkOrdersRepository {
    * product-item flow — a global-client write inside an interactive
    * transaction would deadlock on SQLite's single-writer lock).
    */
-  deleteServiceItemInTransaction(
-    tx: Prisma.TransactionClient,
-    id: string,
-  ): Promise<WorkOrderServiceItem> {
-    return tx.workOrderServiceItem.delete({ where: { id } });
-  }
-
   deleteProductItemInTransaction(
     tx: Prisma.TransactionClient,
     id: string,

@@ -47,7 +47,6 @@ describe('PaymentsService', () => {
     paidTotal: ReturnType<typeof vi.fn>;
     paidTotalInTransaction: ReturnType<typeof vi.fn>;
     createInTransaction: ReturnType<typeof vi.fn>;
-    delete: ReturnType<typeof vi.fn>;
     deleteInTransaction: ReturnType<typeof vi.fn>;
   };
   let workOrdersRepo: { findById: ReturnType<typeof vi.fn> };
@@ -61,7 +60,6 @@ describe('PaymentsService', () => {
       paidTotal: vi.fn(),
       paidTotalInTransaction: vi.fn(),
       createInTransaction: vi.fn(),
-      delete: vi.fn(),
       deleteInTransaction: vi.fn(),
     };
     workOrdersRepo = { findById: vi.fn() };

@@ -101,7 +101,7 @@ export class TokenService {
   }
 
   private refreshTtlMs(): number {
-    const raw = process.env.JWT_REFRESH_SECRET ? (process.env.JWT_REFRESH_EXPIRES ?? '7d') : '7d';
+    const raw = process.env.JWT_REFRESH_EXPIRES ?? '7d';
     const match = /^(\d+)([smhd])$/.exec(raw);
     if (!match || !match[1] || !match[2]) return 7 * 24 * 3600 * 1000;
     const value = Number(match[1]);

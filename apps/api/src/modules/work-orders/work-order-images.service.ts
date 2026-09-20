@@ -97,6 +97,8 @@ export class WorkOrderImagesService {
     const buffer = await this.storage.read(image.storageKey);
     const inline = INLINE_MIME_TYPES.has(image.mimeType);
     response.setHeader('Content-Type', image.mimeType);
+    // Authenticated PII bytes: never let HTTP caches persist them.
+    response.setHeader('Cache-Control', 'private, no-store');
     response.setHeader('Content-Length', buffer.length.toString());
     response.setHeader(
       'Content-Disposition',

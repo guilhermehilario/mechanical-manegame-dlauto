@@ -36,7 +36,7 @@
 
 | # | Decisão | Escolha | Implicações |
 |---|---|---|---|
-| D1 | **SO alvo da oficina** | **Windows (NSIS)** | Foco do empacotamento, testes e homologação (C2 do todo-mvp destravado). O alvo `win.nsis` já está configurado no electron-builder; AppImage permanece como secundário sem garantia |
+| D1 | **SO alvo da oficina** | **Windows (NSIS)** | Foco do empacotamento, testes e homologação (C2 do todo-mvp destravado). O alvo `win.nsis` já está configurado no electron-builder; AppImage permanece como secundário sem garantia. **Confirmado com o hardware real (2026-09-20):** i5-5300U · 8 GB RAM · HDD 460 GB |
 | D2 | **Feed de atualização** | **GitHub Releases** (provider `github`) | Zero infraestrutura. ⚠️ Se o repo for **privado**, o electron-updater exige token embutido no app (risco) — nesse caso, migrar para provider `generic` ou tornar o repo público. O G4 (CI remota) usa o mesmo repo, um destrava o outro |
 | D3 | **Cadência de checagem** | **Só no boot** (+ botão manual "Verificar atualizações") | Sem timer periódico; checagem ~10s após abrir a janela, best-effort. Operador sempre pode forçar em Configurações |
 | D4 | **Assinatura de código (Windows)** | **Sem assinatura por ora** | SmartScreen vai alertar na 1ª instalação — incluir orientação no `docs/deployment.md` ("Mais informações → Executar assim mesmo"). Reavaliar quando houver volume de máquinas |

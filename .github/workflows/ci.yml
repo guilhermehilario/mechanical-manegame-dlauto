@@ -96,3 +96,31 @@ jobs:
           SEED_ADMIN_EMAIL=smoke@oficina.local
           SEED_ADMIN_PASSWORD=ci-smoke-password-2026
           pnpm --dir apps/api smoke
+
+  # C2 (todo-mvp): SO alvo da oficina definido = Windows (2026-09-20) —
+  # gerar o instalador NSIS num runner Windows (evita Wine no build local).
+  windows-build:
+    name: Instalador Windows (NSIS) — C2
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # Build de web + API + desktop (pré-requisito do stage).
+      - run: pnpm build
+      # build+stage+electron-builder --win nsis. O stage regenera o Prisma
+      # Client no diretório do sidecar com os engines Windows nativos.
+      - name: Gerar instalador NSIS
+        run: pnpm --filter @mechanic-system/desktop package:win
+      - name: Upload do instalador
+        uses: actions/upload-artifact@v4
+        with:
+          name: mechanic-dlauto-windows-setup
+          path: apps/desktop/release/mechanic-dlauto-*-setup.exe
+          if-no-files-found: error

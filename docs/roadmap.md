@@ -29,8 +29,9 @@ Fase 9** (2026-09-11 — ver changelog do plano); restam:
 
 > **Nota:** com R5 e R8 fechados, da auditoria restam apenas R7 (Permissões
 > concluídas; cifragem rejeitada com justificativa no ADR-006) e a
-> revalidação do binário empacotado (R2+R6), que exige rodar `pnpm --filter
-> @mechanic-system/desktop package` e testar login/render na máquina alvo.
+> revalidação do binário empacotado (R2+R6), que exige gerar o instalador
+> **Windows** (SO alvo definido em 2026-09-20 — i5-5300U, 8 GB RAM, HDD
+> 460 GB) e testar login/render na máquina real.
 
 ---
 
@@ -93,8 +94,9 @@ desenhada para acomodá-los sem rewrites:
 - **Observabilidade:** pino já estruturado; adicionar correlação de requestId
   por operação de negócio (base para suporte da oficina).
 - **CI remota (G4):** ✅ **implementado (2026-09-18)** — `.github/workflows/ci.yml`
-  (audit + quality + e2e + smoke); falta apenas push/ativação no repositório.
-  A "CI local" (husky + turbo) continua funcionando.
+  (audit + quality + e2e + smoke) + job `windows-build` (2026-09-20) que gera
+  o **instalador NSIS** (C2) como artefato; falta apenas push/ativação no
+  repositório. A "CI local" (husky + turbo) continua funcionando.
 
 ---
 
@@ -119,6 +121,7 @@ gates: lint + typecheck + testes + build + smoke/e2e):
 | **Fase 9** | ✅ **Concluída (2026-09-11):** R1 + R2 + R3 + R4 + R5 + R6 aplicados (ver changelog do plano de remediação). Restam como acompanhamento: revalidar o binário empacotado | Fecha 5 achados de segurança de alta prioridade; rota nova só nasce pública com @Public() explícito |
 | **Fase 10** | ✅ **Concluída (2026-09-11):** backup/restauração locais (SQLite `VACUUM INTO` + storage, manifest com sha256, restore verificado) + permissões 0700/0600 (R7, ADR-006) | Protege o dado mais valioso do negócio (local-only hoje) |
 | **Fase 11** | ✅ **Concluída (2026-09-16/17):** Pagamentos na OS (Bloco A) — entidade `Payment`, painel na OS, estorno com trilha e relatório por forma | Fecha o ciclo financeiro: orçamento → execução → recebimento |
+| **MVP (hoje)** | ✅ **Destravado (2026-09-20):** SO alvo definido = **Windows** (i5-5300U · 8 GB · HDD 460 GB) → gerar o instalador NSIS (`package:win`/job `windows-build` do CI) e homologar **C1/C2/E3** na máquina da oficina (itens em `docs/todo-mvp.md`) | Único bloqueio restante do produto viável |
 | **Fase 12** | Sync offline-first (§2): outbox nos services + worker + ADR de conflitos | O grande diferencial de produto; exige servidor central |
 | **Fase 13+** | Impressão, nota fiscal, estoque avançado, integrações, S3 (§3) | Expansão, conforme demanda do produto |
 
