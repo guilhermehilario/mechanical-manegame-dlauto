@@ -1,6 +1,7 @@
 import type { ShopSettingsDto } from '@mechanic-system/types';
 import { getShopSettings } from '../services/settings.service';
 import { formatCpf, formatPhone } from '../utils/format';
+import { formatDate, formatDateTime } from './datetime';
 
 /**
  * Printing infrastructure (Bloco B — docs/todo-mvp.md).
@@ -59,7 +60,7 @@ function footerHtml(settings: ShopSettingsDto | null): string {
   return `
     <div class="doc-footer">
       ${footer ? `<div>${escapeHtml(footer)}</div>` : ''}
-      <div>Emitido em ${new Date().toLocaleString('pt-BR')}</div>
+      <div>Emitido em ${formatDateTime(new Date().toISOString(), settings?.timeFormat ?? 'H24')}</div>
     </div>`;
 }
 
@@ -166,7 +167,7 @@ export function printWorkOrder(data: WorkOrderPrintData): Promise<void> {
       ${data.customerPhone ? `<tr><th>Telefone</th><td>${escapeHtml(formatPhone(data.customerPhone))}</td></tr>` : ''}
       <tr><th>Veículo</th><td><span class="mono">${escapeHtml(data.vehiclePlate)}</span> — ${escapeHtml(data.vehicleModel)}</td></tr>
       <tr><th>Status</th><td>${escapeHtml(STATUS_LABELS[data.status] ?? data.status)}</td></tr>
-      <tr><th>Aberta em</th><td>${new Date(data.createdAt).toLocaleDateString('pt-BR')}</td></tr>
+      <tr><th>Aberta em</th><td>${formatDate(data.createdAt)}</td></tr>
     </table>
 
     <h2>Serviços</h2>
@@ -233,7 +234,7 @@ export function printPickupReceipt(data: PickupReceiptPrintData): Promise<void> 
       <tr><th>Documento</th><td class="mono">${escapeHtml(formatCpf(data.receiverDoc))}</td></tr>
       ${data.receiverPhone ? `<tr><th>Telefone</th><td>${escapeHtml(formatPhone(data.receiverPhone))}</td></tr>` : ''}
       ${data.mileageKm !== null ? `<tr><th>KM</th><td>${data.mileageKm.toLocaleString('pt-BR')} km</td></tr>` : ''}
-      <tr><th>Data/hora</th><td>${new Date(data.createdAt).toLocaleString('pt-BR')}</td></tr>
+      <tr><th>Data/hora</th><td>${formatDateTime(data.createdAt)}</td></tr>
     </table>
 
     ${data.notes ? `<p class="notes">${escapeHtml(data.notes)}</p>` : ''}

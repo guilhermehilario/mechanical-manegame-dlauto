@@ -1,4 +1,5 @@
 import { formatBRL } from '@mechanic-system/shared';
+import { formatDate } from '../../utils/datetime';
 import type {
   PaymentMethod,
   PaymentMethodRevenueReportDto,
@@ -26,7 +27,7 @@ export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
 };
 
 function period(report: { from: string; to: string }): string {
-  return `Período: ${report.from} a ${report.to}`;
+  return `Período: ${formatDate(report.from)} a ${formatDate(report.to)}`;
 }
 
 export function buildRevenueReport(report: RevenueReportDto): ReportPrintData {
@@ -37,7 +38,7 @@ export function buildRevenueReport(report: RevenueReportDto): ReportPrintData {
     columns: ['Data', 'OS', 'Serviços', 'Produtos', 'Descontos', 'Total'],
     rightAlign: [1, 2, 3, 4, 5],
     rows: report.items.map((item) => [
-      item.date,
+      formatDate(item.date),
       String(item.workOrderCount),
       formatBRL(item.servicesCents),
       formatBRL(item.productsCents),

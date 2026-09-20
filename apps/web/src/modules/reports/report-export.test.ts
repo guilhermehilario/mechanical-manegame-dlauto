@@ -63,9 +63,9 @@ describe('report-export builders', () => {
     const table = buildRevenueReport(revenue);
 
     expect(table.title).toBe('Relatório de Receita');
-    expect(table.period).toBe('Período: 2026-09-01 a 2026-09-30');
+    expect(table.period).toBe('Período: 01/09/2026 a 30/09/2026');
     expect(table.columns).toEqual(['Data', 'OS', 'Serviços', 'Produtos', 'Descontos', 'Total']);
-    expect(table.rows[0]?.[0]).toBe('2026-09-10');
+    expect(table.rows[0]?.[0]).toBe('10/09/2026');
     expect(table.rows[0]?.[1]).toBe('2');
     expect(table.rows[0]?.join(' ')).toContain('1.234,56');
     expect(table.totalsRow?.[5]).toContain('1.234,56');

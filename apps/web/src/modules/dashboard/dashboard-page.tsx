@@ -6,9 +6,10 @@ import { getDashboardSummary } from '../../services/dashboard.service';
 import { BackupAlertBanner } from './backup-alert-banner';
 import { WORK_ORDER_STATUS_LABELS, WORK_ORDER_STATUS_BADGES } from '../work-orders/work-orders-page';
 import { APPOINTMENT_STATUS_BADGES } from '../appointments/appointment-status';
-import { formatTime } from '../../utils/dates';
+import { formatTime } from '../../utils/datetime';
 import { PageHeader } from '../../components/page-header';
 import { DashboardChartsSection } from './dashboard-charts';
+import { useTimeFormat } from '../../hooks/use-time-format';
 
 function KpiCard({
   label,
@@ -68,6 +69,7 @@ function Card({ title, children }: { title: string; children: React.ReactNode })
 }
 
 export function DashboardPage() {
+  const timeFormat = useTimeFormat();
   const summaryQuery = useQuery({
     queryKey: ['dashboard-summary'],
     queryFn: getDashboardSummary,
@@ -245,7 +247,7 @@ export function DashboardPage() {
                   </div>
                   <div className="flex shrink-0 flex-col items-end gap-1">
                     <span className="text-xs font-medium text-slate-600">
-                      {formatTime(new Date(appointment.scheduledAt))}
+                      {formatTime(new Date(appointment.scheduledAt), timeFormat)}
                     </span>
                     <span
                       className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${

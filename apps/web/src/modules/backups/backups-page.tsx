@@ -1,7 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import type { BackupDto } from '@mechanic-system/types';
-import { formatBytes, formatDate } from '../../utils/format';
+import { formatBytes } from '../../utils/format';
+import { formatDate } from '../../utils/datetime';
 import { createBackup, deleteBackup, listBackups, restoreBackup } from '../../services/backups.service';
 import { PageHeader } from '../../components/page-header';
 import { btnPrimary } from '../../components/ui';

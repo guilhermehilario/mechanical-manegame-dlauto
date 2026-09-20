@@ -17,11 +17,3 @@ export const APPOINTMENT_STATUS_BADGES: Record<AppointmentStatus, string> = {
   COMPLETED: 'bg-green-50 text-green-700',
   CANCELLED: 'bg-slate-100 text-slate-500',
 };
-
-/** `dd/mm/aaaa hh:mm` in the local timezone (matching how the slot was picked). */
-export function formatAppointmentDateTime(iso: string): string {
-  return new Intl.DateTimeFormat('pt-BR', {
-    dateStyle: 'short',
-    timeStyle: 'short',
-  }).format(new Date(iso));
-}

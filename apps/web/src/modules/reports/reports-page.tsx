@@ -11,6 +11,7 @@ import {
   getWorkOrderStatusReport,
 } from '../../services/reports.service';
 import { downloadCsv } from '../../utils/csv';
+import { formatDate } from '../../utils/datetime';
 import { printReport, type ReportPrintData } from '../../utils/print';
 import { WORK_ORDER_STATUS_LABELS } from '../work-orders/work-orders-page';
 import {
@@ -311,7 +312,7 @@ function ReportContent({
         </div>
         {payments.items.length === 0 ? (
           <p className="text-sm text-slate-500">
-            Nenhum pagamento recebido no período {payments.from} a {payments.to}.
+            Nenhum pagamento recebido no período {formatDate(payments.from)} a {formatDate(payments.to)}.
           </p>
         ) : (
           <div className="overflow-x-auto">
@@ -364,7 +365,7 @@ function ReportContent({
         </div>
         {revenue.items.length === 0 ? (
           <p className="text-sm text-slate-500">
-            Nenhuma OS entregue no período {revenue.from} a {revenue.to}.
+            Nenhuma OS entregue no período {formatDate(revenue.from)} a {formatDate(revenue.to)}.
           </p>
         ) : (
           <div className="overflow-x-auto">
