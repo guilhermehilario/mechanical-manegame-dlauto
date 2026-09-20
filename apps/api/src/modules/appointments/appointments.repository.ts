@@ -68,13 +68,16 @@ export class AppointmentsRepository {
     });
   }
 
-  private listWhere(filters: {
-    customerId?: string;
-    vehicleId?: string;
-    status?: AppointmentStatus;
-    from?: Date;
-    to?: Date;
-  }): Prisma.AppointmentWhereInput {
+  private listWhere(
+    filters: {
+      customerId?: string;
+      vehicleId?: string;
+      status?: AppointmentStatus;
+      from?: Date;
+      to?: Date;
+    },
+    search?: string,
+  ): Prisma.AppointmentWhereInput {
     const base: Prisma.AppointmentWhereInput = {};
     if (filters.customerId) base.customerId = filters.customerId;
     if (filters.vehicleId) base.vehicleId = filters.vehicleId;
@@ -85,7 +88,15 @@ export class AppointmentsRepository {
         ...(filters.to ? { lte: filters.to } : {}),
       };
     }
-    return base;
+    if (!search) return base;
+    return {
+      ...base,
+      OR: [
+        { customer: { name: { contains: search } } },
+        { vehicle: { plate: { contains: search } } },
+        { service: { name: { contains: search } } },
+      ],
+    };
   }
 
   list(
@@ -98,11 +109,12 @@ export class AppointmentsRepository {
       from?: Date;
       to?: Date;
     },
+    search?: string,
     sortBy?: AppointmentSortField,
     sortDir?: 'asc' | 'desc',
   ): Promise<AppointmentWithRelations[]> {
     return this.prisma.appointment.findMany({
-      where: this.listWhere(filters),
+      where: this.listWhere(filters, search),
       orderBy: buildOrderBy(sortBy, sortDir, SORT_FIELD_MAP, { scheduledAt: 'asc' }),
       include: {
         customer: { select: { name: true } },
@@ -114,14 +126,17 @@ export class AppointmentsRepository {
     });
   }
 
-  count(filters: {
-    customerId?: string;
-    vehicleId?: string;
-    status?: AppointmentStatus;
-    from?: Date;
-    to?: Date;
-  }): Promise<number> {
-    return this.prisma.appointment.count({ where: this.listWhere(filters) });
+  count(
+    filters: {
+      customerId?: string;
+      vehicleId?: string;
+      status?: AppointmentStatus;
+      from?: Date;
+      to?: Date;
+    },
+    search?: string,
+  ): Promise<number> {
+    return this.prisma.appointment.count({ where: this.listWhere(filters, search) });
   }
 
   /** Active-status appointments within an inclusive time window (Fase 8). */

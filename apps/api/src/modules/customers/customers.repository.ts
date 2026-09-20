@@ -54,8 +54,8 @@ export class CustomersRepository {
     limit: number,
     search?: string,
     includeInactive = false,
-    sortBy?: (keyof typeof SORT_FIELD_MAP) | undefined,
-    sortDir?: 'asc' | 'desc' | undefined,
+    sortBy?: keyof typeof SORT_FIELD_MAP,
+    sortDir?: 'asc' | 'desc',
   ): Promise<Customer[]> {
     return this.prisma.customer.findMany({
       where: this.listWhere(search, includeInactive),

@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { BackupDto } from '@mechanic-system/types';
 import { formatBytes } from '../../utils/format';
 import { formatDate } from '../../utils/datetime';
@@ -8,6 +8,8 @@ import { PageHeader } from '../../components/page-header';
 import { btnPrimary } from '../../components/ui';
 import { IconButton, IconActionGroup } from '../../components/icon-button';
 import { IconRestore, IconTrash } from '../../components/icons';
+import { SortableTh } from '../../components/sortable-th';
+import { useTableSort } from '../../hooks/use-table-sort';
 
 /**
  * Backups (Fase 10, spec §3) — admin-only page. The API enforces the role;
@@ -25,6 +27,10 @@ export function BackupsPage() {
   const [actionError, setActionError] = useState<string | null>(null);
   const [restoreConfirm, setRestoreConfirm] = useState<RestoreConfirmState | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<BackupDto | null>(null);
+  const { sort, sortProps } = useTableSort({
+    createdAt: 'desc',
+    sizeBytes: 'desc',
+  } as const);
 
   const backupsQuery = useQuery({
     queryKey: ['backups'],
@@ -69,6 +75,18 @@ export function BackupsPage() {
 
   const backups = backupsQuery.data ?? [];
 
+  const sortedBackups = useMemo(() => {
+    const list = backupsQuery.data ?? [];
+    if (!sort.sortBy || !sort.sortDir) return list;
+    const direction = sort.sortDir === 'asc' ? 1 : -1;
+    return [...list].sort((a, b) => {
+      if (sort.sortBy === 'createdAt') {
+        return (a.createdAt > b.createdAt ? 1 : a.createdAt < b.createdAt ? -1 : 0) * direction;
+      }
+      return (a.sizeBytes - b.sizeBytes) * direction;
+    });
+  }, [backupsQuery.data, sort]);
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -98,10 +116,10 @@ export function BackupsPage() {
         <table className="min-w-full divide-y divide-slate-200 text-sm">
           <thead className="bg-slate-50">
             <tr>
-              <th className="px-4 py-3 text-left font-semibold text-slate-600">Data</th>
+              <SortableTh name="Data" {...sortProps('createdAt')}>Data</SortableTh>
               <th className="px-4 py-3 text-left font-semibold text-slate-600">Banco</th>
               <th className="px-4 py-3 text-left font-semibold text-slate-600">Imagens</th>
-              <th className="px-4 py-3 text-left font-semibold text-slate-600">Total</th>
+              <SortableTh name="Total" {...sortProps('sizeBytes')}>Total</SortableTh>
               <th className="px-4 py-3 text-left font-semibold text-slate-600">Migração</th>
               <th className="px-4 py-3 text-right font-semibold text-slate-600">Ações</th>
             </tr>
@@ -120,7 +138,7 @@ export function BackupsPage() {
                 </td>
               </tr>
             ) : (
-              backups.map((backup) => (
+              sortedBackups.map((backup) => (
                 <tr key={backup.id}>
                   <td className="px-4 py-3 text-slate-800">{formatDate(backup.createdAt)}</td>
                   <td className="px-4 py-3 text-slate-600">{formatBytes(backup.databaseSizeBytes)}</td>

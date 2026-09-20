@@ -34,7 +34,7 @@ export class VehiclePickupsController {
   list(
     @Query(new ZodValidationPipe(vehiclePickupQuerySchema, 'query')) query: VehiclePickupQuery,
   ): Promise<Paginated<VehiclePickupDto>> {
-    return this.pickupsService.list(query.page, query.limit, query.sortBy, query.sortDir);
+    return this.pickupsService.list(query.page, query.limit, query.search, query.sortBy, query.sortDir);
   }
 
   /** Receipt for one work order (or 404 when not picked up yet). */

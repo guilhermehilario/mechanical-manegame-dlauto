@@ -134,6 +134,7 @@ export class AppointmentsService {
       from?: Date;
       to?: Date;
     },
+    search?: string,
     sortBy?: AppointmentSortField,
     sortDir?: 'asc' | 'desc',
   ): Promise<{
@@ -144,8 +145,8 @@ export class AppointmentsService {
     totalPages: number;
   }> {
     const [appointments, total] = await Promise.all([
-      this.appointmentsRepository.list(page, limit, filters, sortBy, sortDir),
-      this.appointmentsRepository.count(filters),
+      this.appointmentsRepository.list(page, limit, filters, search, sortBy, sortDir),
+      this.appointmentsRepository.count(filters, search),
     ]);
     return {
       items: appointments.map(toDto),

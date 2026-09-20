@@ -1,4 +1,4 @@
-import { type FormEvent, useState } from 'react';
+import { type FormEvent, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { WorkOrderDto } from '@mechanic-system/types';
 import { PAYMENT_METHODS, type PaymentMethod } from '@mechanic-system/types';
@@ -8,6 +8,8 @@ import { ApiClientError } from '../../services/api-client';
 import { useAuth } from '../auth/use-auth';
 import { useDateTime } from '../../hooks/use-date-time';
 import { formatDate } from '../../utils/datetime';
+import { SortableTh } from '../../components/sortable-th';
+import { useTableSort } from '../../hooks/use-table-sort';
 import {
   createPayment,
   listPayments,
@@ -37,6 +39,11 @@ export function WorkOrderPaymentsPanel({ workOrder }: { workOrder: WorkOrderDto 
   const [amount, setAmount] = useState('');
   const [notes, setNotes] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const { sort, sortProps } = useTableSort({
+    method: 'asc',
+    paidAt: 'desc',
+    amountCents: 'desc',
+  } as const);
 
   const summary = workOrder.payment;
   // Guard for cached DTOs fetched before the payments feature (no payment field).
@@ -57,6 +64,21 @@ export function WorkOrderPaymentsPanel({ workOrder }: { workOrder: WorkOrderDto 
     // Receipt printing and reports also embed payment data.
     void queryClient.invalidateQueries({ queryKey: ['reports'] });
   };
+
+  const sortedPayments = useMemo(() => {
+    const list = paymentsQuery.data?.items ?? [];
+    if (!sort.sortBy || !sort.sortDir) return list;
+    const direction = sort.sortDir === 'asc' ? 1 : -1;
+    return [...list].sort((a, b) => {
+      if (sort.sortBy === 'paidAt') {
+        return (a.paidAt > b.paidAt ? 1 : a.paidAt < b.paidAt ? -1 : 0) * direction;
+      }
+      if (sort.sortBy === 'method') {
+        return a.method.localeCompare(b.method) * direction;
+      }
+      return (a.amountCents - b.amountCents) * direction;
+    });
+  }, [paymentsQuery.data, sort]);
 
   const createMutation = useMutation({
     mutationFn: (input: { method: PaymentMethod; amountCents: number; notes?: string }) =>
@@ -154,8 +176,17 @@ export function WorkOrderPaymentsPanel({ workOrder }: { workOrder: WorkOrderDto 
 
       {paymentsQuery.data && paymentsQuery.data.items.length > 0 ? (
         <table className="w-full text-left text-sm">
+          <thead>
+            <tr className="border-t border-slate-100 text-xs text-slate-500">
+              <SortableTh name="Forma" {...sortProps('method')}>Forma</SortableTh>
+              <SortableTh name="Data" {...sortProps('paidAt')}>Data</SortableTh>
+              <SortableTh name="Observação">Observação</SortableTh>
+              <SortableTh name="Valor" {...sortProps('amountCents')}>Valor</SortableTh>
+              <th className="px-4 py-2 text-right text-xs text-slate-500">Ações</th>
+            </tr>
+          </thead>
           <tbody>
-            {paymentsQuery.data.items.map((payment) => (
+            {sortedPayments.map((payment) => (
               <tr key={payment.id} className="border-t border-slate-100">
                 <td className="px-4 py-2 text-slate-600">
                   {PAYMENT_METHOD_LABELS[payment.method]}

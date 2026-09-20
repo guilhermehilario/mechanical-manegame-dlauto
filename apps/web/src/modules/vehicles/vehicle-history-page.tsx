@@ -1,3 +1,4 @@
+import { useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import type { VehicleHistoryEntryDto } from '@mechanic-system/types';
@@ -15,6 +16,9 @@ import { formatDate } from '../../utils/datetime';
 export function VehicleHistoryPage() {
   const { dateFormat, timeFormat } = useDateTime();
   const { vehicleId = '' } = useParams<{ vehicleId: string }>();
+  const [historySort, setHistorySort] = useState<
+    'openedAt-desc' | 'openedAt-asc' | 'totalCents-desc' | 'totalCents-asc'
+  >('openedAt-desc');
 
   const vehicleQuery = useQuery({
     queryKey: ['vehicle', vehicleId],
@@ -30,6 +34,21 @@ export function VehicleHistoryPage() {
 
   const vehicle = vehicleQuery.data;
   const history: VehicleHistoryEntryDto[] = historyQuery.data ?? [];
+
+  const sortedHistory = useMemo(() => {
+    const list = historyQuery.data ?? [];
+    const copy = [...list];
+    if (historySort === 'openedAt-asc' || historySort === 'openedAt-desc') {
+      const direction = historySort === 'openedAt-asc' ? 1 : -1;
+      copy.sort(
+        (a, b) => (a.openedAt > b.openedAt ? 1 : a.openedAt < b.openedAt ? -1 : 0) * direction,
+      );
+    } else {
+      const direction = historySort === 'totalCents-asc' ? 1 : -1;
+      copy.sort((a, b) => (a.totalCents - b.totalCents) * direction);
+    }
+    return copy;
+  }, [historyQuery.data, historySort]);
 
   if (vehicleQuery.isError) {
     return (
@@ -50,16 +69,33 @@ export function VehicleHistoryPage() {
         ← Voltar para veículos
       </Link>
 
-      <div className="mt-3">
-        <h1 className="text-xl font-semibold tracking-tight text-slate-900">
-          Histórico — <span className="font-mono">{vehicle?.plate ?? '…'}</span>
-        </h1>
-        {vehicle ? (
-          <p className="mt-0.5 text-sm text-slate-500">
-            {vehicle.brand} {vehicle.model}
-            {vehicle.year ? ` · ${vehicle.year}` : ''}
-            {vehicle.color ? ` · ${vehicle.color}` : ''}
-          </p>
+      <div className="mt-3 flex flex-wrap items-start justify-between gap-2">
+        <div>
+          <h1 className="text-xl font-semibold tracking-tight text-slate-900">
+            Histórico — <span className="font-mono">{vehicle?.plate ?? '…'}</span>
+          </h1>
+          {vehicle ? (
+            <p className="mt-0.5 text-sm text-slate-500">
+              {vehicle.brand} {vehicle.model}
+              {vehicle.year ? ` · ${vehicle.year}` : ''}
+              {vehicle.color ? ` · ${vehicle.color}` : ''}
+            </p>
+          ) : null}
+        </div>
+        {history.length > 1 ? (
+          <select
+            value={historySort}
+            onChange={(event) => {
+              setHistorySort(event.target.value as typeof historySort);
+            }}
+            className="rounded-md border border-slate-300 px-3 py-2 text-sm"
+            aria-label="Ordenar histórico"
+          >
+            <option value="openedAt-desc">Mais recentes primeiro</option>
+            <option value="openedAt-asc">Mais antigas primeiro</option>
+            <option value="totalCents-desc">Maior total primeiro</option>
+            <option value="totalCents-asc">Menor total primeiro</option>
+          </select>
         ) : null}
       </div>
 
@@ -71,7 +107,7 @@ export function VehicleHistoryPage() {
         </div>
       ) : (
         <ol className="mt-4 space-y-4">
-          {history.map((entry) => (
+          {sortedHistory.map((entry) => (
             <li key={entry.workOrderId} className="rounded-lg border border-slate-200 bg-white">
               <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 px-4 py-3">
                 <div>

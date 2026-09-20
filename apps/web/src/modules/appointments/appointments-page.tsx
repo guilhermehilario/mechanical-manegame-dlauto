@@ -33,6 +33,7 @@ import {
   IconPencil,
   IconPlay,
   IconPlus,
+  IconSearch,
   IconTrash,
 } from '../../components/icons';
 import { useDateTime } from '../../hooks/use-date-time';
@@ -53,6 +54,8 @@ export function AppointmentsPage() {
   const [cursor, setCursor] = useState<Date>(startOfDay(new Date()));
   const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState<'' | AppointmentStatus>('');
+  const [search, setSearch] = useState('');
+  const [submittedSearch, setSubmittedSearch] = useState('');
   const [formOpen, setFormOpen] = useState(false);
   const [editingAppointment, setEditingAppointment] = useState<AppointmentDto | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -68,9 +71,14 @@ export function AppointmentsPage() {
   };
 
   const appointmentsQuery = useQuery({
-    queryKey: ['appointments', 'list', page, statusFilter, sort],
+    queryKey: ['appointments', 'list', page, statusFilter, submittedSearch, sort],
     queryFn: () =>
-      listAppointments({ page, status: statusFilter || undefined, ...sort }),
+      listAppointments({
+        page,
+        status: statusFilter || undefined,
+        search: submittedSearch || undefined,
+        ...sort,
+      }),
     enabled: view === 'list',
   });
 
@@ -186,7 +194,31 @@ export function AppointmentsPage() {
 
       {view === 'list' ? (
         <>
-          <div className="mb-4 flex flex-wrap gap-2">
+          <div className="mb-4 flex flex-wrap items-start gap-2">
+            <form
+              className="flex flex-col gap-2 sm:flex-row sm:flex-1 sm:max-w-sm"
+              onSubmit={(event) => {
+                event.preventDefault();
+                setPage(1);
+                setSubmittedSearch(search.trim());
+              }}
+            >
+              <div className="relative flex-1">
+                <IconSearch className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="search"
+                  placeholder="Buscar por cliente, placa ou serviço…"
+                  className={`${inputClass} pl-9`}
+                  value={search}
+                  onChange={(event) => {
+                    setSearch(event.target.value);
+                  }}
+                />
+              </div>
+              <button type="submit" className={btnSecondary}>
+                Buscar
+              </button>
+            </form>
             <select
               value={statusFilter}
               onChange={(event) => {

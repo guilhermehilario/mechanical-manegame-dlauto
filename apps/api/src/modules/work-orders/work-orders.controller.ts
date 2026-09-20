@@ -64,6 +64,7 @@ export class WorkOrdersController {
         vehicleId: query.vehicleId,
         status: query.status,
       },
+      query.search,
       query.sortBy,
       query.sortDir,
     );

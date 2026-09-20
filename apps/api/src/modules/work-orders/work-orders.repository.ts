@@ -48,27 +48,40 @@ export class WorkOrdersRepository {
     });
   }
 
-  private listWhere(filters: {
-    customerId?: string;
-    vehicleId?: string;
-    status?: WorkOrderStatus;
-  }): Prisma.WorkOrderWhereInput {
+  private listWhere(
+    filters: {
+      customerId?: string;
+      vehicleId?: string;
+      status?: WorkOrderStatus;
+    },
+    search?: string,
+  ): Prisma.WorkOrderWhereInput {
     const base: Prisma.WorkOrderWhereInput = {};
     if (filters.customerId) base.customerId = filters.customerId;
     if (filters.vehicleId) base.vehicleId = filters.vehicleId;
     if (filters.status) base.status = filters.status;
-    return base;
+    if (!search) return base;
+    const orderEquals = /^\d+$/.test(search) ? Number(search) : undefined;
+    return {
+      ...base,
+      OR: [
+        ...(orderEquals !== undefined ? [{ orderNumber: { equals: orderEquals } }] : []),
+        { customer: { name: { contains: search } } },
+        { vehicle: { plate: { contains: search } } },
+      ],
+    };
   }
 
   list(
     page: number,
     limit: number,
     filters: { customerId?: string; vehicleId?: string; status?: WorkOrderStatus },
+    search?: string,
     sortBy?: WorkOrderSortField,
     sortDir?: 'asc' | 'desc',
   ): Promise<WorkOrderWithRelations[]> {
     return this.prisma.workOrder.findMany({
-      where: this.listWhere(filters),
+      where: this.listWhere(filters, search),
       orderBy: buildOrderBy(sortBy, sortDir, SORT_FIELD_MAP, { orderNumber: 'desc' }),
       include: WORK_ORDER_INCLUDE,
       skip: (page - 1) * limit,
@@ -76,12 +89,15 @@ export class WorkOrdersRepository {
     });
   }
 
-  count(filters: {
-    customerId?: string;
-    vehicleId?: string;
-    status?: WorkOrderStatus;
-  }): Promise<number> {
-    return this.prisma.workOrder.count({ where: this.listWhere(filters) });
+  count(
+    filters: {
+      customerId?: string;
+      vehicleId?: string;
+      status?: WorkOrderStatus;
+    },
+    search?: string,
+  ): Promise<number> {
+    return this.prisma.workOrder.count({ where: this.listWhere(filters, search) });
   }
 
   /**

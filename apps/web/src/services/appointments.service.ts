@@ -14,6 +14,7 @@ export interface ListAppointmentsParams {
   status?: AppointmentStatus;
   from?: string;
   to?: string;
+  search?: string;
   sortBy?: 'scheduledAt' | 'status' | 'createdAt';
   sortDir?: 'asc' | 'desc';
 }

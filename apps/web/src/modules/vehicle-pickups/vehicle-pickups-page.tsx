@@ -21,11 +21,13 @@ import { useTableSort } from '../../hooks/use-table-sort';
 import { SignaturePad } from './signature-pad';
 import { btnPrimary, btnSecondary, inputClass, tableHead, tableWrap } from '../../components/ui';
 import { IconButton, IconActionGroup } from '../../components/icon-button';
-import { IconPrinter } from '../../components/icons';
+import { IconPrinter, IconSearch } from '../../components/icons';
 
 export function VehiclePickupsPage() {
   const { dateFormat } = useDateTime();
   const [page, setPage] = useState(1);
+  const [search, setSearch] = useState('');
+  const [submittedSearch, setSubmittedSearch] = useState('');
   const [registering, setRegistering] = useState<WorkOrderDto | null>(null);
   const [error, setError] = useState<string | null>(null);
   const { sort, sortProps } = useTableSort({
@@ -39,8 +41,14 @@ export function VehiclePickupsPage() {
   });
 
   const pickupsQuery = useQuery({
-    queryKey: ['vehicle-pickups', page, sort],
-    queryFn: () => listVehiclePickups({ page, limit: 20, ...sort }),
+    queryKey: ['vehicle-pickups', page, submittedSearch, sort],
+    queryFn: () =>
+      listVehiclePickups({
+        page,
+        limit: 20,
+        search: submittedSearch || undefined,
+        ...sort,
+      }),
   });
 
   const queue: WorkOrderDto[] = queueQuery.data?.items ?? [];
@@ -158,7 +166,33 @@ export function VehiclePickupsPage() {
       </div>
 
       {/* History of registered pickups */}
-      <h2 className="mt-8 text-base font-semibold text-slate-900">Retiradas registradas</h2>
+      <div className="mt-8 flex flex-wrap items-center justify-between gap-2">
+        <h2 className="text-base font-semibold text-slate-900">Retiradas registradas</h2>
+        <form
+          className="flex flex-col gap-2 sm:flex-row sm:flex-1 sm:max-w-sm"
+          onSubmit={(event) => {
+            event.preventDefault();
+            setPage(1);
+            setSubmittedSearch(search.trim());
+          }}
+        >
+          <div className="relative flex-1">
+            <IconSearch className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <input
+              type="search"
+              placeholder="Buscar por quem retirou, doc ou placa…"
+              className={`${inputClass} pl-9`}
+              value={search}
+              onChange={(event) => {
+                setSearch(event.target.value);
+              }}
+            />
+          </div>
+          <button type="submit" className={btnSecondary}>
+            Buscar
+          </button>
+        </form>
+      </div>
       <div className={`mt-3 ${tableWrap}`}>
         <table className="w-full min-w-[760px] text-left text-sm">
           <thead className={tableHead}>

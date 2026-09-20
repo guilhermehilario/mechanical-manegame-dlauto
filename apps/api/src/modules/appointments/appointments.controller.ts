@@ -49,6 +49,7 @@ export class AppointmentsController {
         ...(query.from ? { from: new Date(query.from) } : {}),
         ...(query.to ? { to: new Date(query.to) } : {}),
       },
+      query.search,
       query.sortBy,
       query.sortDir,
     );

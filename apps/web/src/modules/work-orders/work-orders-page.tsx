@@ -12,7 +12,7 @@ import { ApiClientError } from '../../services/api-client';
 import { PageHeader } from '../../components/page-header';
 import { btnPrimary, btnSecondary, inputClass, tableHead, tableWrap } from '../../components/ui';
 import { IconButton, IconActionGroup } from '../../components/icon-button';
-import { IconPlus, IconTrash } from '../../components/icons';
+import { IconPlus, IconSearch, IconTrash } from '../../components/icons';
 import { SortableTh } from '../../components/sortable-th';
 import { useTableSort } from '../../hooks/use-table-sort';
 import { WorkOrderForm } from './work-order-form';
@@ -53,14 +53,21 @@ export function WorkOrdersPage() {
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState<'' | WorkOrderStatus>('');
+  const [search, setSearch] = useState('');
+  const [submittedSearch, setSubmittedSearch] = useState('');
   const [formOpen, setFormOpen] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const { sort, sortProps } = useTableSort(DEFAULT_DIRS);
 
   const workOrdersQuery = useQuery({
-    queryKey: ['work-orders', page, statusFilter, sort],
+    queryKey: ['work-orders', page, statusFilter, submittedSearch, sort],
     queryFn: () =>
-      listWorkOrders({ page, status: statusFilter || undefined, ...sort }),
+      listWorkOrders({
+        page,
+        status: statusFilter || undefined,
+        search: submittedSearch || undefined,
+        ...sort,
+      }),
   });
 
   const deleteMutation = useMutation({
@@ -103,7 +110,31 @@ export function WorkOrdersPage() {
         }
       />
 
-      <div className="mb-4 flex flex-wrap gap-2">
+      <div className="mb-4 flex flex-wrap items-start gap-2">
+        <form
+          className="flex flex-col gap-2 sm:flex-row sm:flex-1 sm:max-w-sm"
+          onSubmit={(event) => {
+            event.preventDefault();
+            setPage(1);
+            setSubmittedSearch(search.trim());
+          }}
+        >
+          <div className="relative flex-1">
+            <IconSearch className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <input
+              type="search"
+              placeholder="Buscar por nº, cliente ou placa…"
+              className={`${inputClass} pl-9`}
+              value={search}
+              onChange={(event) => {
+                setSearch(event.target.value);
+              }}
+            />
+          </div>
+          <button type="submit" className={btnSecondary}>
+            Buscar
+          </button>
+        </form>
         <select
           value={statusFilter}
           onChange={(event) => {

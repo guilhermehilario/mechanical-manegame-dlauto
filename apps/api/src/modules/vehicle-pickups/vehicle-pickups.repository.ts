@@ -71,13 +71,31 @@ export class VehiclePickupsRepository {
     });
   }
 
+  private listWhere(search?: string): Prisma.VehiclePickupWhereInput {
+    if (!search) return {};
+    const orderEquals = /^\d+$/.test(search) ? Number(search) : undefined;
+    return {
+      OR: [
+        { receiverName: { contains: search } },
+        { receiverDoc: { contains: search } },
+        ...(orderEquals !== undefined
+          ? [{ workOrder: { orderNumber: { equals: orderEquals } } }]
+          : []),
+        { workOrder: { customer: { name: { contains: search } } } },
+        { workOrder: { vehicle: { plate: { contains: search } } } },
+      ],
+    };
+  }
+
   list(
     page: number,
     limit: number,
+    search?: string,
     sortBy?: VehiclePickupSortField,
     sortDir?: 'asc' | 'desc',
   ): Promise<VehiclePickupWithRelations[]> {
     return this.prisma.vehiclePickup.findMany({
+      where: this.listWhere(search),
       orderBy: buildOrderBy(sortBy, sortDir, SORT_FIELD_MAP, { createdAt: 'desc' }),
       include: PICKUP_INCLUDE,
       skip: (page - 1) * limit,
@@ -85,8 +103,8 @@ export class VehiclePickupsRepository {
     });
   }
 
-  count(): Promise<number> {
-    return this.prisma.vehiclePickup.count();
+  count(search?: string): Promise<number> {
+    return this.prisma.vehiclePickup.count({ where: this.listWhere(search) });
   }
 
   /**

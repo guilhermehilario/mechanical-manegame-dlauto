@@ -96,12 +96,13 @@ export class VehiclePickupsService {
   async list(
     page: number,
     limit: number,
+    search?: string,
     sortBy?: VehiclePickupSortField,
     sortDir?: 'asc' | 'desc',
   ): Promise<{ items: VehiclePickupDto[]; page: number; limit: number; total: number; totalPages: number }> {
     const [pickups, total] = await Promise.all([
-      this.pickupsRepository.list(page, limit, sortBy, sortDir),
-      this.pickupsRepository.count(),
+      this.pickupsRepository.list(page, limit, search, sortBy, sortDir),
+      this.pickupsRepository.count(search),
     ]);
     return {
       items: pickups.map(toDto),

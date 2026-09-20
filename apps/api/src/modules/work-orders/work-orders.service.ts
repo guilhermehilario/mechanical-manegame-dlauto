@@ -179,6 +179,7 @@ export class WorkOrdersService {
     page: number,
     limit: number,
     filters: { customerId?: string; vehicleId?: string; status?: WorkOrderStatus },
+    search?: string,
     sortBy?: WorkOrderSortField,
     sortDir?: 'asc' | 'desc',
   ): Promise<{
@@ -189,8 +190,8 @@ export class WorkOrdersService {
     totalPages: number;
   }> {
     const [workOrders, total] = await Promise.all([
-      this.workOrdersRepository.list(page, limit, filters, sortBy, sortDir),
-      this.workOrdersRepository.count(filters),
+      this.workOrdersRepository.list(page, limit, filters, search, sortBy, sortDir),
+      this.workOrdersRepository.count(filters, search),
     ]);
     const items = await Promise.all(
       workOrders.map(async (workOrder) =>
