@@ -1,4 +1,4 @@
-import type { ShopSettingsDto } from '@mechanic-system/types';
+import type { DateFormat, ShopSettingsDto } from '@mechanic-system/types';
 import { getShopSettings } from '../services/settings.service';
 import { formatCpf, formatPhone } from '../utils/format';
 import { formatDate, formatDateTime } from './datetime';
@@ -60,7 +60,11 @@ function footerHtml(settings: ShopSettingsDto | null): string {
   return `
     <div class="doc-footer">
       ${footer ? `<div>${escapeHtml(footer)}</div>` : ''}
-      <div>Emitido em ${formatDateTime(new Date().toISOString(), settings?.timeFormat ?? 'H24')}</div>
+      <div>Emitido em ${formatDateTime(
+        new Date().toISOString(),
+        settings?.dateFormat ?? 'DD_MM_YYYY',
+        settings?.timeFormat ?? 'H24',
+      )}</div>
     </div>`;
 }
 
@@ -160,14 +164,17 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 /** Opens the print dialog with the work-order document. */
-export function printWorkOrder(data: WorkOrderPrintData): Promise<void> {
+export function printWorkOrder(
+  data: WorkOrderPrintData,
+  dateFormat: DateFormat = 'DD_MM_YYYY',
+): Promise<void> {
   const body = `
     <table class="meta">
       <tr><th>Cliente</th><td>${escapeHtml(data.customerName)}</td></tr>
       ${data.customerPhone ? `<tr><th>Telefone</th><td>${escapeHtml(formatPhone(data.customerPhone))}</td></tr>` : ''}
       <tr><th>Veículo</th><td><span class="mono">${escapeHtml(data.vehiclePlate)}</span> — ${escapeHtml(data.vehicleModel)}</td></tr>
       <tr><th>Status</th><td>${escapeHtml(STATUS_LABELS[data.status] ?? data.status)}</td></tr>
-      <tr><th>Aberta em</th><td>${formatDate(data.createdAt)}</td></tr>
+      <tr><th>Aberta em</th><td>${formatDate(data.createdAt, dateFormat)}</td></tr>
     </table>
 
     <h2>Serviços</h2>
@@ -215,7 +222,10 @@ export interface PickupReceiptPrintData {
 }
 
 /** Opens the print dialog with the vehicle handover receipt. */
-export function printPickupReceipt(data: PickupReceiptPrintData): Promise<void> {
+export function printPickupReceipt(
+  data: PickupReceiptPrintData,
+  dateFormat: DateFormat = 'DD_MM_YYYY',
+): Promise<void> {
   const signature = data.signatureData
     ? `<div class="signature"><img src="${escapeHtml(data.signatureData)}" alt="Assinatura" /></div>`
     : '<div class="signature empty-signature"></div>';
@@ -234,7 +244,7 @@ export function printPickupReceipt(data: PickupReceiptPrintData): Promise<void> 
       <tr><th>Documento</th><td class="mono">${escapeHtml(formatCpf(data.receiverDoc))}</td></tr>
       ${data.receiverPhone ? `<tr><th>Telefone</th><td>${escapeHtml(formatPhone(data.receiverPhone))}</td></tr>` : ''}
       ${data.mileageKm !== null ? `<tr><th>KM</th><td>${data.mileageKm.toLocaleString('pt-BR')} km</td></tr>` : ''}
-      <tr><th>Data/hora</th><td>${formatDateTime(data.createdAt)}</td></tr>
+      <tr><th>Data/hora</th><td>${formatDateTime(data.createdAt, dateFormat)}</td></tr>
     </table>
 
     ${data.notes ? `<p class="notes">${escapeHtml(data.notes)}</p>` : ''}

@@ -1,4 +1,5 @@
 import { formatBRL } from '@mechanic-system/shared';
+import type { DateFormat } from '@mechanic-system/types';
 import { formatDate } from '../../utils/datetime';
 import type {
   PaymentMethod,
@@ -26,19 +27,25 @@ export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
   TRANSFER: 'Transferência',
 };
 
-function period(report: { from: string; to: string }): string {
-  return `Período: ${formatDate(report.from)} a ${formatDate(report.to)}`;
+function period(
+  report: { from: string; to: string },
+  dateFormat: DateFormat,
+): string {
+  return `Período: ${formatDate(report.from, dateFormat)} a ${formatDate(report.to, dateFormat)}`;
 }
 
-export function buildRevenueReport(report: RevenueReportDto): ReportPrintData {
+export function buildRevenueReport(
+  report: RevenueReportDto,
+  dateFormat: DateFormat = 'DD_MM_YYYY',
+): ReportPrintData {
   return {
     title: 'Relatório de Receita',
-    period: period(report),
+    period: period(report, dateFormat),
     summary: `Receita total: ${formatBRL(report.totalCents)}`,
     columns: ['Data', 'OS', 'Serviços', 'Produtos', 'Descontos', 'Total'],
     rightAlign: [1, 2, 3, 4, 5],
     rows: report.items.map((item) => [
-      formatDate(item.date),
+      formatDate(item.date, dateFormat),
       String(item.workOrderCount),
       formatBRL(item.servicesCents),
       formatBRL(item.productsCents),
@@ -49,11 +56,14 @@ export function buildRevenueReport(report: RevenueReportDto): ReportPrintData {
   };
 }
 
-export function buildPaymentsReport(report: PaymentMethodRevenueReportDto): ReportPrintData {
+export function buildPaymentsReport(
+  report: PaymentMethodRevenueReportDto,
+  dateFormat: DateFormat = 'DD_MM_YYYY',
+): ReportPrintData {
   const count = report.items.reduce((sum, item) => sum + item.count, 0);
   return {
     title: 'Relatório de Recebimentos (caixa)',
-    period: period(report),
+    period: period(report, dateFormat),
     summary: `Recebido no período: ${formatBRL(report.totalCents)}`,
     columns: ['Forma', 'Recebimentos', 'Total'],
     rightAlign: [1, 2],
@@ -66,12 +76,16 @@ export function buildPaymentsReport(report: PaymentMethodRevenueReportDto): Repo
   };
 }
 
-function buildTopItemsReport(title: string, report: TopItemsReportDto): ReportPrintData {
+function buildTopItemsReport(
+  title: string,
+  report: TopItemsReportDto,
+  dateFormat: DateFormat,
+): ReportPrintData {
   const quantity = report.items.reduce((sum, item) => sum + item.quantity, 0);
   const revenue = report.items.reduce((sum, item) => sum + item.revenueCents, 0);
   return {
     title,
-    period: period(report),
+    period: period(report, dateFormat),
     columns: ['#', 'Nome', 'Quantidade', 'Receita'],
     rightAlign: [2, 3],
     rows: report.items.map((item, index) => [
@@ -84,19 +98,28 @@ function buildTopItemsReport(title: string, report: TopItemsReportDto): ReportPr
   };
 }
 
-export function buildServicesReport(report: TopItemsReportDto): ReportPrintData {
-  return buildTopItemsReport('Serviços mais vendidos', report);
+export function buildServicesReport(
+  report: TopItemsReportDto,
+  dateFormat: DateFormat = 'DD_MM_YYYY',
+): ReportPrintData {
+  return buildTopItemsReport('Serviços mais vendidos', report, dateFormat);
 }
 
-export function buildProductsReport(report: TopItemsReportDto): ReportPrintData {
-  return buildTopItemsReport('Produtos mais vendidos', report);
+export function buildProductsReport(
+  report: TopItemsReportDto,
+  dateFormat: DateFormat = 'DD_MM_YYYY',
+): ReportPrintData {
+  return buildTopItemsReport('Produtos mais vendidos', report, dateFormat);
 }
 
-export function buildStatusReport(report: WorkOrderStatusReportDto): ReportPrintData {
+export function buildStatusReport(
+  report: WorkOrderStatusReportDto,
+  dateFormat: DateFormat = 'DD_MM_YYYY',
+): ReportPrintData {
   const total = report.items.reduce((sum, item) => sum + item.count, 0);
   return {
     title: 'Relatório de OS por status',
-    period: period(report),
+    period: period(report, dateFormat),
     summary: `OS criadas no período: ${total}`,
     columns: ['Status', 'Quantidade'],
     rightAlign: [1],

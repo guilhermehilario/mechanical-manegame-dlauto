@@ -41,6 +41,7 @@ vi.mock('../auth/use-auth', () => ({
 }));
 
 const settings: ShopSettingsDto = {
+  dateFormat: 'DD_MM_YYYY',
   timeFormat: 'H24',
   name: 'Auto Center DL',
   phone: '1133334444',
@@ -109,6 +110,7 @@ describe('SettingsPage identity tab (Bloco F2 mínimo)', () => {
         phone: '1133334444',
         address: 'Rua das Flores, 100',
         documentFooter: 'Obrigado!',
+        dateFormat: 'DD_MM_YYYY',
         timeFormat: 'H24',
       });
     });
@@ -271,8 +273,8 @@ describe('SettingsPage data/time tab (2026-09-18)', () => {
     renderPage();
     await userEvent.click(screen.getByRole('tab', { name: 'Data e hora' }));
 
-    const h24 = await screen.findByRole('radio', { name: /24 horas/ });
-    const h12 = screen.getByRole('radio', { name: /12 horas/ });
+    const h12 = await screen.findByRole('radio', { name: /12 horas/ });
+    const h24 = screen.getByRole('radio', { name: /24 horas/ });
     expect(h24).toHaveProperty('checked', true);
     await userEvent.click(h12);
     expect(h12).toHaveProperty('checked', true);
@@ -285,7 +287,32 @@ describe('SettingsPage data/time tab (2026-09-18)', () => {
         phone: '1133334444',
         address: 'Rua das Flores, 100',
         documentFooter: 'Obrigado!',
+        dateFormat: 'DD_MM_YYYY',
         timeFormat: 'H12',
+      });
+    });
+    expect(await screen.findByText('Configurações salvas.')).toBeTruthy();
+  });
+
+  it('switches the app-wide date format (AAAA/MM/DD)', async () => {
+    mocks.useAuth.mockReturnValue({ user: { role: 'ADMIN' } });
+
+    renderPage();
+    await userEvent.click(screen.getByRole('tab', { name: 'Data e hora' }));
+
+    const isoSaved = await screen.findByRole('radio', { name: /AAAA\/MM\/DD/ });
+    await userEvent.click(isoSaved);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+
+    await waitFor(() => {
+      expect(mocks.updateShopSettings.mock.calls[0]?.[0]).toEqual({
+        name: 'Auto Center DL',
+        phone: '1133334444',
+        address: 'Rua das Flores, 100',
+        documentFooter: 'Obrigado!',
+        dateFormat: 'YYYY_MM_DD',
+        timeFormat: 'H24',
       });
     });
     expect(await screen.findByText('Configurações salvas.')).toBeTruthy();
@@ -307,8 +334,10 @@ describe('SettingsPage data/time tab (2026-09-18)', () => {
     await userEvent.click(screen.getByRole('tab', { name: 'Data e hora' }));
 
     const radios = await screen.findAllByRole('radio');
-    expect(radios[0]).toHaveProperty('disabled', true);
-    expect(radios[1]).toHaveProperty('disabled', true);
+    expect(radios.length).toBe(5);
+    radios.forEach((radio) => {
+      expect(radio).toHaveProperty('disabled', true);
+    });
     expect(screen.queryByRole('button', { name: 'Salvar' })).toBeNull();
     expect(screen.getByText(/Somente administradores/)).toBeTruthy();
   });

@@ -11,6 +11,7 @@ function makeRow(overrides: Partial<ShopSettings> = {}): ShopSettings {
     phone: null,
     address: null,
     documentFooter: null,
+    dateFormat: 'DD_MM_YYYY',
     timeFormat: 'H24',
     backupAutoEnabled: null,
     backupIntervalHours: null,
@@ -85,6 +86,7 @@ describe('SettingsService (Bloco F2 mínimo)', () => {
       phone: '1133334444',
       address: null,
       documentFooter: null,
+      dateFormat: 'YYYY_MM_DD',
       timeFormat: 'H24',
     });
 
@@ -95,6 +97,7 @@ describe('SettingsService (Bloco F2 mínimo)', () => {
         phone: '1133334444',
         address: null,
         documentFooter: null,
+        dateFormat: 'YYYY_MM_DD',
         timeFormat: 'H24',
       },
     });
@@ -111,6 +114,7 @@ describe('SettingsService (Bloco F2 mínimo)', () => {
       phone: null,
       address: null,
       documentFooter: null,
+      dateFormat: 'DD_MM_YYYY',
       timeFormat: 'H24',
     });
 

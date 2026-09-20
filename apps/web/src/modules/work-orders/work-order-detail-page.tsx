@@ -29,6 +29,7 @@ import {
 } from './work-orders-page';
 import { WorkOrderImagesPanel } from './work-order-images-panel';
 import { WorkOrderPaymentsPanel } from './work-order-payments-panel';
+import { useDateTime } from '../../hooks/use-date-time';
 
 const inputClass =
   'w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none';
@@ -36,6 +37,7 @@ const inputClass =
 export function WorkOrderDetailPage() {
   const { id } = useParams<{ id: string }>();
   const queryClient = useQueryClient();
+  const { dateFormat } = useDateTime();
   const [actionError, setActionError] = useState<string | null>(null);
   const [notes, setNotes] = useState<string | null>(null);
   const [serviceId, setServiceId] = useState('');
@@ -166,28 +168,31 @@ export function WorkOrderDetailPage() {
     if (!workOrderQuery.data) return;
     setIsPrinting(true);
     try {
-      await printWorkOrder({
-        orderNumber: workOrderQuery.data.orderNumber,
-        status: workOrderQuery.data.status,
-        createdAt: workOrderQuery.data.createdAt,
-        customerName: workOrderQuery.data.customerName,
-        customerPhone: customerQuery.data?.phone ?? null,
-        vehiclePlate: workOrderQuery.data.vehiclePlate,
-        vehicleModel: workOrderQuery.data.vehicleModel,
-        notes: workOrderQuery.data.notes,
-        serviceItems: workOrderQuery.data.serviceItems.map((item) => ({
-          name: item.serviceName,
-          quantity: item.quantity,
-          unitPriceCents: item.unitPriceCents,
-        })),
-        productItems: workOrderQuery.data.productItems.map((item) => ({
-          name: item.productName,
-          quantity: item.quantity,
-          unitPriceCents: item.unitPriceCents,
-          discountCents: item.discountCents,
-        })),
-        totals: workOrderQuery.data.totals,
-      });
+      await printWorkOrder(
+        {
+          orderNumber: workOrderQuery.data.orderNumber,
+          status: workOrderQuery.data.status,
+          createdAt: workOrderQuery.data.createdAt,
+          customerName: workOrderQuery.data.customerName,
+          customerPhone: customerQuery.data?.phone ?? null,
+          vehiclePlate: workOrderQuery.data.vehiclePlate,
+          vehicleModel: workOrderQuery.data.vehicleModel,
+          notes: workOrderQuery.data.notes,
+          serviceItems: workOrderQuery.data.serviceItems.map((item) => ({
+            name: item.serviceName,
+            quantity: item.quantity,
+            unitPriceCents: item.unitPriceCents,
+          })),
+          productItems: workOrderQuery.data.productItems.map((item) => ({
+            name: item.productName,
+            quantity: item.quantity,
+            unitPriceCents: item.unitPriceCents,
+            discountCents: item.discountCents,
+          })),
+          totals: workOrderQuery.data.totals,
+        },
+        dateFormat,
+      );
     } finally {
       setIsPrinting(false);
     }

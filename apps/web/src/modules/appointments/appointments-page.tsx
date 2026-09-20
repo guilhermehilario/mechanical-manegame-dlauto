@@ -35,7 +35,7 @@ import {
   IconPlus,
   IconTrash,
 } from '../../components/icons';
-import { useTimeFormat } from '../../hooks/use-time-format';
+import { useDateTime } from '../../hooks/use-date-time';
 import { useTableSort } from '../../hooks/use-table-sort';
 import { SortableTh } from '../../components/sortable-th';
 import { formatDateTime } from '../../utils/datetime';
@@ -48,7 +48,7 @@ const DEFAULT_DIRS = {
 
 export function AppointmentsPage() {
   const queryClient = useQueryClient();
-  const timeFormat = useTimeFormat();
+  const { dateFormat, timeFormat } = useDateTime();
   const [view, setView] = useState<'list' | AgendaMode>('list');
   const [cursor, setCursor] = useState<Date>(startOfDay(new Date()));
   const [page, setPage] = useState(1);
@@ -237,7 +237,7 @@ export function AppointmentsPage() {
                     return (
                       <tr key={appointment.id} className="border-b border-slate-100 last:border-0">
                         <td className="whitespace-nowrap px-4 py-3 font-medium text-slate-800">
-                          {formatDateTime(appointment.scheduledAt, timeFormat)}
+                          {formatDateTime(appointment.scheduledAt, dateFormat, timeFormat)}
                         </td>
                         <td className="px-4 py-3 text-slate-600">{appointment.customerName}</td>
                         <td className="px-4 py-3 font-mono text-xs text-slate-600">

@@ -25,6 +25,7 @@ import {
 } from './report-export';
 import { PageHeader } from '../../components/page-header';
 import { btnPrimary, btnSecondary, inputClass } from '../../components/ui';
+import { useDateTime } from '../../hooks/use-date-time';
 
 const STATUS_BADGES: Record<WorkOrderStatusDto, string> = {
   OPEN: 'bg-blue-50 text-blue-700',
@@ -97,6 +98,7 @@ export function ReportsPage() {
   const [tab, setTab] = useState<ReportTab>(initialTab);
 
   const { from, to } = appliedPeriod;
+  const { dateFormat } = useDateTime();
 
   const revenueQuery = useQuery({
     queryKey: ['reports', 'revenue', from, to],
@@ -143,15 +145,15 @@ export function ReportsPage() {
 
   const reportTable: ReportPrintData | null =
     tab === 'revenue' && revenueQuery.data
-      ? buildRevenueReport(revenueQuery.data)
+      ? buildRevenueReport(revenueQuery.data, dateFormat)
       : tab === 'payments' && paymentsQuery.data
-        ? buildPaymentsReport(paymentsQuery.data)
+        ? buildPaymentsReport(paymentsQuery.data, dateFormat)
         : tab === 'services' && servicesQuery.data
-          ? buildServicesReport(servicesQuery.data)
+          ? buildServicesReport(servicesQuery.data, dateFormat)
           : tab === 'products' && productsQuery.data
-            ? buildProductsReport(productsQuery.data)
+            ? buildProductsReport(productsQuery.data, dateFormat)
             : tab === 'status' && statusQuery.data
-              ? buildStatusReport(statusQuery.data)
+              ? buildStatusReport(statusQuery.data, dateFormat)
               : null;
 
   function handleExportCsv(): void {
@@ -300,6 +302,8 @@ function ReportContent({
   products: Awaited<ReturnType<typeof getTopProducts>> | null;
   status: Awaited<ReturnType<typeof getWorkOrderStatusReport>> | null;
 }) {
+  const { dateFormat } = useDateTime();
+
   if (tab === 'payments' && payments) {
     const max = Math.max(1, ...payments.items.map((item) => item.totalCents));
     return (
@@ -312,7 +316,7 @@ function ReportContent({
         </div>
         {payments.items.length === 0 ? (
           <p className="text-sm text-slate-500">
-            Nenhum pagamento recebido no período {formatDate(payments.from)} a {formatDate(payments.to)}.
+            Nenhum pagamento recebido no período {formatDate(payments.from, dateFormat)} a {formatDate(payments.to, dateFormat)}.
           </p>
         ) : (
           <div className="overflow-x-auto">
@@ -365,7 +369,7 @@ function ReportContent({
         </div>
         {revenue.items.length === 0 ? (
           <p className="text-sm text-slate-500">
-            Nenhuma OS entregue no período {formatDate(revenue.from)} a {formatDate(revenue.to)}.
+            Nenhuma OS entregue no período {formatDate(revenue.from, dateFormat)} a {formatDate(revenue.to, dateFormat)}.
           </p>
         ) : (
           <div className="overflow-x-auto">
@@ -384,7 +388,9 @@ function ReportContent({
               <tbody>
                 {revenue.items.map((item) => (
                   <tr key={item.date} className="border-b border-slate-100 last:border-0">
-                    <td className="px-3 py-2 font-medium text-slate-800">{item.date}</td>
+                    <td className="px-3 py-2 font-medium text-slate-800">
+                      {formatDate(item.date, dateFormat)}
+                    </td>
                     <td className="px-3 py-2 text-right text-slate-600">{item.workOrderCount}</td>
                     <td className="px-3 py-2 text-right text-slate-600">
                       {formatBRL(item.servicesCents)}

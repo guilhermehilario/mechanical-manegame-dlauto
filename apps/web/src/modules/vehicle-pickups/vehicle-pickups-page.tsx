@@ -12,7 +12,7 @@ import {
   registerVehiclePickup,
 } from '../../services/vehicle-pickups.service';
 import { formatPhone } from '../../utils/format';
-import { useTimeFormat } from '../../hooks/use-time-format';
+import { useDateTime } from '../../hooks/use-date-time';
 import { formatDate } from '../../utils/datetime';
 import { printPickupReceipt } from '../../utils/print';
 import { PageHeader } from '../../components/page-header';
@@ -24,7 +24,7 @@ import { IconButton, IconActionGroup } from '../../components/icon-button';
 import { IconPrinter } from '../../components/icons';
 
 export function VehiclePickupsPage() {
-  const timeFormat = useTimeFormat();
+  const { dateFormat } = useDateTime();
   const [page, setPage] = useState(1);
   const [registering, setRegistering] = useState<WorkOrderDto | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -64,7 +64,7 @@ export function VehiclePickupsPage() {
         signatureData: receipt.signatureData,
         notes: receipt.notes,
         workOrderTotalCents: receipt.workOrderTotalCents,
-      });
+      }, dateFormat);
     } catch (err) {
       setError(
         err instanceof ApiClientError && err.status === 404
@@ -200,7 +200,7 @@ export function VehiclePickupsPage() {
                   <td className="px-4 py-3 text-slate-600">
                     {pickup.mileageKm === null ? '—' : `${pickup.mileageKm.toLocaleString('pt-BR')} km`}
                   </td>
-                  <td className="whitespace-nowrap px-4 py-3 text-slate-600">{formatDate(pickup.createdAt, timeFormat)}</td>
+                  <td className="whitespace-nowrap px-4 py-3 text-slate-600">{formatDate(pickup.createdAt, dateFormat)}</td>
                   <td className="px-4 py-3 text-right">
                     <IconActionGroup>
                       <IconButton

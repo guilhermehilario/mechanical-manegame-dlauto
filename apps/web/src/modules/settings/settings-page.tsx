@@ -2,9 +2,9 @@ import { type FormEvent, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { shopSettingsSchema } from '@mechanic-system/validation';
-import type { TimeFormat } from '@mechanic-system/types';
+import type { DateFormat, TimeFormat } from '@mechanic-system/types';
 import { ApiClientError } from '../../services/api-client';
-import { formatTimeExample } from '../../utils/datetime';
+import { formatDateExample, formatTimeExample } from '../../utils/datetime';
 import { getShopSettings, updateShopSettings } from '../../services/settings.service';
 import { useAuth } from '../auth/use-auth';
 import { BackupSettingsSection } from './backup-settings-section';
@@ -258,8 +258,59 @@ function TimeFormatSection({
             />
             {option.label}
             <span className="text-xs text-slate-400">
-              ({formatTimeExample(option.id)})
+              ({formatTimeExample('DD_MM_YYYY', option.id)})
             </span>
+          </label>
+        ))}
+      </div>
+    </fieldset>
+  );
+}
+
+/** Formato de data usado em todo o app (padrão DD/MM/AAAA; opções ISO/US). */
+function DateFormatSection({
+  value,
+  onChange,
+  disabled,
+}: {
+  value: DateFormat;
+  onChange: (format: DateFormat) => void;
+  disabled: boolean;
+}) {
+  const options: Array<{ id: DateFormat; label: string }> = [
+    { id: 'DD_MM_YYYY', label: 'DD/MM/AAAA' },
+    { id: 'YYYY_MM_DD', label: 'AAAA/MM/DD' },
+    { id: 'MM_DD_YYYY', label: 'MM/DD/AAAA' },
+  ];
+  return (
+    <fieldset>
+      <legend className="mb-1 text-sm font-medium text-slate-700">Formato da data</legend>
+      <p className="mb-2 text-xs text-slate-500">
+        Como as datas são exibidas em toda a plataforma.
+      </p>
+      <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Formato da data">
+        {options.map((option) => (
+          <label
+            key={option.id}
+            className={`flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors ${
+              value === option.id
+                ? 'border-blue-500 bg-blue-50 font-medium text-blue-700'
+                : 'border-slate-300 bg-white text-slate-600 hover:bg-slate-50'
+            } ${disabled ? 'cursor-not-allowed opacity-60' : ''}`}
+          >
+            <input
+              type="radio"
+              name="date-format"
+              value={option.id}
+              checked={value === option.id}
+              onChange={() => {
+                onChange(option.id);
+              }}
+              disabled={disabled}
+              className="accent-blue-600"
+            />
+            {option.label}
+            <span className="text-xs text-slate-400">({formatDateExample(option.id)})</span>
           </label>
         ))}
       </div>
@@ -279,12 +330,16 @@ function DateTimeSection() {
     queryFn: getShopSettings,
   });
 
+  const [selectedDate, setSelectedDate] = useState<DateFormat>('DD_MM_YYYY');
   const [selected, setSelected] = useState<TimeFormat>('H24');
   const [formError, setFormError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
-    if (settingsQuery.data) setSelected(settingsQuery.data.timeFormat);
+    if (settingsQuery.data) {
+      setSelectedDate(settingsQuery.data.dateFormat);
+      setSelected(settingsQuery.data.timeFormat);
+    }
   }, [settingsQuery.data]);
 
   const saveMutation = useMutation({
@@ -313,6 +368,7 @@ function DateTimeSection() {
       phone: settings.phone,
       address: settings.address,
       documentFooter: settings.documentFooter,
+      dateFormat: selectedDate,
       timeFormat: selected,
     });
     if (!parsed.success) {
@@ -328,6 +384,11 @@ function DateTimeSection() {
 
   return (
     <form className="space-y-4 rounded-lg border border-slate-200 bg-white p-6" onSubmit={handleSubmit} noValidate>
+      <DateFormatSection
+        value={selectedDate}
+        onChange={setSelectedDate}
+        disabled={!canEdit || saveMutation.isPending}
+      />
       <TimeFormatSection
         value={selected}
         onChange={setSelected}

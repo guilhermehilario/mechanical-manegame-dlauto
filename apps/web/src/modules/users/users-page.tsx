@@ -14,7 +14,7 @@ import { PageHeader } from '../../components/page-header';
 import { btnPrimary, btnSecondary, inputClass, tableHead, tableWrap } from '../../components/ui';
 import { IconButton, IconActionGroup } from '../../components/icon-button';
 import { IconKey, IconPlus, IconSearch, IconTrash } from '../../components/icons';
-import { useTimeFormat } from '../../hooks/use-time-format';
+import { useDateTime } from '../../hooks/use-date-time';
 import { useTableSort } from '../../hooks/use-table-sort';
 import { SortableTh } from '../../components/sortable-th';
 import { formatDate } from '../../utils/datetime';
@@ -45,7 +45,7 @@ interface PasswordResetState {
  */
 export function UsersPage() {
   const queryClient = useQueryClient();
-  const timeFormat = useTimeFormat();
+  const { dateFormat } = useDateTime();
   const { user: currentUser } = useAuth();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
@@ -210,7 +210,7 @@ export function UsersPage() {
                       {user.active ? 'Ativo' : 'Inativo'}
                     </span>
                   </td>
-                  <td className="whitespace-nowrap px-4 py-3 text-slate-500">{formatDate(user.createdAt, timeFormat)}</td>
+                  <td className="whitespace-nowrap px-4 py-3 text-slate-500">{formatDate(user.createdAt, dateFormat)}</td>
                   <td className="px-4 py-3 text-right">
                     <IconActionGroup>
                       {canManageUsers &&

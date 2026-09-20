@@ -72,6 +72,13 @@ describe('report-export builders', () => {
     expect(table.rightAlign).toEqual([1, 2, 3, 4, 5]);
   });
 
+  it('reflects the configured date format in period and rows', () => {
+    const table = buildRevenueReport(revenue, 'YYYY_MM_DD');
+
+    expect(table.period).toBe('Período: 2026/09/01 a 2026/09/30');
+    expect(table.rows[0]?.[0]).toBe('2026/09/10');
+  });
+
   it('builds the cash-basis payments table with translated labels', () => {
     const table = buildPaymentsReport(payments);
 
