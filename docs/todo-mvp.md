@@ -25,6 +25,18 @@
 > placa duplicada). **G2 (decisão R8)** encerrado — ADR-007. Faltam **só
 > homologação no hardware + ativação da CI**: C1/C2 (binário na máquina
 > alvo), E3 (restauração real) e push/habilitação do workflow (G3/G4).
+>
+> Revisão 2026-09-20: fechada a **usabilidade de listagem** — busca textual
+> em **todas** as tabelas de listagem (faltava em OS, Agendamentos e
+> Retiradas — server-side via `search`, mesmo padrão de clientes/usuários/etc.)
+> e **ordenação de colunas em todas as tabelas** (completada em Backups,
+> Pagamentos e Histórico do veículo). Na semana anterior também entraram a
+> padronização de todas as datas em DD/MM/AAAA (`7d92aa8`), a aba **"Data e
+> hora"** nas Configurações (`4bb5644`) e o **formato de data configurável**
+> (DD/MM/AAAA · AAAA/MM/DD · MM/DD/AAAA) refletido em todo o projeto
+> (`8fed78a`). Gates: **154 API + 60 web + 10 desktop** verdes + tsc/lint
+> limpos. ⚠️ O trabalho de filtros/ordenação **ainda não foi commitado** e há
+> pendências de código novas abaixo — ver `docs/handoff.md`.
 
 ---
 
@@ -59,6 +71,16 @@
   quality + e2e + smoke; gate `pnpm audit --prod --audit-level=high` e job
   smoke validados localmente). Restam só homologação no hardware (C1/C2) e
   restauração real (E3) — ver "Ainda pendente".
+- ✅ Revisão 2026-09-20: **datas padronizadas em DD/MM/AAAA** (fonte única
+  `apps/web/src/utils/datetime.ts` + hook `useDateTime` — commits `7d92aa8`,
+  `4bb5644`, `8fed78a`) com **formato configurável** na aba "Data e hora"
+  das Configurações (DD/MM/AAAA · AAAA/MM/DD · MM/DD/AAAA), aplicado em
+  listagens, relatórios e impressos. **Busca + ordenação em todas as
+  listagens**: OS/Agendamentos/Retiradas ganharam busca server-side e
+  Backups/Pagamentos/Histórico do veículo ganharam ordenação de colunas.
+  ⚠️ Este trecho da revisão (filtros/ordenação) **está sem commit**. Gates:
+  **154 testes API + 60 testes web + 10 desktop** verdes + typecheck/lint
+  (web só com warnings pré-existentes de fast-refresh).
 
 **Gaps para MVP (revisado 2026-09-18):** ciclo financeiro (Bloco A),
 impressão de OS/recibo (B1–B3), sessão persistente + refresh automático
@@ -188,6 +210,22 @@ impressão (OS + recibo). Pré-requisitos são semeados pela API
 
 ---
 
+## Nova pendência de código (2026-09-20)
+
+Encontradas após a revisão de usabilidade de listagem e a análise do backlog:
+
+| Prio | Item | Status | Resumo |
+|---|---|---|---|
+| 🔴 | P1 | ⛔ sem commit | Commit do trabalho de **filtros/ordenação** (busca server-side em OS/Agendamentos/Retiradas + ordenação de colunas em Backups/Pagamentos/Histórico do veículo). Diff pronto e gates verdes — aguarda confirmação do usuário para commitar |
+| 🟠 | P2 | ⬜ falta | **Testes web das páginas de listagem novas**: `work-orders-page`, `appointments-page`, `vehicle-pickups-page`, `backups-page` e o painel de pagamentos não têm `*.test.tsx` (hoje só tsc cobre). Seguir o padrão de `settings-page.test.tsx`/`services-page.test.tsx` |
+| 🟠 | P3 | ⬜ falta | **Cobertura da busca na API**: o filtro `search` (repository `listWhere` com `OR` em work-orders/appointments/vehicle-pickups) não tem teste unitário direto — adicionar casos em `apps/api/tests/*.spec.ts` |
+| 🟡 | P4 | ⬜ falta | **E2E do pagamento parcial** → saldo → PAGO (complementa A6). `work-order-flow.spec.ts` paga o saldo todo de uma vez ("Receber saldo"); o fluxo parcial continua sem E2E próprio |
+| 🟡 | P5 | ⬜ falta | **Script `start` da API** documentado errado: `pnpm --filter @mechanic-system/api start` (`node dist`) falha porque os `workspace:` de `apps/desktop/staging` não compilam — o commit correto hoje é o smoke via `ts-node src/platform.ts`. Ajustar script ou a doc (`docs/development.md`) |
+| 🟡 | P6 | ⬜ opcional | **Ordenação em sub-tabelas restantes**: tabela de veículos no detalhe do cliente, itens (serviços/peças) da OS, tabela de receita dos relatórios e agenda do dashboard |
+| ⚪ | P7 | ⬜ opcional | **Limpeza**: hook legado `apps/web/src/hooks/use-time-format.ts` ficou em desuso com o `useDateTime` (restam `dashboard-page` e `appointments-agenda`, que não exibem datas numéricas) — unificar ou remover |
+
+---
+
 ## Bloco A — Fechamento do ciclo financeiro (Fase 11) 🔴 Crítico
 
 Sem isso a OS não vira recebimento — é o maior bloqueio de produto.
@@ -234,7 +272,8 @@ Sem isso a OS não vira recebimento — é o maior bloqueio de produto.
   `paymentTotalsByMethod` (group by method).
 - [x] **A6 (parcial)** ✅ 2026-09-16: 13 testes unitários (11 do service
   de payments + 2 do relatório de formas) e KPIs cobertos nos testes do
-  dashboard. Falta E2E do fluxo pagar parcial → saldo → PAGO (Bloco G).
+  dashboard. Falta E2E do fluxo pagar parcial → saldo → PAGO (= **P4**,
+  2026-09-20).
 
 ## Bloco B — Impressão de documentos 🔴 Crítico
 

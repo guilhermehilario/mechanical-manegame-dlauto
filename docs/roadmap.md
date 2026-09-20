@@ -6,7 +6,7 @@
 >
 > Fontes: `docs/security/remediation-plan.md` (auditoria de segurança),
 > `docs/architecture.md` (evolução planejada), análise do código atual.
-> Última atualização: 2026-09-18.
+> Última atualização: 2026-09-20.
 
 ---
 
@@ -56,13 +56,15 @@ soft delete, `sync_outbox` no schema.
 Listados em `docs/architecture.md` como evolution planejada; a arquitetura foi
 desenhada para acomodá-los sem rewrites:
 
-- ❌ **Backup/restauração** do banco SQLite (nenhuma referência no código;
-  incluir checkpoint WAL — ver nota em `ADR-001`). Crítico para o contexto
-  real da oficina (dados financeiros + histórico + PII só existem localmente).
-- ❌ **Impressão** (OS, recibo de retirada, relatórios) — não há fluxo de
-  impressão no renderer nem template.
-- ❌ **Pagamentos** (múltiplas formas, parcial, baixa de receita) — hoje a OS
-  tem totais/desconto, mas não há entidade de pagamento.
+- ✅ **Backup/restauração** do banco SQLite — **feito (Fase 10, 2026-09-11)**:
+  `VACUUM INTO` + storage com manifest sha256 e restore verificado (Bloco E em
+  `docs/todo-mvp.md`); nota do checkpoint WAL permanece em `ADR-001`.
+- ✅ **Impressão** (OS, recibo de retirada, relatórios) — **feito (Bloco B,
+  2026-09-16/17)**: `window.print()` + `#print-root` com CSS `@media print`,
+  zero dependências (B1–B5 em `docs/todo-mvp.md`).
+- ✅ **Pagamentos** (múltiplas formas, parcial, baixa de receita) — **feito
+  (Fase 11 / Bloco A, 2026-09-16/17)**: entidade `Payment`, saldo validado
+  dentro da transação, estorno com trilha, painel na OS + relatório por forma.
 - ❌ **Emissão de nota fiscal** (NFSe/NFCe — dependerá de decisão de produto
   e certificado digital).
 - ❌ **Estoque avançado** (entradas por compra/NF, reservas além do fluxo
@@ -77,10 +79,15 @@ desenhada para acomodá-los sem rewrites:
 
 ## 4. Melhorias de qualidade (oportunidades, não bloqueiam)
 
-- **E2E:** só existe `core-flow.spec.ts` (login + cliente + relatórios).
-  Ampliar para os fluxos críticos criados nas Fases 4–7: agendamento com
-  conflito, ciclo completo da OS (itens → aprovação → execução → retirada),
-  upload de imagem, histórico do veículo.
+- **Usabilidade (2026-09-20):** busca textual em **todas** as listagens +
+  ordenação de colunas em **todas** as tabelas + **data configurável**
+  (DD/MM/AAAA · AAAA/MM/DD · MM/DD/AAAA via aba "Data e hora" das
+  Configurações). Pendência: commit (P1) e testes web das páginas novas (P2)
+  em `docs/todo-mvp.md`.
+- **E2E:** hoje **10 testes / 4 suítes** (`core-flow`, `work-order-flow`,
+  `print`, `seed-catalog`) em portas isoladas (`E2E_API_PORT`/`E2E_WEB_PORT`).
+  Ampliar: fluxo de **pagamento parcial** → saldo → PAGO (P4) e upload de
+  imagem dirigido pela UI.
 - **Acessibilidade/UX:** auditoria de teclado/foco nos modais e no signature pad;
   estados de carregamento/vazio consistentes entre páginas.
 - **Observabilidade:** pino já estruturado; adicionar correlação de requestId
@@ -111,7 +118,7 @@ gates: lint + typecheck + testes + build + smoke/e2e):
 |---|---|---|
 | **Fase 9** | ✅ **Concluída (2026-09-11):** R1 + R2 + R3 + R4 + R5 + R6 aplicados (ver changelog do plano de remediação). Restam como acompanhamento: revalidar o binário empacotado | Fecha 5 achados de segurança de alta prioridade; rota nova só nasce pública com @Public() explícito |
 | **Fase 10** | ✅ **Concluída (2026-09-11):** backup/restauração locais (SQLite `VACUUM INTO` + storage, manifest com sha256, restore verificado) + permissões 0700/0600 (R7, ADR-006) | Protege o dado mais valioso do negócio (local-only hoje) |
-| **Fase 11** | Pagamentos na OS (§3) | Fecha o ciclo financeiro: orçamento → execução → recebimento |
+| **Fase 11** | ✅ **Concluída (2026-09-16/17):** Pagamentos na OS (Bloco A) — entidade `Payment`, painel na OS, estorno com trilha e relatório por forma | Fecha o ciclo financeiro: orçamento → execução → recebimento |
 | **Fase 12** | Sync offline-first (§2): outbox nos services + worker + ADR de conflitos | O grande diferencial de produto; exige servidor central |
 | **Fase 13+** | Impressão, nota fiscal, estoque avançado, integrações, S3 (§3) | Expansão, conforme demanda do produto |
 
@@ -123,3 +130,7 @@ gates: lint + typecheck + testes + build + smoke/e2e):
 > o **produto viável (MVP)** — pagamentos, impressão, empacotamento/homologação,
 > sessão, backup automático e onboarding — está consolidado em
 > [docs/todo-mvp.md](todo-mvp.md).
+>
+> **Nota (2026-09-20):** para o **passo a passo operacional** (estado do
+> working tree, gates, convenções e pendências de código), ver
+> [docs/handoff.md](handoff.md).
