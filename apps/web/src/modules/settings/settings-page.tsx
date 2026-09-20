@@ -15,7 +15,7 @@ const inputClass =
 const tabClass =
   'rounded-t-md border-b-2 px-4 py-2 text-sm font-semibold transition-colors';
 
-type Tab = 'identidade' | 'operacao' | 'conta';
+type Tab = 'identidade' | 'data-hora' | 'operacao' | 'conta';
 
 const ROLE_LABELS: Record<string, string> = {
   ADMIN: 'Administrador',
@@ -27,6 +27,7 @@ const ROLE_LABELS: Record<string, string> = {
 function Tabs({ active, onChange }: { active: Tab; onChange: (tab: Tab) => void }) {
   const items: Array<{ id: Tab; label: string }> = [
     { id: 'identidade', label: 'Identidade da oficina' },
+    { id: 'data-hora', label: 'Data e hora' },
     { id: 'operacao', label: 'Operação' },
     { id: 'conta', label: 'Minha conta' },
   ];
@@ -68,7 +69,6 @@ function IdentitySection() {
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
   const [documentFooter, setDocumentFooter] = useState('');
-  const [timeFormat, setTimeFormat] = useState<TimeFormat>('H24');
   const [formError, setFormError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
 
@@ -79,7 +79,6 @@ function IdentitySection() {
       setPhone(settings.phone ?? '');
       setAddress(settings.address ?? '');
       setDocumentFooter(settings.documentFooter ?? '');
-      setTimeFormat(settings.timeFormat);
     }
   }, [settingsQuery.data]);
 
@@ -107,7 +106,7 @@ function IdentitySection() {
       phone: phone === '' ? null : phone,
       address: address === '' ? null : address,
       documentFooter: documentFooter === '' ? null : documentFooter,
-      timeFormat,
+      timeFormat: settingsQuery.data?.timeFormat ?? 'H24',
     });
     if (!parsed.success) {
       setFormError(parsed.error.issues[0]?.message ?? 'Dados inválidos.');
@@ -184,12 +183,6 @@ function IdentitySection() {
           disabled={!canEdit || saveMutation.isPending}
         />
       </div>
-
-      <TimeFormatSection
-        value={timeFormat}
-        onChange={setTimeFormat}
-        disabled={!canEdit || saveMutation.isPending}
-      />
 
       {formError ? (
         <div role="alert" className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
@@ -274,6 +267,103 @@ function TimeFormatSection({
   );
 }
 
+/** Aba própria de data/hora (2026-09-18) — salva só o formato, preservando
+ * os demais campos (a API sobrescreve com null quando o campo é omitido). */
+function DateTimeSection() {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const canEdit = user?.role === 'ADMIN' || user?.role === 'MANAGER';
+
+  const settingsQuery = useQuery({
+    queryKey: ['settings'],
+    queryFn: getShopSettings,
+  });
+
+  const [selected, setSelected] = useState<TimeFormat>('H24');
+  const [formError, setFormError] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    if (settingsQuery.data) setSelected(settingsQuery.data.timeFormat);
+  }, [settingsQuery.data]);
+
+  const saveMutation = useMutation({
+    mutationFn: updateShopSettings,
+    onSuccess: () => {
+      setFormError(null);
+      setSaved(true);
+      void queryClient.invalidateQueries({ queryKey: ['settings'] });
+    },
+    onError: (error) => {
+      setSaved(false);
+      setFormError(
+        error instanceof ApiClientError ? error.message : 'Não foi possível salvar.',
+      );
+    },
+  });
+
+  function handleSubmit(event: FormEvent<HTMLFormElement>): void {
+    event.preventDefault();
+    const settings = settingsQuery.data;
+    if (!settings) return;
+    setSaved(false);
+    setFormError(null);
+    const parsed = shopSettingsSchema.safeParse({
+      name: settings.name,
+      phone: settings.phone,
+      address: settings.address,
+      documentFooter: settings.documentFooter,
+      timeFormat: selected,
+    });
+    if (!parsed.success) {
+      setFormError(parsed.error.issues[0]?.message ?? 'Dados inválidos.');
+      return;
+    }
+    saveMutation.mutate(parsed.data);
+  }
+
+  if (settingsQuery.isLoading) {
+    return <p className="text-sm text-slate-500">Carregando…</p>;
+  }
+
+  return (
+    <form className="space-y-4 rounded-lg border border-slate-200 bg-white p-6" onSubmit={handleSubmit} noValidate>
+      <TimeFormatSection
+        value={selected}
+        onChange={setSelected}
+        disabled={!canEdit || saveMutation.isPending}
+      />
+
+      {formError ? (
+        <div role="alert" className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
+          {formError}
+        </div>
+      ) : null}
+      {saved ? (
+        <div className="rounded-md bg-green-50 px-3 py-2 text-sm text-green-700">
+          Configurações salvas.
+        </div>
+      ) : null}
+
+      {canEdit ? (
+        <div className="flex justify-end">
+          <button
+            type="submit"
+            disabled={saveMutation.isPending}
+            className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
+          >
+            {saveMutation.isPending ? 'Salvando…' : 'Salvar'}
+          </button>
+        </div>
+      ) : (
+        <p className="text-xs text-slate-400">
+          Somente administradores e gerentes podem editar.
+        </p>
+      )}
+    </form>
+  );
+}
+
 function OperationsSection() {
   const { user } = useAuth();
   if (user?.role !== 'ADMIN') {
@@ -313,9 +403,9 @@ function AccountSection() {
 
 /**
  * Settings (2026-09-18) — reorganized in tabs:
- * Identidade (F2, printed documents); Operação (backup runtime config +
- * manual backup + optional example catalog); Conta (who am I + change
- * password). RBAC mirrored from the API.
+ * Identidade (F2, printed documents); Data e hora (H24/H12 app-wide);
+ * Operação (backup runtime config + manual backup + optional example
+ * catalog); Conta (who am I + change password). RBAC mirrored from the API.
  */
 export function SettingsPage() {
   const [tab, setTab] = useState<Tab>('identidade');
@@ -324,12 +414,13 @@ export function SettingsPage() {
     <section className="mx-auto max-w-xl">
       <h1 className="text-lg font-bold text-slate-900">Configurações</h1>
       <p className="mb-4 text-sm text-slate-500">
-        Identidade da oficina, backup automático e sua conta.
+        Identidade da oficina, formato de data e hora, backup automático e sua conta.
       </p>
 
       <Tabs active={tab} onChange={setTab} />
 
       {tab === 'identidade' ? <IdentitySection /> : null}
+      {tab === 'data-hora' ? <DateTimeSection /> : null}
       {tab === 'operacao' ? <OperationsSection /> : null}
       {tab === 'conta' ? <AccountSection /> : null}
     </section>

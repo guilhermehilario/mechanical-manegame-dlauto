@@ -153,12 +153,13 @@ describe('SettingsPage tabs (2026-09-18)', () => {
     mocks.seedCatalogExample.mockResolvedValue({ services: 10, products: 8, suppliers: 3 });
   });
 
-  it('shows the three tabs with the identity one active by default', async () => {
+  it('shows the four tabs with the identity one active by default', async () => {
     mocks.useAuth.mockReturnValue({ user: { role: 'ADMIN', name: 'Ana', email: 'ana@x.com' } });
 
     renderPage();
 
     expect(screen.getByRole('tab', { name: 'Identidade da oficina' })).toBeTruthy();
+    expect(screen.getByRole('tab', { name: 'Data e hora' })).toBeTruthy();
     expect(screen.getByRole('tab', { name: 'Operação' })).toBeTruthy();
     expect(screen.getByRole('tab', { name: 'Minha conta' })).toBeTruthy();
     expect(await screen.findByLabelText(/Nome da oficina/)).toHaveProperty(
@@ -253,5 +254,62 @@ describe('SettingsPage tabs (2026-09-18)', () => {
 
     expect(await screen.findByText(/Intervalo deve ser um número inteiro entre 1 e 168/)).toBeTruthy();
     expect(mocks.updateBackupConfig).not.toHaveBeenCalled();
+  });
+});
+
+describe('SettingsPage data/time tab (2026-09-18)', () => {
+  beforeEach(() => {
+    mocks.getShopSettings.mockReset();
+    mocks.updateShopSettings.mockReset();
+    mocks.getShopSettings.mockResolvedValue(settings);
+    mocks.updateShopSettings.mockResolvedValue(settings);
+  });
+
+  it('switches the app-wide time format without touching the other fields', async () => {
+    mocks.useAuth.mockReturnValue({ user: { role: 'ADMIN' } });
+
+    renderPage();
+    await userEvent.click(screen.getByRole('tab', { name: 'Data e hora' }));
+
+    const h24 = await screen.findByRole('radio', { name: /24 horas/ });
+    const h12 = screen.getByRole('radio', { name: /12 horas/ });
+    expect(h24).toHaveProperty('checked', true);
+    await userEvent.click(h12);
+    expect(h12).toHaveProperty('checked', true);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+
+    await waitFor(() => {
+      expect(mocks.updateShopSettings.mock.calls[0]?.[0]).toEqual({
+        name: 'Auto Center DL',
+        phone: '1133334444',
+        address: 'Rua das Flores, 100',
+        documentFooter: 'Obrigado!',
+        timeFormat: 'H12',
+      });
+    });
+    expect(await screen.findByText('Configurações salvas.')).toBeTruthy();
+  });
+
+  it('keeps the time format selector out of the identity tab', async () => {
+    mocks.useAuth.mockReturnValue({ user: { role: 'ADMIN' } });
+
+    renderPage();
+
+    expect(await screen.findByLabelText(/Nome da oficina/)).toBeTruthy();
+    expect(screen.queryByRole('radiogroup', { name: 'Formato de data e hora' })).toBeNull();
+  });
+
+  it('blocks editing for ATTENDANT on the data/time tab', async () => {
+    mocks.useAuth.mockReturnValue({ user: { role: 'ATTENDANT' } });
+
+    renderPage();
+    await userEvent.click(screen.getByRole('tab', { name: 'Data e hora' }));
+
+    const radios = await screen.findAllByRole('radio');
+    expect(radios[0]).toHaveProperty('disabled', true);
+    expect(radios[1]).toHaveProperty('disabled', true);
+    expect(screen.queryByRole('button', { name: 'Salvar' })).toBeNull();
+    expect(screen.getByText(/Somente administradores/)).toBeTruthy();
   });
 });
